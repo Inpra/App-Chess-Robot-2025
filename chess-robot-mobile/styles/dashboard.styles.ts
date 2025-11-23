@@ -33,12 +33,15 @@ export const getDashboardStyles = ({ width, height }: ScaledSize) => {
             // For compact (phone portrait), it sits at the bottom naturally via flex column
         },
         sidebarIcon: {
-            marginBottom: isCompact ? 0 : 40,
-            padding: 12,
-            borderRadius: 16,
+            marginBottom: isCompact ? 0 : 24, // Reduced margin for better density
+            width: 48,
+            height: 48,
+            justifyContent: 'center',
+            alignItems: 'center',
+            borderRadius: 14,
         },
         sidebarIconActive: {
-            backgroundColor: '#E0E7FF',
+            backgroundColor: Colors.light.primary + '15', // 15% opacity primary color
         },
         mainContent: {
             flex: 1,

@@ -15,23 +15,37 @@ export default function DashboardScreen() {
 
       {/* Sidebar (Navigation) */}
       <View style={styles.sidebar}>
-        <TouchableOpacity style={styles.sidebarIcon}>
-          <Ionicons name="game-controller" size={28} color={Colors.light.primary} />
-        </TouchableOpacity>
+        <Link href="/game/vs-bot" asChild>
+          <TouchableOpacity style={styles.sidebarIcon}>
+            <Ionicons name="game-controller" size={28} color={Colors.light.primary} />
+          </TouchableOpacity>
+        </Link>
         <TouchableOpacity style={[styles.sidebarIcon, styles.sidebarIconActive]}>
           <Ionicons name="home" size={24} color={Colors.light.primary} />
         </TouchableOpacity>
+        {/* Match History */}
         <TouchableOpacity style={styles.sidebarIcon}>
-          <Ionicons name="trophy-outline" size={24} color={Colors.light.icon} />
+          <Ionicons name="time" size={24} color={Colors.light.icon} />
         </TouchableOpacity>
+        {/* View Ranking */}
         <TouchableOpacity style={styles.sidebarIcon}>
-          <Ionicons name="extension-puzzle-outline" size={24} color={Colors.light.icon} />
+          <Ionicons name="trophy" size={24} color={Colors.light.icon} />
         </TouchableOpacity>
+        {/* Purchase Points */}
         <TouchableOpacity style={styles.sidebarIcon}>
-          <Ionicons name="chatbubble-ellipses-outline" size={24} color={Colors.light.icon} />
+          <Ionicons name="cart" size={24} color={Colors.light.icon} />
         </TouchableOpacity>
+        {/* Settings */}
         <TouchableOpacity style={styles.sidebarIcon}>
-          <Ionicons name="settings-outline" size={24} color={Colors.light.icon} />
+          <Ionicons name="settings" size={24} color={Colors.light.icon} />
+        </TouchableOpacity>
+        {/* Tutorial */}
+        <TouchableOpacity style={styles.sidebarIcon}>
+          <Ionicons name="school" size={24} color={Colors.light.icon} />
+        </TouchableOpacity>
+        {/* FAQ/Support */}
+        <TouchableOpacity style={styles.sidebarIcon}>
+          <Ionicons name="headset" size={24} color={Colors.light.icon} />
         </TouchableOpacity>
         <View style={{ flex: 1 }} />
         <TouchableOpacity style={styles.sidebarIcon}>
@@ -61,7 +75,7 @@ export default function DashboardScreen() {
               />
             </View>
             <TouchableOpacity style={styles.notificationBtn}>
-              <Ionicons name="notifications-outline" size={24} color={Colors.light.text} />
+              <Ionicons name="notifications" size={24} color={Colors.light.text} />
               <View style={{ position: 'absolute', top: 8, right: 8, width: 8, height: 8, borderRadius: 4, backgroundColor: 'red' }} />
             </TouchableOpacity>
           </View>
