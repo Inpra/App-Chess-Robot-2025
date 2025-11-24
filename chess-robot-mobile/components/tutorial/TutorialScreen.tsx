@@ -4,6 +4,7 @@ import { TutorialBoard } from '@/components/tutorial/TutorialBoard';
 import {
     createStandardBoard,
     lessonBoards,
+    lessonComplexMoves,
     lessonPackages,
     lessonStartPositions,
     lessonValidMoves
@@ -15,7 +16,7 @@ import { Stack, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { SafeAreaView, ScrollView, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 
-export function TutorialScreen() {
+export default function TutorialScreen() {
     const dimensions = useWindowDimensions();
     const styles = useMemo(() => getTutorialStyles(dimensions), [dimensions]);
     const router = useRouter();
@@ -47,54 +48,91 @@ export function TutorialScreen() {
         }
 
         const label = currentLessonLabel;
+        const baseBoard = lessonBoards[label];
+        const complexMoves = lessonComplexMoves[label]; // Check for complex moves
         const startPos = lessonStartPositions[label];
         const moves = lessonValidMoves[label] || [];
-        const baseBoard = lessonBoards[label];
 
         // Reset to initial state immediately when lesson changes
         setDisplayBoard([...baseBoard]);
 
-        if (!moves.length) return;
+        if (!complexMoves && !moves.length) return;
 
         let moveIndex = 0;
         let showingStart = true;
 
         const timer = setInterval(() => {
-            if (showingStart) {
-                // Move piece to the next valid target
-                const target = moves[moveIndex];
-                // Copy the base board to keep all other pieces
-                const nextBoard = [...baseBoard];
-                // Clear the start position
-                nextBoard[startPos] = null;
-                // Move the piece to target position
-                nextBoard[target] = baseBoard[startPos];
+            if (complexMoves) {
+                // Logic for complex moves (multiple pieces)
 
-                // Special case for En Passant: remove the captured pawn
-                if (label === 'En Passant' && target === 20) {
-                    // Remove Black pawn at e5 (position 28)
-                    nextBoard[28] = null;
+                if (moveIndex === -1) {
+                    // Show start position (reset state)
+                    setDisplayBoard([...baseBoard]);
+                } else {
+                    // Rebuild board state from baseBoard + moves up to moveIndex
+                    const currentBoard = [...baseBoard];
+
+                    // Apply moves up to current index
+                    for (let i = 0; i <= moveIndex; i++) {
+                        const m = complexMoves[i];
+                        // Move piece
+                        currentBoard[m.to] = currentBoard[m.from];
+                        currentBoard[m.from] = null;
+                    }
+                    setDisplayBoard(currentBoard);
                 }
 
-                // Special case for Promotion: show modal and change piece
-                if (label === 'Promotion' && target === 0) {
-                    setShowPromotionModal(true);
-                    // Change pawn to promoted piece
-                    nextBoard[target] = { type: promotedPiece, color: 'w' };
+                moveIndex++;
+                if (moveIndex >= complexMoves.length) {
+                    moveIndex = -1; // Reset loop to start position
                 }
 
-                setDisplayBoard(nextBoard);
-
-                showingStart = false;
             } else {
-                // Return piece to start position
-                setDisplayBoard([...baseBoard]);
+                // Logic for simple single-piece moves (Old logic)
+                if (showingStart) {
+                    // Move piece to the next valid target
+                    const target = moves[moveIndex];
+                    // Copy the base board to keep all other pieces
+                    const nextBoard = [...baseBoard];
+                    // Clear the start position
+                    nextBoard[startPos] = null;
+                    // Move the piece to target position
+                    nextBoard[target] = baseBoard[startPos];
 
-                showingStart = true;
-                // Advance to next move index
-                moveIndex = (moveIndex + 1) % moves.length;
+                    // Special case for En Passant
+                    if (label === 'En Passant' && target === 20) {
+                        nextBoard[28] = null;
+                    }
+
+                    // Special case for Promotion
+                    if (label === 'Promotion' && target === 0) {
+                        setShowPromotionModal(true);
+                        nextBoard[target] = { type: promotedPiece, color: 'w' };
+                    }
+
+                    // Special case for Short Castling
+                    if (label === 'Short Castling' && target === 62) {
+                        nextBoard[63] = null;
+                        nextBoard[61] = { type: 'r', color: 'w' };
+                    }
+
+                    // Special case for Long Castling
+                    if (label === 'Long Castling' && target === 58) {
+                        nextBoard[56] = null;
+                        nextBoard[59] = { type: 'r', color: 'w' };
+                    }
+
+                    setDisplayBoard(nextBoard);
+                    showingStart = false;
+                } else {
+                    // Return piece to start position
+                    setDisplayBoard([...baseBoard]);
+                    showingStart = true;
+                    // Advance to next move index
+                    moveIndex = (moveIndex + 1) % moves.length;
+                }
             }
-        }, 2000); // Switch every 2000ms (2 seconds)
+        }, 1500); // 1.5 seconds per move
 
         return () => clearInterval(timer);
     }, [activeLessonId, currentLessonLabel, promotedPiece]);
@@ -156,7 +194,7 @@ export function TutorialScreen() {
                 {/* Tutorial Content */}
                 <View style={styles.tutorialSection}>
                     {selectedPackage ? (
-                        <ScrollView contentContainerStyle={styles.lessonPathContainer} showsVerticalScrollIndicator={false}>
+                        <ScrollView contentContainerStyle={styles.lessonPathContainer} showsVerticalScrollIndicator={true}>
                             {lessons.map((lesson, index) => {
                                 const isActive = lesson.id === activeLessonId;
                                 const isCompleted = activeLessonId ? lesson.id < activeLessonId : false;
@@ -165,34 +203,78 @@ export function TutorialScreen() {
                                 return (
                                     <TouchableOpacity
                                         key={lesson.id}
-                                        style={styles.lessonPathItem}
+                                        style={[
+                                            styles.lessonPathItem,
+                                            {
+                                                flexDirection: 'row',
+                                                alignItems: 'flex-start',
+                                                marginBottom: 16,
+                                                minHeight: 80,
+                                            }
+                                        ]}
                                         onPress={() => handleLessonSelect(lesson.id)}
                                         activeOpacity={0.8}
                                     >
-                                        {!isLast && (
-                                            <View style={[
-                                                styles.lessonLine,
-                                                (isCompleted || isActive) && styles.lessonLineActive
-                                            ]} />
-                                        )}
+                                        {/* Cột trái: Icon và đường nối */}
+                                        <View style={{ alignItems: 'center', width: 60, marginRight: 12 }}>
+                                            {!isLast && (
+                                                <View style={[
+                                                    styles.lessonLine,
+                                                    { left: 29 }, // Căn giữa line với icon (60/2 - 1)
+                                                    (isCompleted || isActive) && styles.lessonLineActive
+                                                ]} />
+                                            )}
 
-                                        <View style={[
-                                            styles.lessonTile,
-                                            isActive && styles.lessonTileActive,
-                                            isCompleted && styles.lessonTileCompleted
-                                        ]}>
-                                            <Ionicons
-                                                name={lesson.icon as any}
-                                                size={24}
-                                                color={isActive ? '#FFF' : (isCompleted ? Colors.light.primary : Colors.light.icon)}
-                                            />
+                                            <View style={[
+                                                styles.lessonTile,
+                                                isActive && styles.lessonTileActive,
+                                                isCompleted && styles.lessonTileCompleted
+                                            ]}>
+                                                <Ionicons
+                                                    name={lesson.icon as any}
+                                                    size={24}
+                                                    color={isActive ? '#FFF' : (isCompleted ? Colors.light.primary : Colors.light.icon)}
+                                                />
+                                            </View>
                                         </View>
 
-                                        {isActive && (
-                                            <View style={{ position: 'absolute', right: -80, backgroundColor: Colors.light.card, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: Colors.light.border }}>
-                                                <Text style={{ color: Colors.light.text, fontWeight: '600', fontSize: 14 }}>{lesson.label}</Text>
-                                            </View>
-                                        )}
+                                        {/* Right Column: Description content */}
+                                        <View style={{ flex: 1, paddingTop: 4 }}>
+                                            {isActive ? (
+                                                <View style={{
+                                                    backgroundColor: Colors.light.card,
+                                                    padding: 12,
+                                                    borderRadius: 12,
+                                                    borderWidth: 2,
+                                                    borderColor: Colors.light.primary,
+                                                    shadowColor: '#000',
+                                                    shadowOffset: { width: 0, height: 2 },
+                                                    shadowOpacity: 0.1,
+                                                    shadowRadius: 4,
+                                                    elevation: 3,
+                                                }}>
+                                                    <Text style={{
+                                                        color: Colors.light.primary,
+                                                        fontWeight: '700',
+                                                        fontSize: 15,
+                                                        marginBottom: 4,
+                                                    }}>{lesson.label}</Text>
+                                                    <Text style={{
+                                                        color: Colors.light.text,
+                                                        fontSize: 13,
+                                                        lineHeight: 18,
+                                                    }}>{lesson.description || 'Learn how to use this piece'}</Text>
+                                                </View>
+                                            ) : (
+                                                <View style={{ paddingVertical: 10 }}>
+                                                    <Text style={{
+                                                        color: isCompleted ? Colors.light.text : Colors.light.icon,
+                                                        fontWeight: isCompleted ? '600' : '400',
+                                                        fontSize: 14,
+                                                    }}>{lesson.label}</Text>
+                                                </View>
+                                            )}
+                                        </View>
                                     </TouchableOpacity>
                                 );
                             })}
@@ -200,14 +282,14 @@ export function TutorialScreen() {
                     ) : (
                         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }}>
                             <Ionicons name="school-outline" size={64} color={Colors.light.icon} style={{ opacity: 0.3, marginBottom: 16 }} />
-                            <Text style={{ fontSize: 18, fontWeight: '600', color: Colors.light.text, marginBottom: 8, textAlign: 'center' }}>Chào mừng đến với Tutorial</Text>
-                            <Text style={{ fontSize: 14, color: Colors.light.icon, textAlign: 'center', marginBottom: 24 }}>Nhấn vào icon danh sách bên dưới để chọn khóa học</Text>
+                            <Text style={{ fontSize: 18, fontWeight: '600', color: Colors.light.text, marginBottom: 8, textAlign: 'center' }}>Welcome to Tutorial</Text>
+                            <Text style={{ fontSize: 14, color: Colors.light.icon, textAlign: 'center', marginBottom: 24 }}>Tap the list icon below to select a course</Text>
                         </View>
                     )}
 
                     {/* Action Bar */}
                     <View style={styles.actionBar}>
-                        <Text style={styles.actionTitle}>{selectedPackage ? 'Learn To Play Chess' : 'Chọn khóa học để bắt đầu'}</Text>
+                        <Text style={styles.actionTitle}>{selectedPackage ? 'Learn To Play Chess' : 'Select a course to start'}</Text>
                         <View style={styles.actionRow}>
                             <TouchableOpacity
                                 style={styles.menuButton}

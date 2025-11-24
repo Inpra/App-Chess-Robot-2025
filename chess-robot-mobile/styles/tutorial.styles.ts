@@ -74,9 +74,10 @@ export const getTutorialStyles = ({ width, height }: { width: number, height: nu
 
         // Lesson Path
         lessonPathContainer: {
-            flex: 1,
+            flexGrow: 1,
             alignItems: 'center',
             paddingVertical: 20,
+            paddingBottom: 100, // Add extra padding at bottom for scrolling
         },
         lessonPathItem: {
             alignItems: 'center',

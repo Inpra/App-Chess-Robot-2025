@@ -4,12 +4,19 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo } from 'react';
 import { Modal, ScrollView, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 
+interface Lesson {
+    id: number;
+    icon: string;
+    label: string;
+    description?: string;
+}
+
 interface Package {
     id: string;
     name: string;
     description: string;
     icon: string;
-    lessons: any[];
+    lessons: Lesson[];
 }
 
 interface PackageModalProps {
@@ -38,11 +45,24 @@ export function PackageModal({ visible, packages, selectedPackage, onClose, onSe
             >
                 <TouchableOpacity activeOpacity={1}>
                     <View style={[styles.modalContent, { maxHeight: dimensions.height * 0.7 }]}>
-                        <Text style={styles.modalTitle}>Chọn Gói Bài Học</Text>
+                        <View style={{
+                            flexDirection: 'row',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: 16,
+                            borderBottomWidth: 1,
+                            borderBottomColor: Colors.light.border,
+                            paddingBottom: 12
+                        }}>
+                            <Text style={styles.modalTitle}>Select Course</Text>
+                            <TouchableOpacity onPress={onClose}>
+                                <Ionicons name="close" size={24} color={Colors.light.text} />
+                            </TouchableOpacity>
+                        </View>
 
                         <ScrollView
-                            showsVerticalScrollIndicator={true}
                             style={{ maxHeight: dimensions.height * 0.5 }}
+                            showsVerticalScrollIndicator={false}
                         >
                             {packages.map((pkg) => (
                                 <TouchableOpacity
@@ -53,25 +73,27 @@ export function PackageModal({ visible, packages, selectedPackage, onClose, onSe
                                     ]}
                                     onPress={() => onSelectPackage(pkg.id)}
                                 >
-                                    <View style={styles.packageIcon}>
+                                    <View style={[
+                                        styles.packageIcon,
+                                        selectedPackage === pkg.id && { backgroundColor: Colors.light.primary }
+                                    ]}>
                                         <Ionicons
                                             name={pkg.icon as any}
-                                            size={32}
-                                            color={selectedPackage === pkg.id ? Colors.light.primary : Colors.light.icon}
+                                            size={24}
+                                            color={selectedPackage === pkg.id ? '#FFF' : Colors.light.primary}
                                         />
                                     </View>
                                     <View style={styles.packageInfo}>
                                         <Text style={[
                                             styles.packageName,
                                             selectedPackage === pkg.id && styles.packageNameActive
-                                        ]}>
-                                            {pkg.name}
-                                        </Text>
+                                        ]}>{pkg.name}</Text>
                                         <Text style={styles.packageDescription}>{pkg.description}</Text>
-                                        <Text style={styles.packageLessonCount}>
-                                            {pkg.lessons.length} bài học
-                                        </Text>
+                                        <Text style={styles.packageLessonCount}>{pkg.lessons.length} lessons</Text>
                                     </View>
+                                    {selectedPackage === pkg.id && (
+                                        <Ionicons name="checkmark-circle" size={24} color={Colors.light.primary} />
+                                    )}
                                 </TouchableOpacity>
                             ))}
                         </ScrollView>
