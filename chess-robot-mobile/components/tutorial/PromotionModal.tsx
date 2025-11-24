@@ -12,10 +12,10 @@ interface PromotionModalProps {
 
 export function PromotionModal({ visible, onClose, onSelectPiece }: PromotionModalProps) {
     const pieces: Array<{ type: 'q' | 'r' | 'b' | 'n'; name: string }> = [
-        { type: 'q', name: 'Hậu' },
-        { type: 'r', name: 'Xe' },
-        { type: 'b', name: 'Tượng' },
-        { type: 'n', name: 'Mã' },
+        { type: 'q', name: 'Queen' },
+        { type: 'r', name: 'Rook' },
+        { type: 'b', name: 'Bishop' },
+        { type: 'n', name: 'Knight' },
     ];
 
     return (
@@ -34,9 +34,9 @@ export function PromotionModal({ visible, onClose, onSelectPiece }: PromotionMod
                     <View style={styles.content}>
                         <View style={styles.header}>
                             <Ionicons name="trophy" size={32} color={Colors.light.primary} />
-                            <Text style={styles.title}>Phong Cấp Tốt</Text>
+                            <Text style={styles.title}>Pawn Promotion</Text>
                         </View>
-                        <Text style={styles.subtitle}>Chọn quân cờ bạn muốn phong:</Text>
+                        <Text style={styles.subtitle}>Choose a piece to promote to:</Text>
 
                         <View style={styles.piecesContainer}>
                             {pieces.map((piece) => {
@@ -66,7 +66,7 @@ export function PromotionModal({ visible, onClose, onSelectPiece }: PromotionMod
                         </View>
 
                         <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-                            <Text style={styles.cancelButtonText}>Hủy</Text>
+                            <Text style={styles.cancelButtonText}>Cancel</Text>
                         </TouchableOpacity>
                     </View>
                 </TouchableOpacity>
