@@ -1,7 +1,7 @@
 import { PackageModal } from '@/components/tutorial/PackageModal';
+import { PromotionModal } from '@/components/tutorial/PromotionModal';
 import { TutorialBoard } from '@/components/tutorial/TutorialBoard';
 import {
-    createEmptyBoard,
     createStandardBoard,
     lessonBoards,
     lessonPackages,
@@ -24,6 +24,8 @@ export function TutorialScreen() {
     const [displayBoard, setDisplayBoard] = useState<any[]>(createStandardBoard());
     const [showPackageModal, setShowPackageModal] = useState(false);
     const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
+    const [showPromotionModal, setShowPromotionModal] = useState(false);
+    const [promotedPiece, setPromotedPiece] = useState<'q' | 'r' | 'b' | 'n'>('q');
 
     // Get lessons from selected package
     const lessons = selectedPackage ? lessonPackages.find(p => p.id === selectedPackage)?.lessons || [] : [];
@@ -61,9 +63,26 @@ export function TutorialScreen() {
             if (showingStart) {
                 // Move piece to the next valid target
                 const target = moves[moveIndex];
-                const nextBoard = createEmptyBoard();
-                // Move the piece from startPos to target
+                // Copy the base board to keep all other pieces
+                const nextBoard = [...baseBoard];
+                // Clear the start position
+                nextBoard[startPos] = null;
+                // Move the piece to target position
                 nextBoard[target] = baseBoard[startPos];
+
+                // Special case for En Passant: remove the captured pawn
+                if (label === 'En Passant' && target === 20) {
+                    // Remove Black pawn at e5 (position 28)
+                    nextBoard[28] = null;
+                }
+
+                // Special case for Promotion: show modal and change piece
+                if (label === 'Promotion' && target === 0) {
+                    setShowPromotionModal(true);
+                    // Change pawn to promoted piece
+                    nextBoard[target] = { type: promotedPiece, color: 'w' };
+                }
+
                 setDisplayBoard(nextBoard);
 
                 showingStart = false;
@@ -78,7 +97,7 @@ export function TutorialScreen() {
         }, 2000); // Switch every 2000ms (2 seconds)
 
         return () => clearInterval(timer);
-    }, [activeLessonId, currentLessonLabel]);
+    }, [activeLessonId, currentLessonLabel, promotedPiece]);
 
     const handleLessonSelect = (id: number) => {
         setActiveLessonId(id);
@@ -92,6 +111,10 @@ export function TutorialScreen() {
         if (newPackage && newPackage.lessons.length > 0) {
             setActiveLessonId(newPackage.lessons[0].id);
         }
+    };
+
+    const handlePromotionSelect = (pieceType: 'q' | 'r' | 'b' | 'n') => {
+        setPromotedPiece(pieceType);
     };
 
     return (
@@ -116,6 +139,13 @@ export function TutorialScreen() {
                 selectedPackage={selectedPackage || ''}
                 onClose={() => setShowPackageModal(false)}
                 onSelectPackage={handlePackageSelect}
+            />
+
+            {/* Promotion Modal */}
+            <PromotionModal
+                visible={showPromotionModal}
+                onClose={() => setShowPromotionModal(false)}
+                onSelectPiece={handlePromotionSelect}
             />
 
             {/* Main Content Container */}
