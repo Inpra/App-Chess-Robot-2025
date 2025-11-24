@@ -152,41 +152,95 @@ export const lessonBoards: Record<string, any[]> = {
     // Strategy Principles lessons
     'Center Control': (() => {
         const b = createEmptyBoard();
-        b[52] = { type: 'p', color: 'w' }; // e2 - White Pawn
-        b[51] = { type: 'p', color: 'w' }; // d2 - White Pawn
-        b[27] = { type: 'p', color: 'w' }; // d5 - Target center
-        b[28] = { type: 'p', color: 'w' }; // e5 - Target center
+        // Full starting position for both sides
+        // White pieces
+        b[56] = { type: 'r', color: 'w' }; // a1
+        b[57] = { type: 'n', color: 'w' }; // b1
+        b[58] = { type: 'b', color: 'w' }; // c1
+        b[59] = { type: 'q', color: 'w' }; // d1
+        b[60] = { type: 'k', color: 'w' }; // e1
+        b[61] = { type: 'b', color: 'w' }; // f1
+        b[62] = { type: 'n', color: 'w' }; // g1
+        b[63] = { type: 'r', color: 'w' }; // h1
+        // White pawns
+        for (let i = 48; i < 56; i++) {
+            b[i] = { type: 'p', color: 'w' };
+        }
+        // Black pieces
+        b[0] = { type: 'r', color: 'b' };  // a8
+        b[1] = { type: 'n', color: 'b' };  // b8
+        b[2] = { type: 'b', color: 'b' };  // c8
+        b[3] = { type: 'q', color: 'b' };  // d8
+        b[4] = { type: 'k', color: 'b' };  // e8
+        b[5] = { type: 'b', color: 'b' };  // f8
+        b[6] = { type: 'n', color: 'b' };  // g8
+        b[7] = { type: 'r', color: 'b' };  // h8
+        // Black pawns
+        for (let i = 8; i < 16; i++) {
+            b[i] = { type: 'p', color: 'b' };
+        }
         return b;
     })(),
     'Piece Development': (() => {
         const b = createEmptyBoard();
+        // Full starting position for White
+        b[56] = { type: 'r', color: 'w' }; // a1 - White Rook
         b[57] = { type: 'n', color: 'w' }; // b1 - White Knight
         b[58] = { type: 'b', color: 'w' }; // c1 - White Bishop
-        b[45] = { type: 'n', color: 'w' }; // f3 - Developed Knight
-        b[42] = { type: 'b', color: 'w' }; // c4 - Developed Bishop
+        b[59] = { type: 'q', color: 'w' }; // d1 - White Queen
+        b[60] = { type: 'k', color: 'w' }; // e1 - White King
+        b[61] = { type: 'b', color: 'w' }; // f1 - White Bishop
+        b[62] = { type: 'n', color: 'w' }; // g1 - White Knight
+        b[63] = { type: 'r', color: 'w' }; // h1 - White Rook
+        // White pawns
+        for (let i = 48; i < 56; i++) {
+            b[i] = { type: 'p', color: 'w' };
+        }
+        // Black pieces (simplified - just back rank)
+        b[0] = { type: 'r', color: 'b' };  // a8
+        b[1] = { type: 'n', color: 'b' };  // b8
+        b[2] = { type: 'b', color: 'b' };  // c8
+        b[3] = { type: 'q', color: 'b' };  // d8
+        b[4] = { type: 'k', color: 'b' };  // e8
+        b[5] = { type: 'b', color: 'b' };  // f8
+        b[6] = { type: 'n', color: 'b' };  // g8
+        b[7] = { type: 'r', color: 'b' };  // h8
+        // Black pawns
+        for (let i = 8; i < 16; i++) {
+            b[i] = { type: 'p', color: 'b' };
+        }
         return b;
     })(),
     'King Safety': (() => {
         const b = createEmptyBoard();
-        b[60] = { type: 'k', color: 'w' }; // e1 - White King
-        b[63] = { type: 'r', color: 'w' }; // h1 - White Rook
-        b[62] = { type: 'k', color: 'w' }; // g1 - King after castling
-        b[61] = { type: 'r', color: 'w' }; // f1 - Rook after castling
+        // White King in danger in the center
+        b[60] = { type: 'k', color: 'w' }; // e1 - White King (in center - dangerous!)
+        b[63] = { type: 'r', color: 'w' }; // h1 - White Rook (ready to castle)
+        b[48] = { type: 'p', color: 'w' }; // a2 - White Pawn
+        b[49] = { type: 'p', color: 'w' }; // b2 - White Pawn
+        b[50] = { type: 'p', color: 'w' }; // c2 - White Pawn
+        b[53] = { type: 'p', color: 'w' }; // f2 - White Pawn
+        b[54] = { type: 'p', color: 'w' }; // g2 - White Pawn
+        b[55] = { type: 'p', color: 'w' }; // h2 - White Pawn
+        // Black pieces threatening the center
+        b[4] = { type: 'k', color: 'b' };  // e8 - Black King
+        b[20] = { type: 'q', color: 'b' }; // e6 - Black Queen (threatening e1!)
+        b[3] = { type: 'r', color: 'b' };  // d8 - Black Rook (controlling d-file, preventing King from going right)
         return b;
     })(),
     // Basic Endgames lessons
     'King Queen vs King': (() => {
         const b = createEmptyBoard();
-        b[60] = { type: 'k', color: 'w' }; // e1 - White King
-        b[52] = { type: 'q', color: 'w' }; // e2 - White Queen
-        b[7] = { type: 'k', color: 'b' }; // h8 - Black King (trapped)
+        b[6] = { type: 'k', color: 'b' };  // g8 - Black King (starting position)
+        b[36] = { type: 'k', color: 'w' }; // e5 - White King (supporting)
+        b[27] = { type: 'q', color: 'w' }; // d4 - White Queen (ready to lock)
         return b;
     })(),
     'King Rook vs King': (() => {
         const b = createEmptyBoard();
-        b[60] = { type: 'k', color: 'w' }; // e1 - White King
-        b[56] = { type: 'r', color: 'w' }; // a1 - White Rook
-        b[7] = { type: 'k', color: 'b' }; // h8 - Black King (trapped)
+        b[36] = { type: 'k', color: 'w' }; // e4 - White King (helping)
+        b[8] = { type: 'r', color: 'w' };  // a7 - White Rook (cutting off rank 7)
+        b[7] = { type: 'k', color: 'b' };  // h8 - Black King (trapped)
         return b;
     })(),
 };
@@ -210,10 +264,10 @@ export const lessonStartPositions: Record<string, number> = {
     'Pin': 24,
     'Skewer': 56,
     'Discovered Attack': 36,
-    'Center Control': 52,
+    'Center Control': 51,
     'Piece Development': 57,
     'King Safety': 60,
-    'King Queen vs King': 52,
+    'King Queen vs King': 27,
     'King Rook vs King': 56,
 };
 
@@ -236,11 +290,11 @@ export const lessonValidMoves: Record<string, number[]> = {
     'Pin': [], // Handled by lessonComplexMoves
     'Skewer': [], // Handled by lessonComplexMoves
     'Discovered Attack': [], // Handled by lessonComplexMoves
-    'Center Control': [44, 36, 27, 28],
-    'Piece Development': [42, 45, 47, 40],
-    'King Safety': [62, 61],
-    'King Queen vs King': [15, 23, 31, 39, 47, 55, 63],
-    'King Rook vs King': [0, 8, 16, 24, 32, 40, 48],
+    'Center Control': [], // Handled by lessonComplexMoves
+    'Piece Development': [], // Handled by lessonComplexMoves
+    'King Safety': [], // Handled by lessonComplexMoves
+    'King Queen vs King': [], // Handled by lessonComplexMoves
+    'King Rook vs King': [], // Handled by lessonComplexMoves
 };
 
 // Lesson packages
@@ -292,11 +346,11 @@ export const lessonPackages = [
         description: 'Strategic concepts and endgame techniques',
         icon: 'compass',
         lessons: [
-            { id: 21, icon: 'grid', label: 'Center Control', description: 'Control the center (e4, d4, e5, d5). Owning the center gives your pieces more mobility.' },
-            { id: 22, icon: 'rocket', label: 'Piece Development', description: 'Develop your pieces! Get your Knights and Bishops out early to control the board.' },
-            { id: 23, icon: 'shield-checkmark', label: 'King Safety', description: 'Protect the King! Castle early to get your King out of the dangerous center files.' },
-            { id: 24, icon: 'checkmark-done-circle', label: 'King Queen vs King', description: 'Checkmate with Queen: Use the Queen to cut off the enemy King, then bring your King to help finish.' },
-            { id: 25, icon: 'checkmark-circle', label: 'King Rook vs King', description: 'Checkmate with Rook: Use the "Box" technique to push the enemy King to the edge of the board.' },
+            { id: 21, icon: 'grid', label: 'Center Control', description: 'Control the center! The 4 center squares (d4, d5, e4, e5) are the most important.\n\nWhy? Pieces in the center can attack more squares and control the game.\n\nStrategy: Move your pawns to d4 and e4 early to dominate the center!' },
+            { id: 22, icon: 'rocket', label: 'Piece Development', description: 'Develop your pieces in the first 5 moves!\n\n1. e4 - Open lines for Bishop and Queen\n2. Nf3 - Knight controls the center\n3. Bc4 - Bishop attacks weak point f7\n4. Nc3 - Second Knight develops\n5. d3 - Open line for Bishop c1\n\nGoal: Get ALL Knights and Bishops off rank 1 as soon as possible!' },
+            { id: 23, icon: 'shield-checkmark', label: 'King Safety', description: 'Protect the King by Castling!\n\nSituation: White King on e1 (center) is threatened by Black Queen on e6. Very dangerous!\n\nSolution: Short Castling (0-0)\n- King e1 → g1 (escape to safe corner)\n- Rook h1 → f1 (protect King)\n\nResult: King is protected by Pawns (f2, g2, h2) and Rook. Safe!' },
+            { id: 24, icon: 'checkmark-done-circle', label: 'King Queen vs King', description: '"Kiss of Death" Technique\n\nPosition: Black King g8, White King e5, White Queen d4\n\n1. Qe7 - "Lock the box", force King to rank 8 only\n2. Kh8 - King forced to corner\n3. Kf6 - White King advances to support\n4. Kg8 - King has only 1 move\n5. Qg7# - Final "kiss"! Checkmate!\n\nQueen delivers mate next to enemy King, protected by your King!' },
+            { id: 25, icon: 'checkmark-circle', label: 'King Rook vs King', description: 'Checkmate with Rook - "Box" Technique!\n\n1. Rook cuts horizontal rank (rank 7)\n2. White King advances\n3. Rook pushes Black King to rank 8\n4. White King gets closer\n5. Rook delivers checkmate on rank 8!\n\nPrinciple: Rook cuts rank, King supports, push to edge then checkmate!' },
         ]
     },
 ];
@@ -361,5 +415,41 @@ export const lessonComplexMoves: Record<string, { from: number; to: number }[]> 
         { from: 36, to: 18 }, // 1. Be4 -> c6 (Bishop moves, Discovered Check on e8, attacks Queen a4)
         { from: 4, to: 5 },   // 2. Ke8 -> f8 (King escapes)
         { from: 18, to: 32 }, // 3. Bc6 -> a4 (Bishop captures Queen)
+    ],
+    'Center Control': [
+        { from: 52, to: 44 }, // 1. e2 -> e4 (White pawn advances to center)
+        { from: 11, to: 27 }, // 2. d7 -> d5 (Black challenges center!)
+        { from: 44, to: 36 }, // 3. e4 -> e5 (White pawn advances)
+        { from: 51, to: 43 }, // 4. d2 -> d4 (White controls d4)
+        { from: 27, to: 36 }, // 5. d5 -> e4 (Black pawn advances)
+        { from: 43, to: 36 }, // 6. d4 x e4 (White captures diagonally - legal!)
+    ],
+    'Piece Development': [
+        { from: 52, to: 44 }, // 1. e2 -> e4 (Open lines for Bishop and Queen)
+        { from: 62, to: 45 }, // 2. Ng1 -> f3 (Knight develops, controls center)
+        { from: 61, to: 34 }, // 3. Bf1 -> c4 (Bishop develops, attacks f7)
+        { from: 57, to: 42 }, // 4. Nb1 -> c3 (Second Knight develops)
+        { from: 51, to: 43 }, // 5. d2 -> d3 (Open line for Bishop c1)
+        { from: 58, to: 37 }, // 6. Bc1 -> f4 (Second Bishop develops)
+    ],
+    'King Safety': [
+        { from: 60, to: 62 }, // 1. Ke1 -> g1 (King castles to safety)
+        { from: 63, to: 61 }, // 2. Rh1 -> f1 (Rook jumps over to protect King)
+    ],
+    'King Queen vs King': [
+        { from: 27, to: 12 }, // 1. Qd4 -> e7 ("Lock the box" - Queen cuts off rank 7)
+        { from: 6, to: 7 },   // 2. Kg8 -> h8 (King forced to corner)
+        { from: 36, to: 29 }, // 3. Ke5 -> f5 (White King advances 1 square)
+        { from: 7, to: 6 },   // 4. Kh8 -> g8 (Only legal move)
+        { from: 29, to: 21 }, // 5. Kf5 -> f6 (White King advances 1 more square)
+        { from: 6, to: 7 },   // 6. Kg8 -> h8 (King goes back)
+        { from: 12, to: 14 }, // 7. Qe7 -> g7# ("Kiss of Death" - Checkmate!)
+    ],
+    'King Rook vs King': [
+        { from: 36, to: 29 }, // 1. Ke4 -> f5 (King advances)
+        { from: 7, to: 6 },   // 2. Kh8 -> g8 (King tries to escape)
+        { from: 29, to: 22 }, // 3. Kf5 -> g6 (King gets closer)
+        { from: 6, to: 7 },   // 4. Kg8 -> h8 (King forced back)
+        { from: 8, to: 0 },   // 5. Ra7 -> a8# (Checkmate!)
     ]
 };

@@ -165,9 +165,7 @@ export default function TutorialScreen() {
                     <Ionicons name="arrow-back" size={24} color={Colors.light.text} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Tutorial</Text>
-                <TouchableOpacity>
-                    <Ionicons name="settings-outline" size={24} color={Colors.light.text} />
-                </TouchableOpacity>
+                <View style={{ width: 24 }} />
             </View>
 
             {/* Package Selection Modal */}

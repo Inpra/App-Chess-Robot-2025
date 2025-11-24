@@ -211,7 +211,7 @@ export const getTutorialStyles = ({ width, height }: { width: number, height: nu
             borderRadius: 20,
             padding: 24,
             width: '100%',
-            maxWidth: 400,
+            maxWidth: 480,
             shadowColor: '#000',
             shadowOffset: { width: 0, height: 10 },
             shadowOpacity: 0.3,
