@@ -1,6 +1,43 @@
 // Helper to create an empty board
 export const createEmptyBoard = () => Array(64).fill(null);
 
+// Helper to create a standard chess starting position
+export const createStandardBoard = () => {
+    const board = createEmptyBoard();
+
+    // Black pieces (top of board, ranks 8 and 7)
+    board[0] = { type: 'r', color: 'b' };  // a8
+    board[1] = { type: 'n', color: 'b' };  // b8
+    board[2] = { type: 'b', color: 'b' };  // c8
+    board[3] = { type: 'q', color: 'b' };  // d8
+    board[4] = { type: 'k', color: 'b' };  // e8
+    board[5] = { type: 'b', color: 'b' };  // f8
+    board[6] = { type: 'n', color: 'b' };  // g8
+    board[7] = { type: 'r', color: 'b' };  // h8
+
+    // Black pawns (rank 7)
+    for (let i = 8; i < 16; i++) {
+        board[i] = { type: 'p', color: 'b' };
+    }
+
+    // White pawns (rank 2)
+    for (let i = 48; i < 56; i++) {
+        board[i] = { type: 'p', color: 'w' };
+    }
+
+    // White pieces (bottom of board, rank 1)
+    board[56] = { type: 'r', color: 'w' };  // a1
+    board[57] = { type: 'n', color: 'w' };  // b1
+    board[58] = { type: 'b', color: 'w' };  // c1
+    board[59] = { type: 'q', color: 'w' };  // d1
+    board[60] = { type: 'k', color: 'w' };  // e1
+    board[61] = { type: 'b', color: 'w' };  // f1
+    board[62] = { type: 'n', color: 'w' };  // g1
+    board[63] = { type: 'r', color: 'w' };  // h1
+
+    return board;
+};
+
 // Hardcoded board setups for each lesson
 export const lessonBoards: Record<string, any[]> = {
     'Pawn': (() => {
@@ -85,6 +122,83 @@ export const lessonBoards: Record<string, any[]> = {
         b[6] = { type: 'n', color: 'b' }; // g8 - Black Knight
         return b;
     })(),
+    // Basic Tactics lessons
+    'Piece Value': (() => {
+        const b = createEmptyBoard();
+        b[28] = { type: 'q', color: 'w' }; // e5 - White Queen
+        b[36] = { type: 'p', color: 'b' }; // e4 - Black Pawn
+        b[20] = { type: 'r', color: 'b' }; // e6 - Black Rook
+        return b;
+    })(),
+    'Fork': (() => {
+        const b = createEmptyBoard();
+        b[36] = { type: 'n', color: 'w' }; // e4 - White Knight
+        b[18] = { type: 'r', color: 'b' }; // c6 - Black Rook
+        b[22] = { type: 'q', color: 'b' }; // g6 - Black Queen
+        return b;
+    })(),
+    'Pin': (() => {
+        const b = createEmptyBoard();
+        b[4] = { type: 'k', color: 'b' }; // e8 - Black King
+        b[12] = { type: 'q', color: 'b' }; // e7 - Black Queen
+        b[60] = { type: 'r', color: 'w' }; // e1 - White Rook (pinning Queen to King)
+        return b;
+    })(),
+    'Skewer': (() => {
+        const b = createEmptyBoard();
+        b[4] = { type: 'k', color: 'b' }; // e8 - Black King
+        b[20] = { type: 'r', color: 'b' }; // e6 - Black Rook
+        b[60] = { type: 'r', color: 'w' }; // e1 - White Rook (skewering King)
+        return b;
+    })(),
+    'Discovered Attack': (() => {
+        const b = createEmptyBoard();
+        b[28] = { type: 'b', color: 'w' }; // e5 - White Bishop
+        b[36] = { type: 'n', color: 'w' }; // e4 - White Knight (blocking Bishop)
+        b[4] = { type: 'k', color: 'b' }; // e8 - Black King
+        b[20] = { type: 'r', color: 'b' }; // e6 - Black Rook
+        return b;
+    })(),
+    // Strategy Principles lessons
+    'Center Control': (() => {
+        const b = createEmptyBoard();
+        b[52] = { type: 'p', color: 'w' }; // e2 - White Pawn
+        b[51] = { type: 'p', color: 'w' }; // d2 - White Pawn
+        b[27] = { type: 'p', color: 'w' }; // d5 - Target center
+        b[28] = { type: 'p', color: 'w' }; // e5 - Target center
+        return b;
+    })(),
+    'Piece Development': (() => {
+        const b = createEmptyBoard();
+        b[57] = { type: 'n', color: 'w' }; // b1 - White Knight
+        b[58] = { type: 'b', color: 'w' }; // c1 - White Bishop
+        b[45] = { type: 'n', color: 'w' }; // f3 - Developed Knight
+        b[42] = { type: 'b', color: 'w' }; // c4 - Developed Bishop
+        return b;
+    })(),
+    'King Safety': (() => {
+        const b = createEmptyBoard();
+        b[60] = { type: 'k', color: 'w' }; // e1 - White King
+        b[63] = { type: 'r', color: 'w' }; // h1 - White Rook
+        b[62] = { type: 'k', color: 'w' }; // g1 - King after castling
+        b[61] = { type: 'r', color: 'w' }; // f1 - Rook after castling
+        return b;
+    })(),
+    // Basic Endgames lessons
+    'King Queen vs King': (() => {
+        const b = createEmptyBoard();
+        b[60] = { type: 'k', color: 'w' }; // e1 - White King
+        b[52] = { type: 'q', color: 'w' }; // e2 - White Queen
+        b[7] = { type: 'k', color: 'b' }; // h8 - Black King (trapped)
+        return b;
+    })(),
+    'King Rook vs King': (() => {
+        const b = createEmptyBoard();
+        b[60] = { type: 'k', color: 'w' }; // e1 - White King
+        b[56] = { type: 'r', color: 'w' }; // a1 - White Rook
+        b[7] = { type: 'k', color: 'b' }; // h8 - Black King (trapped)
+        return b;
+    })(),
 };
 
 // Start positions for resetting the animation
@@ -103,6 +217,19 @@ export const lessonStartPositions: Record<string, number> = {
     'Stalemate': 9,
     'Insufficient Material': 60,
     'Threefold Repetition': 62,
+    // Basic Tactics
+    'Piece Value': 28,
+    'Fork': 36,
+    'Pin': 60,
+    'Skewer': 60,
+    'Discovered Attack': 36,
+    // Strategy Principles
+    'Center Control': 52,
+    'Piece Development': 57,
+    'King Safety': 60,
+    // Basic Endgames
+    'King Queen vs King': 52,
+    'King Rook vs King': 56,
 };
 
 // Hardcoded valid moves (indices) for the tutorial demonstration
@@ -121,6 +248,19 @@ export const lessonValidMoves: Record<string, number[]> = {
     'Stalemate': [1, 2, 10, 18], // Queen moves maintaining stalemate
     'Insufficient Material': [52, 44, 36, 28], // King moves (no checkmate possible)
     'Threefold Repetition': [45, 52], // Knight moves (f3, e2) showing repetition pattern
+    // Basic Tactics
+    'Piece Value': [36, 20], // Queen can take Pawn or Rook
+    'Fork': [18, 22], // Knight forks Rook and Queen
+    'Pin': [12, 20, 28, 36], // Rook moves along e-file showing pin
+    'Skewer': [12, 20, 28], // Rook attacking King, forcing it to move
+    'Discovered Attack': [45, 52, 44], // Knight moves revealing Bishop attack
+    // Strategy Principles
+    'Center Control': [44, 36, 27, 28], // Pawns controlling center squares
+    'Piece Development': [42, 45, 47, 40], // Developed piece positions
+    'King Safety': [62, 61], // King and Rook after castling
+    // Basic Endgames
+    'King Queen vs King': [15, 23, 31, 39, 47, 55, 63], // Queen cutting off King
+    'King Rook vs King': [0, 8, 16, 24, 32, 40, 48], // Rook cutting off King on a-file
 };
 
 // Lesson packages
@@ -161,6 +301,40 @@ export const lessonPackages = [
             { id: 12, icon: 'hand-left', label: 'Stalemate' },
             { id: 13, icon: 'remove-circle', label: 'Insufficient Material' },
             { id: 14, icon: 'repeat', label: 'Threefold Repetition' },
+        ]
+    },
+    {
+        id: 'tactics',
+        name: 'Chiến Thuật Cơ Bản',
+        description: 'Học các mánh khóe để giành lợi thế',
+        icon: 'bulb',
+        lessons: [
+            { id: 15, icon: 'stats-chart', label: 'Piece Value' },
+            { id: 16, icon: 'git-network', label: 'Fork' },
+            { id: 17, icon: 'pin', label: 'Pin' },
+            { id: 18, icon: 'arrow-redo', label: 'Skewer' },
+            { id: 19, icon: 'eye', label: 'Discovered Attack' },
+        ]
+    },
+    {
+        id: 'strategy',
+        name: 'Nguyên Tắc Chiến Lược',
+        description: 'Học các nguyên tắc chiến lược cơ bản',
+        icon: 'compass',
+        lessons: [
+            { id: 20, icon: 'grid', label: 'Center Control' },
+            { id: 21, icon: 'rocket', label: 'Piece Development' },
+            { id: 22, icon: 'shield-checkmark', label: 'King Safety' },
+        ]
+    },
+    {
+        id: 'endgame',
+        name: 'Kết Thúc Cơ Bản',
+        description: 'Học cách chiếu hết trong tàn cuộc',
+        icon: 'flag',
+        lessons: [
+            { id: 23, icon: 'checkmark-done-circle', label: 'King Queen vs King' },
+            { id: 24, icon: 'checkmark-circle', label: 'King Rook vs King' },
         ]
     },
 ];

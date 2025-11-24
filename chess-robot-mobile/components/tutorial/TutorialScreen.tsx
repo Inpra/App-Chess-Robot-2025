@@ -2,6 +2,7 @@ import { PackageModal } from '@/components/tutorial/PackageModal';
 import { TutorialBoard } from '@/components/tutorial/TutorialBoard';
 import {
     createEmptyBoard,
+    createStandardBoard,
     lessonBoards,
     lessonPackages,
     lessonStartPositions,
@@ -19,20 +20,30 @@ export function TutorialScreen() {
     const styles = useMemo(() => getTutorialStyles(dimensions), [dimensions]);
     const router = useRouter();
 
-    const [activeLessonId, setActiveLessonId] = useState(1);
-    const [displayBoard, setDisplayBoard] = useState<any[]>(createEmptyBoard());
+    const [activeLessonId, setActiveLessonId] = useState<number | null>(null);
+    const [displayBoard, setDisplayBoard] = useState<any[]>(createStandardBoard());
     const [showPackageModal, setShowPackageModal] = useState(false);
-    const [selectedPackage, setSelectedPackage] = useState('basic');
+    const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
 
     // Get lessons from selected package
-    const lessons = lessonPackages.find(p => p.id === selectedPackage)?.lessons || [];
+    const lessons = selectedPackage ? lessonPackages.find(p => p.id === selectedPackage)?.lessons || [] : [];
 
     // Get current lesson label
-    const currentLessonLabel = lessons.find(l => l.id === activeLessonId)?.label || 'Pawn';
-    const validMoves = lessonValidMoves[currentLessonLabel] || [];
+    const currentLessonLabel = activeLessonId ? lessons.find(l => l.id === activeLessonId)?.label || '' : '';
+    const validMoves = currentLessonLabel ? lessonValidMoves[currentLessonLabel] || [] : [];
+
+    // Check if current lesson is the last one
+    const currentLessonIndex = activeLessonId ? lessons.findIndex(l => l.id === activeLessonId) : -1;
+    const isLastLesson = currentLessonIndex !== -1 && currentLessonIndex === lessons.length - 1;
 
     // Animation Effect
     useEffect(() => {
+        // If no lesson selected, show standard board
+        if (!currentLessonLabel || !activeLessonId) {
+            setDisplayBoard(createStandardBoard());
+            return;
+        }
+
         const label = currentLessonLabel;
         const startPos = lessonStartPositions[label];
         const moves = lessonValidMoves[label] || [];
@@ -102,7 +113,7 @@ export function TutorialScreen() {
             <PackageModal
                 visible={showPackageModal}
                 packages={lessonPackages}
-                selectedPackage={selectedPackage}
+                selectedPackage={selectedPackage || ''}
                 onClose={() => setShowPackageModal(false)}
                 onSelectPackage={handlePackageSelect}
             />
@@ -114,51 +125,59 @@ export function TutorialScreen() {
 
                 {/* Tutorial Content */}
                 <View style={styles.tutorialSection}>
-                    <ScrollView contentContainerStyle={styles.lessonPathContainer} showsVerticalScrollIndicator={false}>
-                        {lessons.map((lesson, index) => {
-                            const isActive = lesson.id === activeLessonId;
-                            const isCompleted = lesson.id < activeLessonId;
-                            const isLast = index === lessons.length - 1;
+                    {selectedPackage ? (
+                        <ScrollView contentContainerStyle={styles.lessonPathContainer} showsVerticalScrollIndicator={false}>
+                            {lessons.map((lesson, index) => {
+                                const isActive = lesson.id === activeLessonId;
+                                const isCompleted = activeLessonId ? lesson.id < activeLessonId : false;
+                                const isLast = index === lessons.length - 1;
 
-                            return (
-                                <TouchableOpacity
-                                    key={lesson.id}
-                                    style={styles.lessonPathItem}
-                                    onPress={() => handleLessonSelect(lesson.id)}
-                                    activeOpacity={0.8}
-                                >
-                                    {!isLast && (
+                                return (
+                                    <TouchableOpacity
+                                        key={lesson.id}
+                                        style={styles.lessonPathItem}
+                                        onPress={() => handleLessonSelect(lesson.id)}
+                                        activeOpacity={0.8}
+                                    >
+                                        {!isLast && (
+                                            <View style={[
+                                                styles.lessonLine,
+                                                (isCompleted || isActive) && styles.lessonLineActive
+                                            ]} />
+                                        )}
+
                                         <View style={[
-                                            styles.lessonLine,
-                                            (isCompleted || isActive) && styles.lessonLineActive
-                                        ]} />
-                                    )}
-
-                                    <View style={[
-                                        styles.lessonTile,
-                                        isActive && styles.lessonTileActive,
-                                        isCompleted && styles.lessonTileCompleted
-                                    ]}>
-                                        <Ionicons
-                                            name={lesson.icon as any}
-                                            size={24}
-                                            color={isActive ? '#FFF' : (isCompleted ? Colors.light.primary : Colors.light.icon)}
-                                        />
-                                    </View>
-
-                                    {isActive && (
-                                        <View style={{ position: 'absolute', right: -80, backgroundColor: Colors.light.card, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: Colors.light.border }}>
-                                            <Text style={{ color: Colors.light.text, fontWeight: '600', fontSize: 14 }}>{lesson.label}</Text>
+                                            styles.lessonTile,
+                                            isActive && styles.lessonTileActive,
+                                            isCompleted && styles.lessonTileCompleted
+                                        ]}>
+                                            <Ionicons
+                                                name={lesson.icon as any}
+                                                size={24}
+                                                color={isActive ? '#FFF' : (isCompleted ? Colors.light.primary : Colors.light.icon)}
+                                            />
                                         </View>
-                                    )}
-                                </TouchableOpacity>
-                            );
-                        })}
-                    </ScrollView>
+
+                                        {isActive && (
+                                            <View style={{ position: 'absolute', right: -80, backgroundColor: Colors.light.card, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: Colors.light.border }}>
+                                                <Text style={{ color: Colors.light.text, fontWeight: '600', fontSize: 14 }}>{lesson.label}</Text>
+                                            </View>
+                                        )}
+                                    </TouchableOpacity>
+                                );
+                            })}
+                        </ScrollView>
+                    ) : (
+                        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }}>
+                            <Ionicons name="school-outline" size={64} color={Colors.light.icon} style={{ opacity: 0.3, marginBottom: 16 }} />
+                            <Text style={{ fontSize: 18, fontWeight: '600', color: Colors.light.text, marginBottom: 8, textAlign: 'center' }}>Chào mừng đến với Tutorial</Text>
+                            <Text style={{ fontSize: 14, color: Colors.light.icon, textAlign: 'center', marginBottom: 24 }}>Nhấn vào icon danh sách bên dưới để chọn khóa học</Text>
+                        </View>
+                    )}
 
                     {/* Action Bar */}
                     <View style={styles.actionBar}>
-                        <Text style={styles.actionTitle}>Learn To Play Chess</Text>
+                        <Text style={styles.actionTitle}>{selectedPackage ? 'Learn To Play Chess' : 'Chọn khóa học để bắt đầu'}</Text>
                         <View style={styles.actionRow}>
                             <TouchableOpacity
                                 style={styles.menuButton}
@@ -167,15 +186,31 @@ export function TutorialScreen() {
                                 <Ionicons name="list" size={24} color={Colors.light.icon} />
                             </TouchableOpacity>
                             <TouchableOpacity
-                                style={styles.nextButton}
+                                style={[
+                                    styles.nextButton,
+                                    (!selectedPackage || !activeLessonId || isLastLesson) && { opacity: 0.5 }
+                                ]}
                                 onPress={() => {
-                                    if (activeLessonId < lessons.length) {
-                                        handleLessonSelect(activeLessonId + 1);
+                                    if (activeLessonId && lessons.length > 0 && !isLastLesson) {
+                                        // Find current lesson index
+                                        const currentIndex = lessons.findIndex(l => l.id === activeLessonId);
+                                        // Check if there's a next lesson
+                                        if (currentIndex !== -1 && currentIndex < lessons.length - 1) {
+                                            handleLessonSelect(lessons[currentIndex + 1].id);
+                                        }
                                     }
                                 }}
+                                disabled={!selectedPackage || !activeLessonId || isLastLesson}
                             >
-                                <Text style={styles.nextButtonText}>Next Lesson</Text>
-                                <Ionicons name="arrow-forward" size={20} color="#FFF" style={{ marginLeft: 8 }} />
+                                <Text style={styles.nextButtonText}>
+                                    {isLastLesson ? 'Completed' : 'Next Lesson'}
+                                </Text>
+                                <Ionicons
+                                    name={isLastLesson ? 'checkmark-circle' : 'arrow-forward'}
+                                    size={20}
+                                    color="#FFF"
+                                    style={{ marginLeft: 8 }}
+                                />
                             </TouchableOpacity>
                         </View>
                     </View>
