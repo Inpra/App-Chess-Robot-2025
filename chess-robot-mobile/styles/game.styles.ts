@@ -88,6 +88,51 @@ export const getGameStyles = ({ width, height }: ScaledSize) => {
         piece: {
             // Optional: add shadow or specific styling for pieces
         },
+        playerInfoContainer: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            paddingVertical: 12,
+            paddingHorizontal: 16,
+            backgroundColor: Colors.light.card,
+            borderRadius: 16,
+            ...Styles.shadow,
+        },
+        playerInfo: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 12,
+        },
+        avatarContainer: {
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            backgroundColor: '#F3F4F6',
+            justifyContent: 'center',
+            alignItems: 'center',
+        },
+        playerName: {
+            fontSize: 16,
+            fontWeight: '600',
+            color: Colors.light.text,
+        },
+        playerElo: {
+            fontSize: 14,
+            color: Colors.light.icon,
+            marginLeft: 'auto',
+        },
+        timerContainer: {
+            backgroundColor: '#F3F4F6',
+            paddingHorizontal: 16,
+            paddingVertical: 8,
+            borderRadius: 12,
+        },
+        timerText: {
+            fontSize: 16,
+            fontWeight: '700',
+            color: Colors.light.text,
+            fontFamily: Platform.select({ ios: 'Courier New', android: 'monospace' }),
+        },
         controlsContainer: {
             flex: 1,
             gap: 24,

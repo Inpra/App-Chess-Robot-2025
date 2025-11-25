@@ -1,13 +1,15 @@
+import GameModeModal from '@/components/game/GameModeModal';
 import { Colors } from '@/constants/theme';
 import { getDashboardStyles } from '@/styles/dashboard.styles';
 import { Ionicons } from '@expo/vector-icons';
 import { Link, Stack } from 'expo-router';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Image, SafeAreaView, ScrollView, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 
 export default function DashboardScreen() {
   const dimensions = useWindowDimensions();
   const styles = useMemo(() => getDashboardStyles(dimensions), [dimensions]);
+  const [showGameModal, setShowGameModal] = useState(false);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -15,11 +17,12 @@ export default function DashboardScreen() {
 
       {/* Sidebar (Navigation) */}
       <View style={styles.sidebar}>
-        <Link href="/game/difficulty-select" asChild>
-          <TouchableOpacity style={styles.sidebarIcon}>
-            <Ionicons name="game-controller" size={28} color={Colors.light.primary} />
-          </TouchableOpacity>
-        </Link>
+        <TouchableOpacity
+          style={styles.sidebarIcon}
+          onPress={() => setShowGameModal(true)}
+        >
+          <Ionicons name="game-controller" size={28} color={Colors.light.primary} />
+        </TouchableOpacity>
         <TouchableOpacity style={[styles.sidebarIcon, styles.sidebarIconActive]}>
           <Ionicons name="home" size={24} color={Colors.light.primary} />
         </TouchableOpacity>
@@ -56,7 +59,7 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </Link>
         <View style={{ flex: 1 }} />
-        <Link href="/profile" asChild>
+        <Link href={"/profile" as any} asChild>
           <TouchableOpacity style={styles.sidebarIcon}>
             <Image
               source={{ uri: 'https://i.pravatar.cc/100?img=12' }}
@@ -187,6 +190,12 @@ export default function DashboardScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Game Mode Modal */}
+      <GameModeModal
+        visible={showGameModal}
+        onClose={() => setShowGameModal(false)}
+      />
     </SafeAreaView>
   );
 }
