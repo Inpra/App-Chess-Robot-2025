@@ -1,19 +1,17 @@
+import { Colors } from '@/constants/theme';
+import { Ionicons } from '@expo/vector-icons';
+import { Link, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  StyleSheet,
-  Text,
-  View,
-  TextInput,
-  TouchableOpacity,
-  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
-import { useRouter, Link } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '@/constants/theme';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -22,10 +20,11 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Please enter both email and password.');
-      return;
-    }
+    // Bypass login validation for now
+    // if (!email || !password) {
+    //   Alert.alert('Error', 'Please enter both email and password.');
+    //   return;
+    // }
     // Mock login success
     router.replace('/(tabs)');
   };

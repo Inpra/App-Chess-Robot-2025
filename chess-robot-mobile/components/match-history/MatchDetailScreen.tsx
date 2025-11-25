@@ -148,7 +148,35 @@ export default function MatchDetailScreen() {
                             </View>
                         </View>
 
-                        {/* Controls */}
+
+                    </View>
+
+                    {/* Right Column - Move List */}
+                    <View style={styles.rightColumn}>
+                        <View style={styles.moveListContainer}>
+                            <Text style={styles.moveListTitle}>Move List</Text>
+                            <ScrollView
+                                style={styles.moveListScroll}
+                                contentContainerStyle={{ paddingBottom: 8 }}
+                                showsVerticalScrollIndicator={true}
+                                nestedScrollEnabled={true}
+                            >
+                                <View style={styles.moveGrid}>
+                                    {moves.map((move, index) => (
+                                        <TouchableOpacity
+                                            key={index}
+                                            style={[styles.moveItem, index === currentMoveIndex - 1 && styles.activeMove]}
+                                            onPress={() => setCurrentMoveIndex(index + 1)}
+                                        >
+                                            <Text style={[styles.moveItemText, index === currentMoveIndex - 1 && styles.activeMoveText]}>
+                                                {index % 2 === 0 ? `${index / 2 + 1}.` : ''} {move}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            </ScrollView>
+                        </View>
+                        {/* Controls below move list */}
                         <View style={styles.controlsContainer}>
                             <TouchableOpacity
                                 style={[styles.controlButton, currentMoveIndex === 0 && styles.disabledButton]}
@@ -171,31 +199,6 @@ export default function MatchDetailScreen() {
                             >
                                 <Ionicons name="play-skip-forward" size={24} color={currentMoveIndex === moves.length ? '#D1D5DB' : Colors.light.text} />
                             </TouchableOpacity>
-                        </View>
-                    </View>
-
-                    {/* Right Column - Move List */}
-                    <View style={styles.rightColumn}>
-                        <View style={styles.moveListContainer}>
-                            <Text style={styles.moveListTitle}>Move List</Text>
-                            <ScrollView
-                                style={styles.moveListScroll}
-                                showsVerticalScrollIndicator={false}
-                            >
-                                <View style={styles.moveGrid}>
-                                    {moves.map((move, index) => (
-                                        <TouchableOpacity
-                                            key={index}
-                                            style={[styles.moveItem, index === currentMoveIndex - 1 && styles.activeMove]}
-                                            onPress={() => setCurrentMoveIndex(index + 1)}
-                                        >
-                                            <Text style={[styles.moveItemText, index === currentMoveIndex - 1 && styles.activeMoveText]}>
-                                                {index % 2 === 0 ? `${index / 2 + 1}.` : ''} {move}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    ))}
-                                </View>
-                            </ScrollView>
                         </View>
                     </View>
                 </View>

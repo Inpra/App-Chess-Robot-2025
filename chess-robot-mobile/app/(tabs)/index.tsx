@@ -70,7 +70,12 @@ export default function DashboardScreen() {
       </View>
 
       {/* Main Content */}
-      <ScrollView style={styles.mainContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.mainContent}
+        contentContainerStyle={{ paddingBottom: 40 }}
+        showsVerticalScrollIndicator={true}
+        bounces={true}
+      >
         {/* Header */}
         <View style={styles.header}>
           <View>

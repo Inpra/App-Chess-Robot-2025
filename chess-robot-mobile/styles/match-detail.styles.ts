@@ -3,10 +3,10 @@ import { Platform, ScaledSize, StyleSheet } from 'react-native';
 
 export const getMatchDetailStyles = ({ width, height }: ScaledSize) => {
     const isTablet = width >= 600;
-    // Calculate board size for two-column layout (right column gets ~60% of width)
+    // Calculate board size for two-column layout (board now gets ~70% of width)
     const availableWidth = width - (isTablet ? 64 : 40); // Subtract padding
-    const rightColumnWidth = availableWidth * 0.6; // Right column is 60% of available width
-    const boardSize = Math.min(rightColumnWidth - (isTablet ? 48 : 40), isTablet ? 450 : 320);
+    const leftColumnWidth = availableWidth * 0.7; // Left column is 70% of available width
+    const boardSize = Math.min(leftColumnWidth - (isTablet ? 32 : 24), isTablet ? 500 : 360);
 
     return StyleSheet.create({
         container: {
@@ -58,17 +58,17 @@ export const getMatchDetailStyles = ({ width, height }: ScaledSize) => {
         },
         mainLayout: {
             flexDirection: 'row',
-            gap: isTablet ? 24 : 20,
+            gap: isTablet ? 20 : 16,
             width: '100%',
             flex: 1,
         },
         leftColumn: {
-            flex: 2,
+            flex: 3,
             alignItems: 'center',
         },
         rightColumn: {
-            flex: 1,
-            minWidth: isTablet ? 250 : 180,
+            flex: 1.2,
+            minWidth: isTablet ? 200 : 150,
         },
         playerInfo: {
             flexDirection: 'row',
@@ -110,7 +110,7 @@ export const getMatchDetailStyles = ({ width, height }: ScaledSize) => {
         boardContainer: {
             width: boardSize,
             height: boardSize,
-            marginBottom: 28,
+            marginBottom: 20,
             borderRadius: 16,
             overflow: 'hidden',
             backgroundColor: '#EEE',
@@ -139,13 +139,14 @@ export const getMatchDetailStyles = ({ width, height }: ScaledSize) => {
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: isTablet ? 32 : 24,
-            width: '100%',
+            gap: isTablet ? 20 : 16,
+            marginTop: isTablet ? 16 : 12,
+            paddingHorizontal: isTablet ? 12 : 8,
         },
         controlButton: {
-            width: isTablet ? 56 : 48,
-            height: isTablet ? 56 : 48,
-            borderRadius: isTablet ? 28 : 24,
+            width: isTablet ? 48 : 44,
+            height: isTablet ? 48 : 44,
+            borderRadius: isTablet ? 24 : 22,
             backgroundColor: Colors.light.card,
             justifyContent: 'center',
             alignItems: 'center',
@@ -158,58 +159,58 @@ export const getMatchDetailStyles = ({ width, height }: ScaledSize) => {
             backgroundColor: '#F9FAFB',
         },
         moveDisplay: {
-            paddingHorizontal: isTablet ? 32 : 24,
-            paddingVertical: isTablet ? 16 : 12,
+            paddingHorizontal: isTablet ? 20 : 16,
+            paddingVertical: isTablet ? 12 : 10,
             backgroundColor: Colors.light.card,
-            borderRadius: 16,
+            borderRadius: 12,
             borderWidth: 1,
             borderColor: Colors.light.border,
-            minWidth: isTablet ? 140 : 120,
+            minWidth: isTablet ? 100 : 90,
             alignItems: 'center',
             ...Styles.shadow,
         },
         moveText: {
-            fontSize: isTablet ? 18 : 16,
+            fontSize: isTablet ? 16 : 14,
             fontWeight: '700',
             color: Colors.light.text,
             fontFamily: Platform.select({ ios: 'Courier New', android: 'monospace' }),
         },
         moveListContainer: {
             width: '100%',
-            height: '100%',
+            maxHeight: isTablet ? 450 : 380,
             backgroundColor: Colors.light.card,
-            borderRadius: 20,
-            padding: isTablet ? 24 : 20,
+            borderRadius: 16,
+            padding: isTablet ? 16 : 12,
             borderWidth: 1,
             borderColor: Colors.light.border,
             ...Styles.shadow,
         },
         moveListScroll: {
-            flex: 1,
-            maxHeight: isTablet ? 600 : 500,
+            flexGrow: 0,
+            flexShrink: 1,
         },
         moveListTitle: {
-            fontSize: isTablet ? 20 : 18,
+            fontSize: isTablet ? 18 : 16,
             fontWeight: '700',
             color: Colors.light.text,
-            marginBottom: 16,
+            marginBottom: 12,
         },
         moveGrid: {
-            flexDirection: 'row',
-            flexWrap: 'wrap',
-            gap: 8,
+            flexDirection: 'column',
+            gap: 6,
         },
         moveItem: {
             paddingHorizontal: 10,
-            paddingVertical: 6,
+            paddingVertical: 8,
             borderRadius: 8,
             backgroundColor: '#F9FAFB',
+            width: '100%',
         },
         activeMove: {
             backgroundColor: '#DBEAFE',
         },
         moveItemText: {
-            fontSize: isTablet ? 15 : 14,
+            fontSize: isTablet ? 14 : 13,
             color: '#4B5563',
             fontWeight: '600',
             fontFamily: Platform.select({ ios: 'Courier New', android: 'monospace' }),
