@@ -123,12 +123,13 @@ export default function DashboardScreen() {
                 <Ionicons name="time" size={32} color="#10B981" />
                 <Text style={styles.quickPlayText}>Rapid</Text>
               </TouchableOpacity>
-              <Link href="/game/difficulty-select" asChild>
-                <TouchableOpacity style={styles.quickPlayItem}>
-                  <Ionicons name="hardware-chip" size={32} color="#8B5CF6" />
-                  <Text style={styles.quickPlayText}>Vs Bot</Text>
-                </TouchableOpacity>
-              </Link>
+              <TouchableOpacity
+                style={styles.quickPlayItem}
+                onPress={() => setShowGameModal(true)}
+              >
+                <Ionicons name="hardware-chip" size={32} color="#8B5CF6" />
+                <Text style={styles.quickPlayText}>Vs Bot</Text>
+              </TouchableOpacity>
               <Link href="/puzzles" asChild>
                 <TouchableOpacity style={styles.quickPlayItem}>
                   <Ionicons name="extension-puzzle" size={32} color="#EC4899" />
