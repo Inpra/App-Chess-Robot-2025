@@ -1,0 +1,35 @@
+[33mcommit 6128510b681c7e2a22387cff37a0692b30f0a6dd[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfix/Ui/NewScreen[m[33m)[m
+Author: Hau <inprahima@gmail.com>
+Date:   Tue Nov 25 17:23:17 2025 +0700
+
+    fix ui history vs game
+
+[33mcommit 315d590c75704e42ef7d0de880cd5243094ecd31[m
+Author: Hau <inprahima@gmail.com>
+Date:   Tue Nov 25 11:55:58 2025 +0700
+
+    fix ui game vs history mathchmathch
+
+[33mcommit 870a49b59f5725106e240fbc4969f4c73090344b[m[33m ([m[1;31morigin/UI/NewScreen[m[33m)[m
+Author: Gia Hoang <giahoang29102002@gmail.com>
+Date:   Sun Nov 23 23:14:03 2025 +0700
+
+    Added New Screens
+
+[33mcommit 002c3112f72aeb894ce9ee6df592af490ede4495[m[33m ([m[1;31morigin/main[m[33m, [m[1;32mmain[m[33m)[m
+Author: Hau <inprahima@gmail.com>
+Date:   Sun Nov 23 20:49:09 2025 +0700
+
+    xoa files khong can thiet
+
+[33mcommit ba987eaca22ffd310cb9aad19412e9e7cff802a6[m[33m ([m[1;32mui/player_dashboard[m[33m)[m
+Author: Hau <inprahima@gmail.com>
+Date:   Sun Nov 23 12:32:04 2025 +0700
+
+    Updated Icons
+
+[33mcommit 2dfb51d9d369ef010cddef8b107c83b15a0438cd[m
+Author: Hau <inprahima@gmail.com>
+Date:   Sun Nov 23 11:03:36 2025 +0700
+
+    ui base
