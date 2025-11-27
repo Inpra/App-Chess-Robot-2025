@@ -1,0 +1,255 @@
+import { Colors } from '@/constants/theme';
+import { Dimensions, Platform, StyleSheet } from 'react-native';
+
+const { width } = Dimensions.get('window');
+
+export const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: Colors.light.background,
+    },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+        backgroundColor: 'transparent',
+    },
+    backButton: {
+        padding: 8,
+        borderRadius: 20,
+        backgroundColor: 'white',
+        ...Platform.select({
+            ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
+            android: { elevation: 2 },
+        }),
+    },
+    historyButton: {
+        padding: 8,
+    },
+    headerTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#111827',
+    },
+    content: {
+        padding: 24,
+        paddingTop: 10,
+    },
+    heroSection: {
+        marginBottom: 32,
+    },
+    heroTitle: {
+        fontSize: 28,
+        fontWeight: '800',
+        color: '#111827',
+        marginBottom: 8,
+        letterSpacing: -0.5,
+    },
+    heroSubtitle: {
+        fontSize: 16,
+        color: '#6B7280',
+        lineHeight: 24,
+    },
+    cardsContainer: {
+        gap: 20,
+    },
+    card: {
+        backgroundColor: 'white',
+        borderRadius: 24,
+        padding: 24,
+        ...Platform.select({
+            ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 12 },
+            android: { elevation: 4 },
+        }),
+        borderWidth: 1,
+        borderColor: Colors.light.border,
+    },
+    popularCard: {
+        borderWidth: 2,
+        transform: [{ scale: 1.02 }],
+    },
+    popularTag: {
+        position: 'absolute',
+        top: -12,
+        right: 24,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+        zIndex: 10,
+    },
+    popularText: {
+        color: 'white',
+        fontSize: 11,
+        fontWeight: '700',
+        letterSpacing: 0.5,
+    },
+    cardHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        marginBottom: 16,
+    },
+    iconContainer: {
+        width: 56,
+        height: 56,
+        borderRadius: 18,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    pointsContainer: {
+        alignItems: 'flex-end',
+    },
+    pointsValue: {
+        fontSize: 24,
+        fontWeight: '800',
+    },
+    pointsLabel: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#9CA3AF',
+        textTransform: 'uppercase',
+    },
+    cardBody: {
+        marginBottom: 24,
+    },
+    packageName: {
+        fontSize: 20,
+        fontWeight: '700',
+        color: '#111827',
+        marginBottom: 6,
+    },
+    packageDescription: {
+        fontSize: 15,
+        color: '#6B7280',
+        lineHeight: 22,
+    },
+    cardFooter: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    priceButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 14,
+        paddingHorizontal: 24,
+        borderRadius: 16,
+        width: '100%',
+    },
+    priceText: {
+        color: 'white',
+        fontWeight: '700',
+        fontSize: 16,
+    },
+    footerNote: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: 32,
+        gap: 8,
+    },
+    footerNoteText: {
+        fontSize: 13,
+        color: '#9CA3AF',
+        fontWeight: '500',
+    },
+    // Modal Styles
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 24,
+        backdropFilter: 'blur(4px)', // Works on some platforms
+    },
+    modalContent: {
+        backgroundColor: 'white',
+        borderRadius: 32,
+        padding: 32,
+        width: '100%',
+        maxWidth: 380,
+        alignItems: 'center',
+        ...Platform.select({
+            ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.2, shadowRadius: 20 },
+            android: { elevation: 10 },
+        }),
+    },
+    modalHeader: {
+        width: '100%',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 32,
+    },
+    modalTitle: {
+        fontSize: 22,
+        fontWeight: '700',
+        color: '#111827',
+    },
+    closeButton: {
+        padding: 8,
+        backgroundColor: Colors.light.background,
+        borderRadius: 20,
+    },
+    qrContainer: {
+        alignItems: 'center',
+        marginBottom: 32,
+        width: '100%',
+    },
+    qrPlaceholder: {
+        width: 220,
+        height: 220,
+        backgroundColor: 'white',
+        borderRadius: 24,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 24,
+        borderWidth: 2,
+        borderColor: Colors.light.border,
+        borderStyle: 'dashed',
+    },
+    payInstruction: {
+        fontSize: 15,
+        color: '#6B7280',
+        textAlign: 'center',
+        marginBottom: 24,
+        lineHeight: 22,
+    },
+    amountContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        width: '100%',
+        backgroundColor: Colors.light.background,
+        padding: 16,
+        borderRadius: 16,
+        alignItems: 'center',
+    },
+    amountLabel: {
+        fontSize: 14,
+        color: '#6B7280',
+        fontWeight: '500',
+    },
+    amountValue: {
+        fontSize: 18,
+        fontWeight: '800',
+        color: '#111827',
+    },
+    doneButton: {
+        paddingVertical: 16,
+        borderRadius: 20,
+        width: '100%',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 3,
+    },
+    doneButtonText: {
+        color: 'white',
+        fontWeight: '700',
+        fontSize: 16,
+    },
+});

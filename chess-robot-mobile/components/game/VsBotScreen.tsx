@@ -131,88 +131,96 @@ export default function VsBotScreen() {
             </View>
 
             <View style={styles.contentContainer}>
-                {/* Player Info (Top - Opponent) */}
-                <View style={styles.playerInfoContainer}>
-                    <View style={styles.playerInfo}>
-                        <View style={styles.avatarContainer}>
-                            <Ionicons name="hardware-chip" size={20} color="#6B7280" />
+                {/* Board Section: Players + Board */}
+                <View style={styles.boardSection}>
+                    {/* Match Header Card */}
+                    <View style={styles.matchHeader}>
+                        {/* You (Left) */}
+                        <View style={styles.playerSide}>
+                            <View style={styles.avatarContainer}>
+                                <Ionicons name="person" size={20} color="#6B7280" />
+                            </View>
+                            <View style={styles.playerDetails}>
+                                <Text style={styles.playerName}>You</Text>
+                                <Text style={styles.playerElo}>1200</Text>
+                            </View>
                         </View>
-                        <Text style={styles.playerName}>Robot Arm</Text>
-                        <Text style={styles.playerElo}>{elo || '1500'}</Text>
+
+                        {/* Score/Status (Center) */}
+                        <View style={styles.scoreContainer}>
+
+                            <View style={styles.timerPill}>
+                                <Text style={styles.timerText}>10:00</Text>
+                            </View>
+                        </View>
+
+                        {/* Robot (Right) */}
+                        <View style={styles.playerSideRight}>
+                            <View style={styles.avatarContainer}>
+                                <Ionicons name="hardware-chip" size={16} color="#6B7280" />
+                            </View>
+                            <View style={styles.playerDetailsRight}>
+                                <Text style={styles.playerName}>Robot</Text>
+                                <Text style={styles.playerElo}>{elo || '1500'}</Text>
+                            </View>
+                        </View>
                     </View>
-                    <View style={styles.timerContainer}>
-                        <Text style={styles.timerText}>10:00</Text>
+
+                    {/* Chess Board Area */}
+                    <View style={styles.boardContainer}>
+                        <View style={styles.boardPlaceholder}>
+                            <Image
+                                source={require('@/assets/images/chessboard.png')}
+                                style={{ width: '100%', height: '100%', resizeMode: 'stretch', borderRadius: 16 }}
+                            />
+                            {/* Chess Pieces Overlay */}
+                            <View style={styles.gridOverlay}>
+                                {Array.from({ length: 8 }).map((_, rowIndex) => (
+                                    Array.from({ length: 8 }).map((_, colIndex) => {
+                                        const index = rowIndex * 8 + colIndex;
+                                        const piece = board[index];
+                                        const isSelected = isSquareSelected(rowIndex, colIndex);
+                                        const isPossible = isPossibleMove(rowIndex, colIndex);
+                                        const isCheck = isSquareInCheck(rowIndex, colIndex);
+
+                                        return (
+                                            <TouchableOpacity
+                                                key={`${rowIndex}-${colIndex}`}
+                                                style={[
+                                                    styles.square,
+                                                    isSelected && styles.selectedSquare,
+                                                    isCheck && styles.checkSquare
+                                                ]}
+                                                onPress={() => handleSquareClick(rowIndex, colIndex)}
+                                                activeOpacity={0.7}
+                                            >
+                                                {/* Possible Move Dot */}
+                                                {isPossible && !piece && (
+                                                    <View style={styles.possibleMoveDot} />
+                                                )}
+
+                                                {/* Possible Capture Ring */}
+                                                {isPossible && piece && (
+                                                    <View style={[styles.possibleMoveDot, { backgroundColor: 'rgba(255, 0, 0, 0.4)', width: '100%', height: '100%', borderRadius: 0 }]} />
+                                                )}
+
+                                                {piece && (
+                                                    <Image
+                                                        source={getPieceImageSource(piece.type, piece.color)}
+                                                        style={{ width: '85%', height: '85%', resizeMode: 'contain' }}
+                                                    />
+                                                )}
+                                            </TouchableOpacity>
+                                        );
+                                    })
+                                ))}
+                            </View>
+                        </View>
                     </View>
                 </View>
 
-                {/* Chess Board Area */}
-                <View style={styles.boardContainer}>
-                    <View style={styles.boardPlaceholder}>
-                        <Image
-                            source={require('@/assets/images/chessboard.png')}
-                            style={{ width: '100%', height: '100%', resizeMode: 'stretch', borderRadius: 16 }}
-                        />
-                        {/* Chess Pieces Overlay */}
-                        <View style={styles.gridOverlay}>
-                            {Array.from({ length: 8 }).map((_, rowIndex) => (
-                                Array.from({ length: 8 }).map((_, colIndex) => {
-                                    const index = rowIndex * 8 + colIndex;
-                                    const piece = board[index];
-                                    const isSelected = isSquareSelected(rowIndex, colIndex);
-                                    const isPossible = isPossibleMove(rowIndex, colIndex);
-                                    const isCheck = isSquareInCheck(rowIndex, colIndex);
-
-                                    return (
-                                        <TouchableOpacity
-                                            key={`${rowIndex}-${colIndex}`}
-                                            style={[
-                                                styles.square,
-                                                isSelected && styles.selectedSquare,
-                                                isCheck && styles.checkSquare
-                                            ]}
-                                            onPress={() => handleSquareClick(rowIndex, colIndex)}
-                                            activeOpacity={0.7}
-                                        >
-                                            {/* Possible Move Dot */}
-                                            {isPossible && !piece && (
-                                                <View style={styles.possibleMoveDot} />
-                                            )}
-
-                                            {/* Possible Capture Ring (optional, reusing dot for now or custom style) */}
-                                            {isPossible && piece && (
-                                                <View style={[styles.possibleMoveDot, { backgroundColor: 'rgba(255, 0, 0, 0.4)', width: '100%', height: '100%', borderRadius: 0 }]} />
-                                            )}
-
-                                            {piece && (
-                                                <Image
-                                                    source={getPieceImageSource(piece.type, piece.color)}
-                                                    style={{ width: '85%', height: '85%', resizeMode: 'contain' }}
-                                                />
-                                            )}
-                                        </TouchableOpacity>
-                                    );
-                                })
-                            ))}
-                        </View>
-                    </View>
-                </View>
-
-                {/* Player Info (Bottom - User) */}
-                <View style={styles.playerInfoContainer}>
-                    <View style={styles.playerInfo}>
-                        <View style={styles.avatarContainer}>
-                            <Ionicons name="person" size={20} color="#6B7280" />
-                        </View>
-                        <Text style={styles.playerName}>You</Text>
-                        <Text style={styles.playerElo}>1200</Text>
-                    </View>
-                    <View style={styles.timerContainer}>
-                        <Text style={styles.timerText}>10:00</Text>
-                    </View>
-                </View>
-
-                {/* Controls & Info */}
-                <View style={styles.controlsContainer}>
+                {/* Sidebar: Controls & Info */}
+                <View style={styles.sidebar}>
                     {/* Robot Status */}
                     <View style={styles.statusCard}>
                         <Text style={styles.statusText}>Robot Status</Text>
