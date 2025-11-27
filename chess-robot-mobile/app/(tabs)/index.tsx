@@ -1,13 +1,15 @@
+import GameModeModal from '@/components/game/GameModeModal';
 import { Colors } from '@/constants/theme';
 import { getDashboardStyles } from '@/styles/dashboard.styles';
 import { Ionicons } from '@expo/vector-icons';
 import { Link, Stack } from 'expo-router';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Image, SafeAreaView, ScrollView, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 
 export default function DashboardScreen() {
   const dimensions = useWindowDimensions();
   const styles = useMemo(() => getDashboardStyles(dimensions), [dimensions]);
+  const [showGameModal, setShowGameModal] = useState(false);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -15,26 +17,33 @@ export default function DashboardScreen() {
 
       {/* Sidebar (Navigation) */}
       <View style={styles.sidebar}>
-        <Link href="/game/vs-bot" asChild>
-          <TouchableOpacity style={styles.sidebarIcon}>
-            <Ionicons name="game-controller" size={28} color={Colors.light.primary} />
-          </TouchableOpacity>
-        </Link>
+        <TouchableOpacity
+          style={styles.sidebarIcon}
+          onPress={() => setShowGameModal(true)}
+        >
+          <Ionicons name="game-controller" size={28} color={Colors.light.primary} />
+        </TouchableOpacity>
         <TouchableOpacity style={[styles.sidebarIcon, styles.sidebarIconActive]}>
           <Ionicons name="home" size={24} color={Colors.light.primary} />
         </TouchableOpacity>
         {/* Match History */}
-        <TouchableOpacity style={styles.sidebarIcon}>
-          <Ionicons name="time" size={24} color={Colors.light.icon} />
-        </TouchableOpacity>
+        <Link href="/match-history" asChild>
+          <TouchableOpacity style={styles.sidebarIcon}>
+            <Ionicons name="time" size={24} color={Colors.light.icon} />
+          </TouchableOpacity>
+        </Link>
         {/* View Ranking */}
-        <TouchableOpacity style={styles.sidebarIcon}>
-          <Ionicons name="trophy" size={24} color={Colors.light.icon} />
-        </TouchableOpacity>
+        <Link href="/ranking" asChild>
+          <TouchableOpacity style={styles.sidebarIcon}>
+            <Ionicons name="trophy" size={24} color={Colors.light.icon} />
+          </TouchableOpacity>
+        </Link>
         {/* Purchase Points */}
-        <TouchableOpacity style={styles.sidebarIcon}>
-          <Ionicons name="cart" size={24} color={Colors.light.icon} />
-        </TouchableOpacity>
+        <Link href="/purchase-points" asChild>
+          <TouchableOpacity style={styles.sidebarIcon}>
+            <Ionicons name="cart" size={24} color={Colors.light.icon} />
+          </TouchableOpacity>
+        </Link>
         {/* Settings */}
         <TouchableOpacity style={styles.sidebarIcon}>
           <Ionicons name="settings" size={24} color={Colors.light.icon} />
@@ -44,20 +53,29 @@ export default function DashboardScreen() {
           <Ionicons name="school" size={24} color={Colors.light.icon} />
         </TouchableOpacity>
         {/* FAQ/Support */}
-        <TouchableOpacity style={styles.sidebarIcon}>
-          <Ionicons name="headset" size={24} color={Colors.light.icon} />
-        </TouchableOpacity>
+        <Link href="/faq" asChild>
+          <TouchableOpacity style={styles.sidebarIcon}>
+            <Ionicons name="headset" size={24} color={Colors.light.icon} />
+          </TouchableOpacity>
+        </Link>
         <View style={{ flex: 1 }} />
-        <TouchableOpacity style={styles.sidebarIcon}>
-          <Image
-            source={{ uri: 'https://i.pravatar.cc/100?img=12' }}
-            style={{ width: 32, height: 32, borderRadius: 16 }}
-          />
-        </TouchableOpacity>
+        <Link href={"/profile" as any} asChild>
+          <TouchableOpacity style={styles.sidebarIcon}>
+            <Image
+              source={{ uri: 'https://i.pravatar.cc/100?img=12' }}
+              style={{ width: 32, height: 32, borderRadius: 16 }}
+            />
+          </TouchableOpacity>
+        </Link>
       </View>
 
       {/* Main Content */}
-      <ScrollView style={styles.mainContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.mainContent}
+        contentContainerStyle={{ paddingBottom: 40 }}
+        showsVerticalScrollIndicator={true}
+        bounces={true}
+      >
         {/* Header */}
         <View style={styles.header}>
           <View>
@@ -110,16 +128,19 @@ export default function DashboardScreen() {
                 <Ionicons name="time" size={32} color="#10B981" />
                 <Text style={styles.quickPlayText}>Rapid</Text>
               </TouchableOpacity>
-              <Link href="/game/vs-bot" asChild>
+              <TouchableOpacity
+                style={styles.quickPlayItem}
+                onPress={() => setShowGameModal(true)}
+              >
+                <Ionicons name="hardware-chip" size={32} color="#8B5CF6" />
+                <Text style={styles.quickPlayText}>Vs Bot</Text>
+              </TouchableOpacity>
+              <Link href="/puzzles" asChild>
                 <TouchableOpacity style={styles.quickPlayItem}>
-                  <Ionicons name="hardware-chip" size={32} color="#8B5CF6" />
-                  <Text style={styles.quickPlayText}>Vs Bot</Text>
+                  <Ionicons name="extension-puzzle" size={32} color="#EC4899" />
+                  <Text style={styles.quickPlayText}>Puzzles</Text>
                 </TouchableOpacity>
               </Link>
-              <TouchableOpacity style={styles.quickPlayItem}>
-                <Ionicons name="extension-puzzle" size={32} color="#EC4899" />
-                <Text style={styles.quickPlayText}>Puzzles</Text>
-              </TouchableOpacity>
             </View>
           </View>
 
@@ -152,7 +173,11 @@ export default function DashboardScreen() {
           <View style={styles.card}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <Text style={[styles.cardTitle, { marginBottom: 0 }]}>Live Rankings</Text>
-              <Text style={{ color: Colors.light.primary, fontWeight: '600' }}>View All</Text>
+              <Link href="/ranking" asChild>
+                <TouchableOpacity>
+                  <Text style={{ color: Colors.light.primary, fontWeight: '600' }}>View All</Text>
+                </TouchableOpacity>
+              </Link>
             </View>
 
             {[
@@ -171,6 +196,12 @@ export default function DashboardScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Game Mode Modal */}
+      <GameModeModal
+        visible={showGameModal}
+        onClose={() => setShowGameModal(false)}
+      />
     </SafeAreaView>
   );
 }

@@ -37,19 +37,82 @@ export const getGameStyles = ({ width, height }: ScaledSize) => {
         contentContainer: {
             flex: 1,
             flexDirection: isLandscape ? 'row' : 'column',
-            padding: isTablet ? 32 : 16,
+            padding: isTablet ? 24 : 16,
             gap: isTablet ? 32 : 24,
         },
-        boardContainer: {
-            flex: 2,
+        boardSection: {
+            flex: isLandscape ? 2 : 0,
             alignItems: 'center',
+            justifyContent: 'flex-start',
+            gap: 12,
+            width: isLandscape ? 'auto' : '100%',
+        },
+        matchHeader: {
+            width: isLandscape ? height - 280 : '100%',
+            maxWidth: 500,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            backgroundColor: Colors.light.card,
+            borderRadius: 20,
+            padding: 16,
+            ...Styles.shadow,
+        },
+        playerSide: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 12,
+            flex: 1,
+        },
+        playerSideRight: {
+            flexDirection: 'row-reverse',
+            alignItems: 'center',
+            gap: 12,
+            flex: 1,
+        },
+        playerDetails: {
             justifyContent: 'center',
+        },
+        playerDetailsRight: {
+            alignItems: 'flex-end',
+        },
+        scoreContainer: {
+            alignItems: 'center',
+            paddingHorizontal: 16,
+        },
+        scoreText: {
+            fontSize: 24,
+            fontWeight: '800',
+            color: Colors.light.text,
+        },
+        matchStatusText: {
+            fontSize: 12,
+            fontWeight: '600',
+            color: Colors.light.primary,
+            marginTop: 4,
+        },
+        timerPill: {
+            backgroundColor: '#F3F4F6',
+            paddingHorizontal: 10,
+            paddingVertical: 4,
+            borderRadius: 8,
+            marginTop: 4,
+        },
+        timerText: {
+            fontSize: 14,
+            fontWeight: '700',
+            color: Colors.light.text,
+            fontFamily: Platform.select({ ios: 'Courier New', android: 'monospace' }),
+        },
+        boardContainer: {
+            width: '100%',
+            aspectRatio: 1,
+            maxHeight: isLandscape ? height - 280 : width - 32,
+            maxWidth: 500,
             backgroundColor: Colors.light.card,
             borderRadius: 24,
-            padding: 20,
+            padding: 4,
             ...Styles.shadow,
-            aspectRatio: 1,
-            maxHeight: isLandscape ? '100%' : width - 32,
         },
         boardPlaceholder: {
             width: '100%',
@@ -87,6 +150,51 @@ export const getGameStyles = ({ width, height }: ScaledSize) => {
         },
         piece: {
             // Optional: add shadow or specific styling for pieces
+        },
+        // Re-adding these as they might be used by VsBotScreen (avatarContainer, playerName, etc are used in the new layout too)
+        avatarContainer: {
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            backgroundColor: '#F3F4F6',
+            justifyContent: 'center',
+            alignItems: 'center',
+        },
+        playerName: {
+            fontSize: 16,
+            fontWeight: '600',
+            color: Colors.light.text,
+        },
+        playerElo: {
+            fontSize: 14,
+            color: Colors.light.icon,
+        },
+        playerInfoContainer: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            backgroundColor: Colors.light.card,
+            borderRadius: 16,
+            padding: 16,
+            marginHorizontal: isTablet ? 24 : 16,
+            ...Styles.shadow,
+        },
+        playerInfo: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 12,
+        },
+        timerContainer: {
+            backgroundColor: '#F3F4F6',
+            paddingHorizontal: 12,
+            paddingVertical: 6,
+            borderRadius: 8,
+        },
+        sidebar: {
+            flex: 1,
+            gap: 16,
+            width: isLandscape ? 'auto' : '100%',
+            maxWidth: isLandscape ? 400 : '100%',
         },
         controlsContainer: {
             flex: 1,
@@ -149,6 +257,7 @@ export const getGameStyles = ({ width, height }: ScaledSize) => {
             borderRadius: 20,
             padding: 20,
             ...Styles.shadow,
+            minHeight: 200,
         },
         historyTitle: {
             fontSize: 18,
