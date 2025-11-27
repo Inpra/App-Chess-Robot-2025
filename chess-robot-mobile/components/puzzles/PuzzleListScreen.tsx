@@ -1,3 +1,4 @@
+import NavigationHeader from '@/components/common/NavigationHeader';
 import { Colors } from '@/constants/theme';
 import { puzzleListStyles as styles } from '@/styles/puzzles.styles';
 import { Ionicons } from '@expo/vector-icons';
@@ -54,13 +55,10 @@ export default function PuzzleListScreen() {
             <Stack.Screen options={{ headerShown: false }} />
 
             {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.navigate('/(tabs)')} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color={Colors.light.text} />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Chess Puzzles</Text>
-                <View style={{ width: 40 }} />
-            </View>
+            <NavigationHeader
+                title="Chess Puzzles"
+                onBack={() => router.navigate('/(tabs)')}
+            />
 
             <FlatList
                 data={puzzles}

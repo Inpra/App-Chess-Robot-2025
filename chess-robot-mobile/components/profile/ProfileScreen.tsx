@@ -1,3 +1,4 @@
+import NavigationHeader from '@/components/common/NavigationHeader';
 import { Colors } from '@/constants/theme';
 import { profileStyles as styles } from '@/styles/profile.styles';
 import { Ionicons } from '@expo/vector-icons';
@@ -55,13 +56,10 @@ export default function ProfileScreen() {
             <Stack.Screen options={{ headerShown: false }} />
 
             {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.navigate('/(tabs)')} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color={Colors.light.text} />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Profile & Settings</Text>
-                <View style={{ width: 40 }} />
-            </View>
+            <NavigationHeader
+                title="Profile & Settings"
+                onBack={() => router.navigate('/(tabs)')}
+            />
 
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
                 {/* User Profile Card */}

@@ -1,3 +1,4 @@
+import NavigationHeader from '@/components/common/NavigationHeader';
 import { Colors } from '@/constants/theme';
 import { getMatchHistoryStyles } from '@/styles/match-history.styles';
 import { Ionicons } from '@expo/vector-icons';
@@ -132,13 +133,10 @@ export default function MatchHistoryScreen() {
             <Stack.Screen options={{ headerShown: false }} />
 
             {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.navigate('/(tabs)')} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color={Colors.light.text} />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Match History</Text>
-                <View style={{ width: 40 }} />
-            </View>
+            <NavigationHeader
+                title="Match History"
+                onBack={() => router.navigate('/(tabs)')}
+            />
 
             <FlatList
                 data={MATCH_HISTORY}

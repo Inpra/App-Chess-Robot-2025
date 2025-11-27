@@ -1,3 +1,4 @@
+import NavigationHeader from '@/components/common/NavigationHeader';
 import { PackageModal } from '@/components/tutorial/PackageModal';
 import { PromotionModal } from '@/components/tutorial/PromotionModal';
 import { TutorialBoard } from '@/components/tutorial/TutorialBoard';
@@ -160,13 +161,7 @@ export default function TutorialScreen() {
             <Stack.Screen options={{ headerShown: false }} />
 
             {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()}>
-                    <Ionicons name="arrow-back" size={24} color={Colors.light.text} />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Tutorial</Text>
-                <View style={{ width: 24 }} />
-            </View>
+            <NavigationHeader title="Tutorial" />
 
             {/* Package Selection Modal */}
             <PackageModal
