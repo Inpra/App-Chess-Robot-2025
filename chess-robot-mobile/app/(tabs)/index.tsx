@@ -49,9 +49,11 @@ export default function DashboardScreen() {
           <Ionicons name="settings" size={24} color={Colors.light.icon} />
         </TouchableOpacity>
         {/* Tutorial */}
-        <TouchableOpacity style={styles.sidebarIcon}>
-          <Ionicons name="school" size={24} color={Colors.light.icon} />
-        </TouchableOpacity>
+        <Link href={"/tutorial" as any} asChild>
+          <TouchableOpacity style={styles.sidebarIcon}>
+            <Ionicons name="school" size={24} color={Colors.light.icon} />
+          </TouchableOpacity>
+        </Link>
         {/* FAQ/Support */}
         <Link href="/faq" asChild>
           <TouchableOpacity style={styles.sidebarIcon}>
