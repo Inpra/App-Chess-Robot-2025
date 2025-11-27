@@ -17,19 +17,32 @@ export default function DashboardScreen() {
 
       {/* Sidebar (Navigation) */}
       <View style={styles.sidebar}>
+        <TouchableOpacity style={[styles.sidebarIcon, styles.sidebarIconActive]}>
+          <Ionicons name="home" size={24} color={Colors.light.primary} />
+        </TouchableOpacity>
         <TouchableOpacity
           style={styles.sidebarIcon}
           onPress={() => setShowGameModal(true)}
         >
           <Ionicons name="game-controller" size={28} color={Colors.light.primary} />
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.sidebarIcon, styles.sidebarIconActive]}>
-          <Ionicons name="home" size={24} color={Colors.light.primary} />
-        </TouchableOpacity>
+
         {/* Match History */}
         <Link href="/match-history" asChild>
           <TouchableOpacity style={styles.sidebarIcon}>
             <Ionicons name="time" size={24} color={Colors.light.icon} />
+          </TouchableOpacity>
+        </Link>
+        {/* Tutorial */}
+        <Link href={"/tutorial" as any} asChild>
+          <TouchableOpacity style={styles.sidebarIcon}>
+            <Ionicons name="school" size={24} color={Colors.light.icon} />
+          </TouchableOpacity>
+        </Link>
+        {/* Puzzles */}
+        <Link href="/puzzles" asChild>
+          <TouchableOpacity style={styles.sidebarIcon}>
+            <Ionicons name="extension-puzzle" size={24} color={Colors.light.icon} />
           </TouchableOpacity>
         </Link>
         {/* View Ranking */}
@@ -44,16 +57,11 @@ export default function DashboardScreen() {
             <Ionicons name="cart" size={24} color={Colors.light.icon} />
           </TouchableOpacity>
         </Link>
-        {/* Settings */}
+        {/* Theme */}
         <TouchableOpacity style={styles.sidebarIcon}>
-          <Ionicons name="settings" size={24} color={Colors.light.icon} />
+          <Ionicons name="color-palette" size={24} color={Colors.light.icon} />
         </TouchableOpacity>
-        {/* Tutorial */}
-        <Link href={"/tutorial" as any} asChild>
-          <TouchableOpacity style={styles.sidebarIcon}>
-            <Ionicons name="school" size={24} color={Colors.light.icon} />
-          </TouchableOpacity>
-        </Link>
+
         {/* FAQ/Support */}
         <Link href="/faq" asChild>
           <TouchableOpacity style={styles.sidebarIcon}>

@@ -44,24 +44,24 @@ export function PackageModal({ visible, packages, selectedPackage, onClose, onSe
                 onPress={onClose}
             >
                 <TouchableOpacity activeOpacity={1}>
-                    <View style={[styles.modalContent, { maxHeight: dimensions.height * 0.7 }]}>
+                    <View style={[styles.modalContent, { maxHeight: dimensions.height * 2 }]}>
                         <View style={{
                             flexDirection: 'row',
                             justifyContent: 'space-between',
                             alignItems: 'center',
-                            marginBottom: 16,
+                            marginBottom: 30,
                             borderBottomWidth: 1,
                             borderBottomColor: Colors.light.border,
                             paddingBottom: 12
                         }}>
                             <Text style={styles.modalTitle}>Select Course</Text>
                             <TouchableOpacity onPress={onClose}>
-                                <Ionicons name="close" size={24} color={Colors.light.text} />
+                                
                             </TouchableOpacity>
                         </View>
 
                         <ScrollView
-                            style={{ maxHeight: dimensions.height * 0.5 }}
+                            style={{ maxHeight: dimensions.height * 2 }}
                             showsVerticalScrollIndicator={false}
                         >
                             {packages.map((pkg) => (

@@ -267,12 +267,19 @@ export default function PuzzleGameScreen() {
 
                         <View style={{ flexDirection: 'row', gap: 12 }}>
                             <TouchableOpacity style={[styles.actionButton, { flex: 1 }]}>
+                                <Ionicons name="arrow-undo" size={20} color={Colors.light.text} />
+                                <Text style={styles.actionButtonText}>Undo</Text>
+                            </TouchableOpacity>
+                            
+                            <TouchableOpacity style={[styles.actionButton, { flex: 1 }]}>
+                                <Ionicons name="pause" size={20} color={Colors.light.text} />
+                                <Text style={styles.actionButtonText}>Pause</Text>
+                            </TouchableOpacity>
+                            
+                            
+                            <TouchableOpacity style={[styles.actionButton, { flex: 1 }]}>
                                 <Ionicons name="bulb" size={20} color={Colors.light.text} />
                                 <Text style={styles.actionButtonText}>Hint</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={[styles.actionButton, { flex: 1 }]}>
-                                <Ionicons name="refresh" size={20} color={Colors.light.text} />
-                                <Text style={styles.actionButtonText}>Retry</Text>
                             </TouchableOpacity>
                         </View>
                     </View>

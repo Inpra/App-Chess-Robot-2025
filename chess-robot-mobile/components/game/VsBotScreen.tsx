@@ -247,11 +247,20 @@ export default function VsBotScreen() {
                                 <Ionicons name="arrow-undo" size={20} color={Colors.light.text} />
                                 <Text style={styles.actionButtonText}>Undo</Text>
                             </TouchableOpacity>
+                            
+                            <TouchableOpacity style={[styles.actionButton, { flex: 1 }]}>
+                                <Ionicons name="pause" size={20} color={Colors.light.text} />
+                                <Text style={styles.actionButtonText}>Pause</Text>
+                            </TouchableOpacity>
+
+
                             <TouchableOpacity style={[styles.actionButton, { flex: 1 }]}>
                                 <Ionicons name="bulb" size={20} color={Colors.light.text} />
                                 <Text style={styles.actionButtonText}>Hint</Text>
                             </TouchableOpacity>
+
                         </View>
+
                         <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#FEF2F2' }]}>
                             <Ionicons name="flag" size={20} color="#EF4444" />
                             <Text style={[styles.actionButtonText, { color: '#EF4444' }]}>Resign Game</Text>
