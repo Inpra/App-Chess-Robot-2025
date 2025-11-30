@@ -1,0 +1,234 @@
+.tutorial-container {
+    flex: 1;
+    background-color: var(--color-background);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.tutorial-main-container {
+    flex: 1;
+    display: flex;
+    flex-direction: row;
+    /* Default to landscape-like for web */
+}
+
+@media (max-width: 768px) {
+    .tutorial-main-container {
+        flex-direction: column;
+    }
+}
+
+.tutorial-header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background-color: var(--color-background);
+    z-index: 10;
+}
+
+/* Board Area */
+.board-container {
+    width: 60%;
+    height: 100%;
+    background-color: var(--color-card);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+@media (max-width: 768px) {
+    .board-container {
+        width: 100%;
+        height: auto;
+        padding: 20px 0;
+    }
+}
+
+.board-wrapper {
+    width: 500px;
+    height: 500px;
+    position: relative;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+@media (max-width: 1024px) {
+    .board-wrapper {
+        width: 400px;
+        height: 400px;
+    }
+}
+
+@media (max-width: 768px) {
+    .board-wrapper {
+        width: 90vw;
+        height: 90vw;
+    }
+}
+
+/* Tutorial Section */
+.tutorial-section {
+    flex: 1;
+    background-color: var(--color-background);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.lesson-path-container {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-bottom: 100px;
+    overflow-y: auto;
+}
+
+.lesson-path-item {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    margin-bottom: 24px;
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    cursor: pointer;
+}
+
+.lesson-left-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 60px;
+    margin-right: 12px;
+    position: relative;
+}
+
+.lesson-line {
+    position: absolute;
+    top: 20px;
+    bottom: -44px;
+    width: 2px;
+    background-color: rgba(0, 0, 0, 0.08);
+    z-index: -1;
+}
+
+.lesson-line.active {
+    background-color: var(--color-primary);
+}
+
+.lesson-tile {
+    width: 56px;
+    height: 56px;
+    border-radius: 18px;
+    background-color: var(--color-card);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 1.5px solid rgba(0, 0, 0, 0.06);
+    transition: all 0.2s;
+}
+
+.lesson-tile.active {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+    transform: scale(1.1);
+    color: white;
+}
+
+.lesson-tile.completed {
+    background-color: var(--color-card);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.lesson-content {
+    flex: 1;
+    padding-top: 4px;
+}
+
+.lesson-card-active {
+    background-color: var(--color-card);
+    padding: 12px;
+    border-radius: 12px;
+    border: 2px solid var(--color-primary);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.lesson-title-active {
+    color: var(--color-primary);
+    font-weight: 700;
+    font-size: 15px;
+    margin-bottom: 4px;
+}
+
+.lesson-desc {
+    color: var(--color-text);
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.lesson-title-inactive {
+    font-size: 14px;
+    padding-top: 10px;
+}
+
+/* Action Bar */
+.action-bar {
+    margin-top: auto;
+    padding-top: 20px;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.action-title {
+    color: var(--color-text);
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 16px;
+}
+
+.action-row {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+}
+
+.menu-button {
+    width: 52px;
+    height: 52px;
+    background-color: var(--color-card);
+    border-radius: 16px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    cursor: pointer;
+}
+
+.next-button {
+    flex: 1;
+    height: 52px;
+    background-color: var(--color-primary);
+    border-radius: 16px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    color: white;
+    font-weight: 600;
+    font-size: 16px;
+    cursor: pointer;
+    border: none;
+}
+
+.next-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

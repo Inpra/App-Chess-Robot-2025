@@ -1,0 +1,96 @@
+.puzzles-container {
+    flex: 1;
+    background-color: var(--color-background);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.puzzles-header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background-color: var(--color-card);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.puzzles-list-content {
+    padding: 16px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.puzzle-card {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    background-color: var(--color-card);
+    padding: 16px;
+    border-radius: 16px;
+    margin-bottom: 12px;
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+    text-decoration: none;
+    transition: transform 0.2s;
+}
+
+.puzzle-card:hover {
+    transform: translateY(-2px);
+}
+
+.puzzle-icon-container {
+    width: 48px;
+    height: 48px;
+    border-radius: 24px;
+    background-color: #EEF2FF;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-right: 16px;
+    color: var(--color-primary);
+}
+
+.puzzle-icon-container.solved {
+    background-color: #D1FAE5;
+    color: #10B981;
+}
+
+.puzzle-info {
+    flex: 1;
+}
+
+.puzzle-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-text);
+    margin-bottom: 4px;
+}
+
+.puzzle-meta {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.puzzle-rating {
+    font-size: 14px;
+    color: #6B7280;
+    font-weight: 500;
+}
+
+.dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 2px;
+    background-color: #D1D5DB;
+    margin: 0 8px;
+}
+
+.puzzle-theme {
+    font-size: 14px;
+    color: var(--color-primary);
+    font-weight: 500;
+}
