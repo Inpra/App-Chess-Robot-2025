@@ -339,28 +339,24 @@ export default function VsBot() {
                             </span>
                         </button>
 
-                        {/* Start Game Button */}
-                        <button
-                            className="vs-bot-action-button"
-                            onClick={handleStartGame}
-                            disabled={!isConnected || isStartingGame || gameStatus === 'playing'}
-                            style={{
-                                backgroundColor: gameStatus === 'playing' ? '#10B981' : '#3B82F6',
-                                color: 'white'
-                            }}
-                        >
-                            <Play size={20} color="#FFF" />
-                            <span className="vs-bot-action-button-text" style={{ color: 'white' }}>
-                                {isStartingGame ? 'Starting...' :
-                                    gameStatus === 'playing' ? 'Game Active' : 'Start Game'}
-                            </span>
-                        </button>
-
                         <div className="vs-bot-action-row">
-                            {/* <button className="vs-bot-action-button" style={{ flex: 1 }}>
-                                <RotateCcw size={20} color="var(--color-text)" />
-                                <span className="vs-bot-action-button-text">Undo</span>
-                            </button> */}
+                            {/* Start Game Button */}
+                            <button
+                                className="vs-bot-action-button"
+                                onClick={handleStartGame}
+                                disabled={!isConnected || isStartingGame || gameStatus === 'playing'}
+                                style={{
+                                    flex: 1,
+                                    backgroundColor: '#FFFFFF',
+
+                                }}
+                            >
+                                <Play size={20} color={gameStatus === 'playing' ? '#000000ff' : '#000000ff'} />
+                                <span className="vs-bot-action-button-text" style={{ color: gameStatus === 'playing' ? '#10B981' : '#050a11ff' }}>
+                                    {isStartingGame ? 'Starting...' :
+                                        gameStatus === 'playing' ? 'Game Active' : 'Start Game'}
+                                </span>
+                            </button>
 
                             <button className="vs-bot-action-button" style={{ flex: 1 }}>
                                 <Pause size={20} color="var(--color-text)" />

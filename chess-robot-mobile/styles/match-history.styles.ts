@@ -38,13 +38,11 @@ export const getMatchHistoryStyles = ({ width, height }: ScaledSize) => {
         statsSummary: {
             flexDirection: 'row',
             backgroundColor: Colors.light.card,
-            borderRadius: 20,
+            borderRadius: 16,
             padding: isTablet ? 28 : 20,
             justifyContent: 'space-between',
             alignItems: 'center',
             marginBottom: 28,
-            borderWidth: 1,
-            borderColor: Colors.light.border,
             ...Styles.shadow,
         },
         summaryItem: {
@@ -75,11 +73,9 @@ export const getMatchHistoryStyles = ({ width, height }: ScaledSize) => {
         },
         matchCard: {
             backgroundColor: Colors.light.card,
-            borderRadius: 20,
+            borderRadius: 16,
             padding: isTablet ? 20 : 16,
             marginBottom: 16,
-            borderWidth: 1,
-            borderColor: Colors.light.border,
             ...Styles.shadow,
         },
         matchHeader: {
@@ -97,7 +93,7 @@ export const getMatchHistoryStyles = ({ width, height }: ScaledSize) => {
         avatarContainer: {
             width: 48,
             height: 48,
-            borderRadius: 24,
+            borderRadius: 12,
             backgroundColor: '#F3F4F6',
             justifyContent: 'center',
             alignItems: 'center',
