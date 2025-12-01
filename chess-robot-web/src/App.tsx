@@ -23,6 +23,7 @@ import Puzzles from './pages/Puzzles';
 import Tutorial from './pages/Tutorial';
 import DifficultySelect from './pages/DifficultySelect';
 import VsBot from './pages/VsBot';
+import MatchDetail from './pages/MatchDetail';
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -204,6 +205,7 @@ function App() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/game/vs-bot" element={<VsBot />} />
         <Route path="/match-history" element={<MatchHistory />} />
+        <Route path="/match-history/:id" element={<MatchDetail />} />
         <Route path="/ranking" element={<Ranking />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/puzzles" element={<Puzzles />} />

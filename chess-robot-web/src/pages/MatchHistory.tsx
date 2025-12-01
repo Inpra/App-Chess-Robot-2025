@@ -103,7 +103,7 @@ export default function MatchHistory() {
                 <h3 className="section-title">Recent Matches</h3>
 
                 {MATCH_HISTORY.map((item) => (
-                    <div key={item.id} className="match-card">
+                    <div key={item.id} className="match-card" onClick={() => navigate(`/match-history/${item.id}`)}>
                         <div className="match-header">
                             <div className="opponent-info">
                                 <div className="avatar-container">

@@ -6,32 +6,28 @@
     flex-direction: column;
 }
 
-.tutorial-main-container {
-    flex: 1;
-    display: flex;
-    flex-direction: row;
-    /* Default to landscape-like for web */
-}
-
-@media (max-width: 768px) {
-    .tutorial-main-container {
-        flex-direction: column;
-    }
-}
-
 .tutorial-header {
     display: flex;
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    padding: 16px 20px;
+    padding: 20px 32px;
     background-color: var(--color-background);
     z-index: 10;
 }
 
+.tutorial-main-container {
+    flex: 1;
+    display: flex;
+    flex-direction: row;
+    /* Landscape layout by default for web */
+    overflow: hidden;
+}
+
 /* Board Area */
 .board-container {
-    width: 60%;
+    width: 50%;
+    /* 50% width for board */
     height: 100%;
     background-color: var(--color-card);
     display: flex;
@@ -40,38 +36,53 @@
     padding: 20px;
 }
 
-@media (max-width: 768px) {
-    .board-container {
-        width: 100%;
-        height: auto;
-        padding: 20px 0;
-    }
-}
-
 .board-wrapper {
-    width: 500px;
-    height: 500px;
+    width: 100%;
+    max-width: 500px;
+    /* Max size for board */
+    aspect-ratio: 1;
     position: relative;
     border-radius: 16px;
     overflow: hidden;
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
 }
 
-@media (max-width: 1024px) {
-    .board-wrapper {
-        width: 400px;
-        height: 400px;
-    }
+.grid-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-wrap: wrap;
 }
 
-@media (max-width: 768px) {
-    .board-wrapper {
-        width: 90vw;
-        height: 90vw;
-    }
+.square {
+    width: 12.5%;
+    height: 12.5%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
 }
 
-/* Tutorial Section */
+.possible-move-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background-color: rgba(0, 0, 0, 0.2);
+    position: absolute;
+    z-index: 5;
+}
+
+.piece-image {
+    width: 85%;
+    height: 85%;
+    object-fit: contain;
+    z-index: 10;
+}
+
+/* Tutorial Content Area */
 .tutorial-section {
     flex: 1;
     background-color: var(--color-background);
@@ -79,25 +90,21 @@
     display: flex;
     flex-direction: column;
     justify-content: space-between;
+    overflow-y: auto;
 }
 
 .lesson-path-container {
-    flex-grow: 1;
     display: flex;
     flex-direction: column;
-    align-items: center;
     padding-bottom: 100px;
-    overflow-y: auto;
 }
 
 .lesson-path-item {
     display: flex;
     flex-direction: row;
     align-items: flex-start;
-    margin-bottom: 24px;
-    position: relative;
-    z-index: 1;
-    width: 100%;
+    margin-bottom: 16px;
+    min-height: 80px;
     cursor: pointer;
 }
 
@@ -112,11 +119,15 @@
 
 .lesson-line {
     position: absolute;
-    top: 20px;
+    top: 28px;
+    /* Center of tile (56/2) */
     bottom: -44px;
+    /* Extend to next item */
     width: 2px;
     background-color: rgba(0, 0, 0, 0.08);
-    z-index: -1;
+    z-index: 0;
+    left: 50%;
+    transform: translateX(-50%);
 }
 
 .lesson-line.active {
@@ -132,21 +143,20 @@
     justify-content: center;
     align-items: center;
     border: 1.5px solid rgba(0, 0, 0, 0.06);
+    z-index: 1;
     transition: all 0.2s;
 }
 
 .lesson-tile.active {
     background-color: var(--color-primary);
     border-color: var(--color-primary);
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+    box-shadow: 0 4px 12px rgba(var(--color-primary-rgb), 0.4);
     transform: scale(1.1);
-    color: white;
 }
 
 .lesson-tile.completed {
     background-color: var(--color-card);
     border-color: var(--color-primary);
-    color: var(--color-primary);
 }
 
 .lesson-content {
@@ -173,11 +183,12 @@
     color: var(--color-text);
     font-size: 13px;
     line-height: 1.4;
+    white-space: pre-line;
 }
 
 .lesson-title-inactive {
-    font-size: 14px;
     padding-top: 10px;
+    font-size: 14px;
 }
 
 /* Action Bar */
@@ -185,6 +196,8 @@
     margin-top: auto;
     padding-top: 20px;
     border-top: 1px solid rgba(0, 0, 0, 0.05);
+    background-color: var(--color-background);
+    /* Ensure visibility over scroll */
 }
 
 .action-title {
@@ -192,6 +205,7 @@
     font-size: 20px;
     font-weight: 700;
     margin-bottom: 16px;
+    letter-spacing: 0.5px;
 }
 
 .action-row {
@@ -210,6 +224,11 @@
     align-items: center;
     border: 1px solid rgba(0, 0, 0, 0.06);
     cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.menu-button:hover {
+    background-color: #F3F4F6;
 }
 
 .next-button {
@@ -220,15 +239,128 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 8px;
-    color: white;
-    font-weight: 600;
+    color: #FFFFFF;
     font-size: 16px;
-    cursor: pointer;
+    font-weight: 600;
     border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(var(--color-primary-rgb), 0.25);
+    transition: transform 0.2s;
+}
+
+.next-button:hover {
+    transform: translateY(-2px);
 }
 
 .next-button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+    transform: none;
+}
+
+/* Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.modal-content {
+    background-color: var(--color-card);
+    border-radius: 20px;
+    padding: 24px;
+    width: 100%;
+    max-width: 600px;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+}
+
+.modal-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--color-text);
+}
+
+.package-item {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 16px;
+    border-radius: 16px;
+    background-color: var(--color-background);
+    margin-bottom: 12px;
+    border: 1.5px solid rgba(0, 0, 0, 0.04);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.package-item:hover {
+    border-color: var(--color-primary);
+}
+
+.package-item.active {
+    border-color: var(--color-primary);
+    background-color: rgba(var(--color-primary-rgb), 0.1);
+}
+
+.package-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    background-color: var(--color-card);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-right: 16px;
+}
+
+.package-info {
+    flex: 1;
+}
+
+.package-name {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-text);
+    margin-bottom: 4px;
+}
+
+.package-name.active {
+    color: var(--color-primary);
+}
+
+.package-description {
+    font-size: 14px;
+    color: var(--color-icon);
+    margin-bottom: 4px;
+}
+
+.package-lesson-count {
+    font-size: 12px;
+    color: var(--color-icon);
+    font-weight: 500;
+}
+
+@media (max-width: 768px) {
+    .tutorial-main-container {
+        flex-direction: column;
+        overflow-y: auto;
+    }
+
+    .board-container {
+        width: 100%;
+        height: auto;
+        padding: 20px;
+    }
+
+    .tutorial-section {
+        overflow-y: visible;
+    }
 }
