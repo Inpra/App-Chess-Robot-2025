@@ -1,20 +1,26 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, User, Cpu, Bluetooth, RotateCcw, Pause, Lightbulb, Flag } from 'lucide-react';
+import { ArrowLeft, User, Cpu, Bluetooth, RotateCcw, Pause, Lightbulb, Flag, Play } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import wsService from '../services/websocketService';
-import { ChessBoard, initialBoard } from '../components/chess';
+import gameService from '../services/gameService';
+import { ChessBoard, initialBoard, fenToBoard } from '../components/chess';
 import type { BoardState } from '../components/chess';
 import '../styles/VsBot.css';
 
 export default function VsBot() {
     const navigate = useNavigate();
     const location = useLocation();
-    const { elo } = (location.state as any) || { elo: 1500 };
+    const { elo, difficulty, difficultyName } = (location.state as any) || { elo: 1500, difficulty: 'medium', difficultyName: 'Medium' };
     const [isConnected, setIsConnected] = useState(false);
     const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected');
     const [board, setBoard] = useState<BoardState>([...initialBoard]);
     const [selectedSquare, setSelectedSquare] = useState<{ row: number, col: number } | null>(null);
     const [lastMove, setLastMove] = useState<{ from: number; to: number } | null>(null);
+    
+    // Game state
+    const [gameId, setGameId] = useState<string | null>(null);
+    const [gameStatus, setGameStatus] = useState<'idle' | 'starting' | 'playing' | 'paused' | 'ended'>('idle');
+    const [isStartingGame, setIsStartingGame] = useState(false);
 
     // WebSocket connection setup
     useEffect(() => {
@@ -36,11 +42,24 @@ export default function VsBot() {
         // Handle incoming messages
         const unsubscribeMessage = wsService.on('message', (data) => {
             console.log('[VsBot] Received message:', data);
-            // Handle different message types here
+            
+            // Update board if FEN string is provided
+            if (data.fen_str) {
+                console.log('[VsBot] Updating board with FEN:', data.fen_str);
+                try {
+                    const newBoard = fenToBoard(data.fen_str);
+                    setBoard(newBoard);
+                } catch (error) {
+                    console.error('[VsBot] Failed to parse FEN:', error);
+                }
+            }
+            
+            // Handle different message types
             if (data.type === 'board_status') {
                 console.log('[VsBot] Board status:', data);
             } else if (data.type === 'ai_move_executed') {
                 console.log('[VsBot] AI move:', data);
+                // AI move already contains fen_str, board will be updated above
             } else if (data.type === 'robot_response') {
                 console.log('[VsBot] Robot response:', data);
             }
@@ -69,6 +88,38 @@ export default function VsBot() {
                 setConnectionStatus('error');
                 alert('Failed to connect to server. Make sure the server is running.');
             }
+        }
+    };
+
+    // Start new game
+    const handleStartGame = async () => {
+        if (!isConnected) {
+            alert('Please connect to server first');
+            return;
+        }
+
+        try {
+            setIsStartingGame(true);
+            setGameStatus('starting');
+
+            // Call API to start game
+            const response = await gameService.startGame({
+                gameTypeCode: 'normal_game',
+                difficulty: difficulty || 'medium',
+            });
+
+            console.log('[VsBot] Game started:', response);
+            setGameId(response.gameId);
+            setGameStatus('playing');
+            
+            alert(`Game started! Game ID: ${response.gameId}\nWaiting for board setup...`);
+
+        } catch (error: any) {
+            console.error('[VsBot] Failed to start game:', error);
+            setGameStatus('idle');
+            alert(error.message || 'Failed to start game. Please try again.');
+        } finally {
+            setIsStartingGame(false);
         }
     };
 
@@ -139,7 +190,7 @@ export default function VsBot() {
                                 <Cpu size={16} color="#6B7280" />
                             </div>
                             <div className="vs-bot-player-details-right">
-                                <div className="vs-bot-player-name">Robot</div>
+                                <div className="vs-bot-player-name">Robot ({difficultyName || 'Medium'})</div>
                                 <div className="vs-bot-player-elo">{elo || '1500'}</div>
                             </div>
                         </div>
@@ -188,6 +239,23 @@ export default function VsBot() {
                             <span className="vs-bot-action-button-text vs-bot-primary-button-text">
                                 {connectionStatus === 'connecting' ? 'Connecting...' : 
                                  isConnected ? 'Disconnect Server' : 'Connect to Server'}
+                            </span>
+                        </button>
+
+                        {/* Start Game Button */}
+                        <button
+                            className="vs-bot-action-button"
+                            onClick={handleStartGame}
+                            disabled={!isConnected || isStartingGame || gameStatus === 'playing'}
+                            style={{ 
+                                backgroundColor: gameStatus === 'playing' ? '#10B981' : '#3B82F6',
+                                color: 'white'
+                            }}
+                        >
+                            <Play size={20} color="#FFF" />
+                            <span className="vs-bot-action-button-text" style={{ color: 'white' }}>
+                                {isStartingGame ? 'Starting...' : 
+                                 gameStatus === 'playing' ? 'Game Active' : 'Start Game'}
                             </span>
                         </button>
 

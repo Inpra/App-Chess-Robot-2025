@@ -65,7 +65,8 @@ export default function DifficultySelect({ onClose }: DifficultySelectProps) {
                                         navigate('/game/vs-bot', {
                                             state: {
                                                 difficulty: level.id,
-                                                elo: level.elo
+                                                elo: level.elo,
+                                                difficultyName: level.title
                                             }
                                         });
                                     }}

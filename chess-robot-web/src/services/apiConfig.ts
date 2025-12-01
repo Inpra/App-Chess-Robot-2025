@@ -21,11 +21,11 @@ export const USER_ENDPOINTS = {
 
 // Game endpoints
 export const GAME_ENDPOINTS = {
-    LIST: '/games',
-    DETAIL: '/games',
-    START: '/games/start',
-    MOVE: '/games/move',
-    END: '/games/end',
+    LIST: '/Games',
+    DETAIL: '/Games',
+    START: '/Games/start',
+    MOVE: '/Games/move',
+    END: '/Games/end',
 };
 
 // Robot endpoints
