@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft, User, Cpu, Bluetooth, RotateCcw, Pause, Lightbulb, Flag } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import wsService from '../services/websocketService';
 import '../styles/VsBot.css';
 
 // Chess piece images
@@ -36,8 +37,65 @@ export default function VsBot() {
     const location = useLocation();
     const { elo } = (location.state as any) || { elo: 1500 };
     const [isConnected, setIsConnected] = useState(false);
+    const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected');
     const [board, setBoard] = useState(initialBoard);
     const [selectedSquare, setSelectedSquare] = useState<{ row: number, col: number } | null>(null);
+
+    // WebSocket connection setup
+    useEffect(() => {
+        // Handle connection status changes
+        const unsubscribeConnection = wsService.on('connection', (data) => {
+            console.log('[VsBot] Connection status:', data);
+            if (data.status === 'connected') {
+                setIsConnected(true);
+                setConnectionStatus('connected');
+            } else if (data.status === 'disconnected') {
+                setIsConnected(false);
+                setConnectionStatus('disconnected');
+            } else if (data.status === 'failed') {
+                setIsConnected(false);
+                setConnectionStatus('error');
+            }
+        });
+
+        // Handle incoming messages
+        const unsubscribeMessage = wsService.on('message', (data) => {
+            console.log('[VsBot] Received message:', data);
+            // Handle different message types here
+            if (data.type === 'board_status') {
+                console.log('[VsBot] Board status:', data);
+            } else if (data.type === 'ai_move_executed') {
+                console.log('[VsBot] AI move:', data);
+            } else if (data.type === 'robot_response') {
+                console.log('[VsBot] Robot response:', data);
+            }
+        });
+
+        // Cleanup on unmount
+        return () => {
+            unsubscribeConnection();
+            unsubscribeMessage();
+            wsService.disconnect();
+        };
+    }, []);
+
+    // Connect to server
+    const handleConnect = async () => {
+        if (isConnected) {
+            wsService.disconnect();
+            setIsConnected(false);
+            setConnectionStatus('disconnected');
+        } else {
+            try {
+                setConnectionStatus('connecting');
+                await wsService.connect();
+            } catch (error) {
+                console.error('[VsBot] Connection failed:', error);
+                setConnectionStatus('error');
+                alert('Failed to connect to server. Make sure the server is running.');
+            }
+        }
+    };
 
     // Helper to get piece image
     const getPieceImage = (type: string, color: string) => {
@@ -192,10 +250,18 @@ export default function VsBot() {
                 <div className="vs-bot-sidebar">
                     {/* Robot Status */}
                     <div className="vs-bot-status-card">
-                        <div className="vs-bot-status-text">Robot Status</div>
+                        <div className="vs-bot-status-text">Server Status</div>
                         <div className="vs-bot-status-indicator">
-                            <div className="vs-bot-dot" style={{ backgroundColor: isConnected ? '#10B981' : '#EF4444' }}></div>
-                            <span style={{ color: 'var(--color-icon)' }}>{isConnected ? 'Connected' : 'Disconnected'}</span>
+                            <div className="vs-bot-dot" style={{ 
+                                backgroundColor: connectionStatus === 'connected' ? '#10B981' : 
+                                               connectionStatus === 'connecting' ? '#F59E0B' : 
+                                               connectionStatus === 'error' ? '#EF4444' : '#6B7280'
+                            }}></div>
+                            <span style={{ color: 'var(--color-icon)' }}>
+                                {connectionStatus === 'connected' ? 'Connected' : 
+                                 connectionStatus === 'connecting' ? 'Connecting...' : 
+                                 connectionStatus === 'error' ? 'Connection Error' : 'Disconnected'}
+                            </span>
                         </div>
                     </div>
 
@@ -203,11 +269,13 @@ export default function VsBot() {
                     <div className="vs-bot-actions-card">
                         <button
                             className="vs-bot-action-button vs-bot-primary-button"
-                            onClick={() => setIsConnected(!isConnected)}
+                            onClick={handleConnect}
+                            disabled={connectionStatus === 'connecting'}
                         >
                             <Bluetooth size={20} color="#FFF" />
                             <span className="vs-bot-action-button-text vs-bot-primary-button-text">
-                                {isConnected ? 'Disconnect Robot' : 'Connect Robot'}
+                                {connectionStatus === 'connecting' ? 'Connecting...' : 
+                                 isConnected ? 'Disconnect Server' : 'Connect to Server'}
                             </span>
                         </button>
 
