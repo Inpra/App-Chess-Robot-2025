@@ -4,6 +4,11 @@ export const API_CONFIG = {
     TIMEOUT: 30000,
 };
 
+// Camera Configuration
+export const CAMERA_CONFIG = {
+    STREAM_URL: import.meta.env.VITE_CAMERA_URL || 'http://localhost:8000',
+};
+
 // Auth endpoints
 export const AUTH_ENDPOINTS = {
     LOGIN: '/auth/login',

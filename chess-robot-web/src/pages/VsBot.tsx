@@ -5,6 +5,8 @@ import wsService from '../services/websocketService';
 import gameService from '../services/gameService';
 import { ChessBoard, initialBoard, fenToBoard } from '../components/chess';
 import type { BoardState } from '../components/chess';
+import { CameraView } from '../components/camera';
+import { CAMERA_CONFIG } from '../services/apiConfig';
 import '../styles/VsBot.css';
 
 export default function VsBot() {
@@ -21,6 +23,19 @@ export default function VsBot() {
     const [gameId, setGameId] = useState<string | null>(null);
     const [gameStatus, setGameStatus] = useState<'idle' | 'starting' | 'playing' | 'paused' | 'ended'>('idle');
     const [isStartingGame, setIsStartingGame] = useState(false);
+    
+    // Notification state
+    const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'warning' | 'info', message: string } | null>(null);
+    const [gameMessage, setGameMessage] = useState<string>('Waiting to start game...');
+    const [boardSetupStatus, setBoardSetupStatus] = useState<'checking' | 'correct' | 'incorrect' | null>(null);
+
+    // Auto-dismiss notification after 5 seconds
+    useEffect(() => {
+        if (notification) {
+            const timer = setTimeout(() => setNotification(null), 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [notification]);
 
     // WebSocket connection setup
     useEffect(() => {
@@ -57,11 +72,42 @@ export default function VsBot() {
             // Handle different message types
             if (data.type === 'board_status') {
                 console.log('[VsBot] Board status:', data);
+                setBoardSetupStatus(data.status === 'correct' ? 'correct' : 'incorrect');
+                
+                if (data.status === 'correct') {
+                    setNotification({ type: 'success', message: '✓ Board setup correct! Starting game...' });
+                    setGameMessage('Board verified - Game in progress');
+                } else {
+                    setNotification({ type: 'warning', message: '⚠ Please adjust pieces to match starting position' });
+                    setGameMessage('Waiting for correct board setup...');
+                }
             } else if (data.type === 'ai_move_executed') {
                 console.log('[VsBot] AI move:', data);
-                // AI move already contains fen_str, board will be updated above
+                const move = data.move;
+                if (move) {
+                    const moveText = `${move.from_piece?.replace('_', ' ')} ${move.from} → ${move.to}`;
+                    setNotification({ type: 'info', message: `🤖 Robot: ${moveText}` });
+                    setGameMessage(`Robot moved: ${move.notation || moveText}`);
+                    
+                    if (move.results_in_check) {
+                        setTimeout(() => {
+                            setNotification({ type: 'warning', message: '⚠️ Check!' });
+                        }, 1000);
+                    }
+                }
             } else if (data.type === 'robot_response') {
                 console.log('[VsBot] Robot response:', data);
+                if (data.status === 'completed') {
+                    setNotification({ type: 'success', message: '✓ Robot movement completed' });
+                } else if (data.status === 'error') {
+                    setNotification({ type: 'error', message: '✗ Robot movement failed' });
+                }
+            } else if (data.type === 'illegal_move') {
+                console.log('[VsBot] Illegal move:', data);
+                const move = data.move;
+                const moveText = move ? `${move.piece} from ${move.from} to ${move.to}` : 'Unknown move';
+                setNotification({ type: 'error', message: `✗ Illegal move: ${moveText}` });
+                setGameMessage('Illegal move detected - please try again');
             }
         });
 
@@ -111,8 +157,9 @@ export default function VsBot() {
             console.log('[VsBot] Game started:', response);
             setGameId(response.gameId);
             setGameStatus('playing');
-            
-            alert(`Game started! Game ID: ${response.gameId}\nWaiting for board setup...`);
+            setBoardSetupStatus('checking');
+            setGameMessage('Verifying board setup...');
+            setNotification({ type: 'success', message: '✓ Game started! Please set up your board' });
 
         } catch (error: any) {
             console.error('[VsBot] Failed to start game:', error);
@@ -152,6 +199,14 @@ export default function VsBot() {
 
     return (
         <div className="vs-bot-container">
+            {/* Toast Notification */}
+            {notification && (
+                <div className={`toast-notification toast-${notification.type}`}>
+                    <span>{notification.message}</span>
+                    <button onClick={() => setNotification(null)} style={{ marginLeft: '12px', background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: '18px' }}>×</button>
+                </div>
+            )}
+
             {/* Header */}
             <div className="vs-bot-header">
                 <div onClick={() => navigate(-1)} style={{ cursor: 'pointer', padding: '8px', borderRadius: '12px', backgroundColor: '#F3F4F6' }}>
@@ -211,6 +266,34 @@ export default function VsBot() {
 
                 {/* Sidebar: Controls & Info */}
                 <div className="vs-bot-sidebar">
+                    {/* Game Status Banner */}
+                    {gameStatus === 'playing' && (
+                        <div className="game-status-banner" style={{
+                            backgroundColor: boardSetupStatus === 'correct' ? '#D1FAE5' : 
+                                           boardSetupStatus === 'incorrect' ? '#FEE2E2' : '#FEF3C7',
+                            padding: '12px 16px',
+                            borderRadius: '12px',
+                            marginBottom: '16px',
+                            border: `2px solid ${boardSetupStatus === 'correct' ? '#10B981' : 
+                                                  boardSetupStatus === 'incorrect' ? '#EF4444' : '#F59E0B'}`
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{ fontSize: '16px' }}>
+                                    {boardSetupStatus === 'correct' ? '✓' : 
+                                     boardSetupStatus === 'incorrect' ? '⚠' : '⏳'}
+                                </span>
+                                <span style={{ 
+                                    fontSize: '14px', 
+                                    fontWeight: '500',
+                                    color: boardSetupStatus === 'correct' ? '#065F46' : 
+                                           boardSetupStatus === 'incorrect' ? '#991B1B' : '#92400E'
+                                }}>
+                                    {gameMessage}
+                                </span>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Robot Status */}
                     <div className="vs-bot-status-card">
                         <div className="vs-bot-status-text">Server Status</div>
@@ -280,6 +363,19 @@ export default function VsBot() {
                             <Flag size={20} color="#EF4444" />
                             <span className="vs-bot-action-button-text" style={{ color: '#EF4444' }}>Resign Game</span>
                         </button>
+                    </div>
+
+                    {/* Camera View */}
+                    <div style={{ height: '300px', marginTop: '16px' }}>
+                        <CameraView
+                            streamUrl={CAMERA_CONFIG.STREAM_URL}
+                            title="Robot Camera"
+                            allowFullscreen={true}
+                            showRefresh={true}
+                            onConnectionChange={(connected) => {
+                                console.log('[VsBot] Camera connection status:', connected);
+                            }}
+                        />
                     </div>
 
                     {/* Move History */}
