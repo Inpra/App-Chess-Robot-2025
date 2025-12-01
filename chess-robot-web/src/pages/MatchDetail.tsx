@@ -1,40 +1,14 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Share2, User, Cpu, SkipBack, SkipForward } from 'lucide-react';
+import { ChessBoard, initialBoard } from '../components/chess';
 import '../styles/MatchDetail.css';
-
-// Chess piece images
-import chessboard from '../assets/chessboard.png';
-import bp from '../assets/bp.png';
-import br from '../assets/br.png';
-import bn from '../assets/bn.png';
-import bb from '../assets/bb.png';
-import bq from '../assets/bq.png';
-import bk from '../assets/bk.png';
-import wp from '../assets/wp.png';
-import wr from '../assets/wr.png';
-import wn from '../assets/wn.png';
-import wb from '../assets/wb.png';
-import wq from '../assets/wq.png';
-import wk from '../assets/wk.png';
-
-// Initial board state (8x8 = 64 squares)
-const initialBoard = [
-    { type: 'r', color: 'b' }, { type: 'n', color: 'b' }, { type: 'b', color: 'b' }, { type: 'q', color: 'b' }, { type: 'k', color: 'b' }, { type: 'b', color: 'b' }, { type: 'n', color: 'b' }, { type: 'r', color: 'b' },
-    { type: 'p', color: 'b' }, { type: 'p', color: 'b' }, { type: 'p', color: 'b' }, { type: 'p', color: 'b' }, { type: 'p', color: 'b' }, { type: 'p', color: 'b' }, { type: 'p', color: 'b' }, { type: 'p', color: 'b' },
-    null, null, null, null, null, null, null, null,
-    null, null, null, null, null, null, null, null,
-    null, null, null, null, null, null, null, null,
-    null, null, null, null, null, null, null, null,
-    { type: 'p', color: 'w' }, { type: 'p', color: 'w' }, { type: 'p', color: 'w' }, { type: 'p', color: 'w' }, { type: 'p', color: 'w' }, { type: 'p', color: 'w' }, { type: 'p', color: 'w' }, { type: 'p', color: 'w' },
-    { type: 'r', color: 'w' }, { type: 'n', color: 'w' }, { type: 'b', color: 'w' }, { type: 'q', color: 'w' }, { type: 'k', color: 'w' }, { type: 'b', color: 'w' }, { type: 'n', color: 'w' }, { type: 'r', color: 'w' },
-];
 
 export default function MatchDetail() {
     // const { id } = useParams(); // Unused for now
     const navigate = useNavigate();
     const [currentMoveIndex, setCurrentMoveIndex] = useState(0);
-    const [board] = useState(initialBoard); // setBoard unused
+    const [board] = useState([...initialBoard]); // setBoard unused
 
     // Mock Moves
     const moves = [
@@ -53,15 +27,6 @@ export default function MatchDetail() {
         if (currentMoveIndex > 0) {
             setCurrentMoveIndex(prev => prev - 1);
         }
-    };
-
-    const getPieceImage = (type: string, color: string) => {
-        const pieceKey = `${color}${type}`;
-        const pieceMap: Record<string, string> = {
-            'wp': wp, 'wr': wr, 'wn': wn, 'wb': wb, 'wq': wq, 'wk': wk,
-            'bp': bp, 'br': br, 'bn': bn, 'bb': bb, 'bq': bq, 'bk': bk,
-        };
-        return pieceMap[pieceKey];
     };
 
     return (
@@ -109,32 +74,11 @@ export default function MatchDetail() {
                     {/* Left Column - Board */}
                     <div className="left-column">
                         <div className="board-container">
-                            <div className="board-placeholder">
-                                <img
-                                    src={chessboard}
-                                    alt="Chessboard"
-                                    className="board-image"
-                                />
-                                <div className="grid-overlay">
-                                    {Array.from({ length: 8 }).map((_, rowIndex) => (
-                                        Array.from({ length: 8 }).map((_, colIndex) => {
-                                            const index = rowIndex * 8 + colIndex;
-                                            const piece = board[index];
-                                            return (
-                                                <div key={`${rowIndex}-${colIndex}`} className="square">
-                                                    {piece && (
-                                                        <img
-                                                            src={getPieceImage(piece.type, piece.color)}
-                                                            alt={`${piece.color}${piece.type}`}
-                                                            className="piece-image"
-                                                        />
-                                                    )}
-                                                </div>
-                                            );
-                                        })
-                                    ))}
-                                </div>
-                            </div>
+                            <ChessBoard
+                                board={board}
+                                interactive={false}
+                                size="full"
+                            />
                         </div>
                     </div>
 

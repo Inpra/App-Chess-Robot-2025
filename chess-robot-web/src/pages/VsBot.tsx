@@ -2,35 +2,9 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, User, Cpu, Bluetooth, RotateCcw, Pause, Lightbulb, Flag } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import wsService from '../services/websocketService';
+import { ChessBoard, initialBoard } from '../components/chess';
+import type { BoardState } from '../components/chess';
 import '../styles/VsBot.css';
-
-// Chess piece images
-import chessboard from '../assets/chessboard.png';
-import bp from '../assets/bp.png';
-import br from '../assets/br.png';
-import bn from '../assets/bn.png';
-import bb from '../assets/bb.png';
-import bq from '../assets/bq.png';
-import bk from '../assets/bk.png';
-import wp from '../assets/wp.png';
-import wr from '../assets/wr.png';
-import wn from '../assets/wn.png';
-import wb from '../assets/wb.png';
-import wq from '../assets/wq.png';
-import wk from '../assets/wk.png';
-
-// Initial board state (8x8 = 64 squares)
-// null = empty, { type: 'p'|'r'|'n'|'b'|'q'|'k', color: 'w'|'b' }
-const initialBoard = [
-    { type: 'r', color: 'b' }, { type: 'n', color: 'b' }, { type: 'b', color: 'b' }, { type: 'q', color: 'b' }, { type: 'k', color: 'b' }, { type: 'b', color: 'b' }, { type: 'n', color: 'b' }, { type: 'r', color: 'b' },
-    { type: 'p', color: 'b' }, { type: 'p', color: 'b' }, { type: 'p', color: 'b' }, { type: 'p', color: 'b' }, { type: 'p', color: 'b' }, { type: 'p', color: 'b' }, { type: 'p', color: 'b' }, { type: 'p', color: 'b' },
-    null, null, null, null, null, null, null, null,
-    null, null, null, null, null, null, null, null,
-    null, null, null, null, null, null, null, null,
-    null, null, null, null, null, null, null, null,
-    { type: 'p', color: 'w' }, { type: 'p', color: 'w' }, { type: 'p', color: 'w' }, { type: 'p', color: 'w' }, { type: 'p', color: 'w' }, { type: 'p', color: 'w' }, { type: 'p', color: 'w' }, { type: 'p', color: 'w' },
-    { type: 'r', color: 'w' }, { type: 'n', color: 'w' }, { type: 'b', color: 'w' }, { type: 'q', color: 'w' }, { type: 'k', color: 'w' }, { type: 'b', color: 'w' }, { type: 'n', color: 'w' }, { type: 'r', color: 'w' },
-];
 
 export default function VsBot() {
     const navigate = useNavigate();
@@ -38,8 +12,9 @@ export default function VsBot() {
     const { elo } = (location.state as any) || { elo: 1500 };
     const [isConnected, setIsConnected] = useState(false);
     const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected');
-    const [board, setBoard] = useState(initialBoard);
+    const [board, setBoard] = useState<BoardState>([...initialBoard]);
     const [selectedSquare, setSelectedSquare] = useState<{ row: number, col: number } | null>(null);
+    const [lastMove, setLastMove] = useState<{ from: number; to: number } | null>(null);
 
     // WebSocket connection setup
     useEffect(() => {
@@ -97,19 +72,8 @@ export default function VsBot() {
         }
     };
 
-    // Helper to get piece image
-    const getPieceImage = (type: string, color: string) => {
-        const pieceKey = `${color}${type}`;
-        const pieceMap: Record<string, string> = {
-            'wp': wp, 'wr': wr, 'wn': wn, 'wb': wb, 'wq': wq, 'wk': wk,
-            'bp': bp, 'br': br, 'bn': bn, 'bb': bb, 'bq': bq, 'bk': bk,
-        };
-        return pieceMap[pieceKey];
-    };
-
     // Handle square click
-    const handleSquareClick = (row: number, col: number) => {
-        const index = row * 8 + col;
+    const handleSquareClick = (row: number, col: number, index: number) => {
         const piece = board[index];
 
         if (selectedSquare) {
@@ -126,6 +90,7 @@ export default function VsBot() {
                 newBoard[index] = selectedPiece;
                 newBoard[selectedIndex] = null;
                 setBoard(newBoard);
+                setLastMove({ from: selectedIndex, to: index });
                 setSelectedSquare(null);
             }
         } else if (piece) {
@@ -182,67 +147,14 @@ export default function VsBot() {
 
                     {/* Chess Board Area */}
                     <div className="vs-bot-board-container">
-                        <div className="vs-bot-board-placeholder">
-                            {/* Chessboard background */}
-                            <img
-                                src={chessboard}
-                                alt="Chessboard"
-                                style={{
-                                    width: '100%',
-                                    height: '100%',
-                                    position: 'absolute',
-                                    borderRadius: '16px'
-                                }}
-                            />
-
-                            {/* Chess Pieces Overlay */}
-                            <div style={{
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                right: 0,
-                                bottom: 0,
-                                display: 'flex',
-                                flexWrap: 'wrap'
-                            }}>
-                                {Array.from({ length: 8 }).map((_, rowIndex) => (
-                                    Array.from({ length: 8 }).map((_, colIndex) => {
-                                        const index = rowIndex * 8 + colIndex;
-                                        const piece = board[index];
-                                        const isSelected = selectedSquare?.row === rowIndex && selectedSquare?.col === colIndex;
-
-                                        return (
-                                            <div
-                                                key={`${rowIndex}-${colIndex}`}
-                                                onClick={() => handleSquareClick(rowIndex, colIndex)}
-                                                style={{
-                                                    width: '12.5%',
-                                                    height: '12.5%',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    cursor: 'pointer',
-                                                    backgroundColor: isSelected ? 'rgba(255, 255, 0, 0.5)' : 'transparent',
-                                                }}
-                                            >
-                                                {piece && (
-                                                    <img
-                                                        src={getPieceImage(piece.type, piece.color)}
-                                                        alt={`${piece.color}${piece.type}`}
-                                                        style={{
-                                                            width: '85%',
-                                                            height: '85%',
-                                                            objectFit: 'contain',
-                                                            pointerEvents: 'none'
-                                                        }}
-                                                    />
-                                                )}
-                                            </div>
-                                        );
-                                    })
-                                ))}
-                            </div>
-                        </div>
+                        <ChessBoard
+                            board={board}
+                            selectedSquare={selectedSquare}
+                            lastMove={lastMove}
+                            interactive={true}
+                            onSquareClick={handleSquareClick}
+                            size="full"
+                        />
                     </div>
                 </div>
 

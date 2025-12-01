@@ -24,6 +24,8 @@ import Tutorial from './pages/Tutorial';
 import DifficultySelect from './pages/DifficultySelect';
 import VsBot from './pages/VsBot';
 import MatchDetail from './pages/MatchDetail';
+import Login from './pages/Login';
+import Register from './pages/Register';
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -202,6 +204,8 @@ function App() {
   return (
     <Router>
       <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
         <Route path="/" element={<Dashboard />} />
         <Route path="/game/vs-bot" element={<VsBot />} />
         <Route path="/match-history" element={<MatchHistory />} />
