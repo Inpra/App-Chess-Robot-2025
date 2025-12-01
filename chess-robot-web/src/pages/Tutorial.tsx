@@ -210,52 +210,54 @@ export default function Tutorial() {
 
                 {/* Tutorial Content */}
                 <div className="tutorial-section">
-                    {selectedPackage ? (
-                        <div className="lesson-path-container">
-                            {lessons.map((lesson, index) => {
-                                const isActive = lesson.id === activeLessonId;
-                                const isCompleted = activeLessonId ? lesson.id < activeLessonId : false;
-                                const isLast = index === lessons.length - 1;
+                    <div className="tutorial-scroll-area">
+                        {selectedPackage ? (
+                            <div className="lesson-path-container">
+                                {lessons.map((lesson, index) => {
+                                    const isActive = lesson.id === activeLessonId;
+                                    const isCompleted = activeLessonId ? lesson.id < activeLessonId : false;
+                                    const isLast = index === lessons.length - 1;
 
-                                return (
-                                    <div
-                                        key={lesson.id}
-                                        className="lesson-path-item"
-                                        onClick={() => handleLessonSelect(lesson.id)}
-                                    >
-                                        <div className="lesson-left-col">
-                                            {!isLast && (
-                                                <div className={`lesson-line ${isCompleted || isActive ? 'active' : ''}`} />
-                                            )}
-                                            <div className={`lesson-tile ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}`}>
-                                                <div style={{ color: isActive ? '#FFF' : (isCompleted ? 'var(--color-primary)' : 'var(--color-icon)') }}>
-                                                    {getIcon(lesson.icon)}
+                                    return (
+                                        <div
+                                            key={lesson.id}
+                                            className="lesson-path-item"
+                                            onClick={() => handleLessonSelect(lesson.id)}
+                                        >
+                                            <div className="lesson-left-col">
+                                                {!isLast && (
+                                                    <div className={`lesson-line ${isCompleted || isActive ? 'active' : ''}`} />
+                                                )}
+                                                <div className={`lesson-tile ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}`}>
+                                                    <div style={{ color: isActive ? '#FFF' : (isCompleted ? 'var(--color-primary)' : 'var(--color-icon)') }}>
+                                                        {getIcon(lesson.icon)}
+                                                    </div>
                                                 </div>
                                             </div>
+                                            <div className="lesson-content">
+                                                {isActive ? (
+                                                    <div className="lesson-card-active">
+                                                        <div className="lesson-title-active">{lesson.label}</div>
+                                                        <div className="lesson-desc">{lesson.description}</div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="lesson-title-inactive" style={{ color: isCompleted ? 'var(--color-text)' : 'var(--color-icon)', fontWeight: isCompleted ? 600 : 400 }}>
+                                                        {lesson.label}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
-                                        <div className="lesson-content">
-                                            {isActive ? (
-                                                <div className="lesson-card-active">
-                                                    <div className="lesson-title-active">{lesson.label}</div>
-                                                    <div className="lesson-desc">{lesson.description}</div>
-                                                </div>
-                                            ) : (
-                                                <div className="lesson-title-inactive" style={{ color: isCompleted ? 'var(--color-text)' : 'var(--color-icon)', fontWeight: isCompleted ? 600 : 400 }}>
-                                                    {lesson.label}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    ) : (
-                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-                            <GraduationCap size={64} color="var(--color-icon)" style={{ opacity: 0.3, marginBottom: 16 }} />
-                            <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--color-text)', marginBottom: 8, textAlign: 'center' }}>Welcome to Tutorial</div>
-                            <div style={{ fontSize: 14, color: 'var(--color-icon)', textAlign: 'center', marginBottom: 24 }}>Tap the list icon below to select a course</div>
-                        </div>
-                    )}
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+                                <GraduationCap size={64} color="var(--color-icon)" style={{ opacity: 0.3, marginBottom: 16 }} />
+                                <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--color-text)', marginBottom: 8, textAlign: 'center' }}>Welcome to Tutorial</div>
+                                <div style={{ fontSize: 14, color: 'var(--color-icon)', textAlign: 'center', marginBottom: 24 }}>Tap the list icon below to select a course</div>
+                            </div>
+                        )}
+                    </div>
 
                     <div className="action-bar">
                         <div className="action-title">{selectedPackage ? 'Learn To Play Chess' : 'Select a course to start'}</div>

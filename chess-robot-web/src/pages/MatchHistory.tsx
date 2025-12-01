@@ -142,11 +142,13 @@ export default function MatchHistory() {
     return (
         <div className="match-history-container">
             <div className="match-history-header">
-                <div onClick={() => navigate('/')} style={{ cursor: 'pointer', padding: '8px', borderRadius: '12px', backgroundColor: '#F3F4F6' }}>
-                    <ArrowLeft size={24} color="var(--color-text)" />
+                <div className="header-content">
+                    <div onClick={() => navigate('/')} style={{ cursor: 'pointer', padding: '8px', borderRadius: '12px', backgroundColor: '#F3F4F6' }}>
+                        <ArrowLeft size={24} color="var(--color-text)" />
+                    </div>
+                    <h2 className="header-title">Match History</h2>
+                    <div style={{ width: 40 }}></div>
                 </div>
-                <h2 className="header-title">Match History</h2>
-                <div style={{ width: 40 }}></div>
             </div>
 
             <div className="list-content">

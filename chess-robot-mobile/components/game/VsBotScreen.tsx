@@ -7,6 +7,8 @@ import React, { useMemo, useState } from 'react';
 import { SafeAreaView, ScrollView, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import ChessBoard from './ChessBoard';
 
+import CameraView from '../camera/CameraView';
+
 // Simple initial board state representation
 // null = empty, { type: 'p'|'r'|'n'|'b'|'q'|'k', color: 'w'|'b' }
 const initialBoard = [
@@ -26,6 +28,7 @@ export default function VsBotScreen() {
     const router = useRouter();
     const { elo } = useLocalSearchParams();
     const [isConnected, setIsConnected] = useState(false);
+    const [showCamera, setShowCamera] = useState(false);
 
     // Game State
     const [board, setBoard] = useState(initialBoard);
@@ -145,7 +148,12 @@ export default function VsBotScreen() {
                 <View style={styles.sidebar}>
                     {/* Robot Status */}
                     <View style={styles.statusCard}>
-                        <Text style={styles.statusText}>Robot Status</Text>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                            <Text style={styles.statusText}>Robot Status</Text>
+                            <TouchableOpacity onPress={() => setShowCamera(true)}>
+                                <Ionicons name="videocam" size={20} color={Colors.light.primary} />
+                            </TouchableOpacity>
+                        </View>
                         <View style={styles.statusIndicator}>
                             <View style={[styles.dot, { backgroundColor: isConnected ? '#10B981' : '#EF4444' }]} />
                             <Text style={{ color: Colors.light.icon }}>{isConnected ? 'Connected' : 'Disconnected'}</Text>
@@ -204,6 +212,13 @@ export default function VsBotScreen() {
                     </View>
                 </View>
             </View>
+
+            <CameraView
+                visible={showCamera}
+                onClose={() => setShowCamera(false)}
+                streamUrl="http://192.168.1.100:8080/video" // Example stream URL
+                title="Robot Camera"
+            />
         </SafeAreaView>
     );
 }

@@ -25,6 +25,10 @@ import Tutorial from './pages/Tutorial';
 import DifficultySelect from './pages/DifficultySelect';
 import VsBot from './pages/VsBot';
 import MatchDetail from './pages/MatchDetail';
+import PurchasePoints from './pages/PurchasePoints';
+import PointsHistory from './pages/PointsHistory';
+import FAQ from './pages/FAQ';
+import ThemeSettings from './pages/ThemeSettings';
 import Login from './pages/Login';
 import Register from './pages/Register';
 
@@ -60,13 +64,13 @@ function Dashboard() {
         <div className="sidebar-icon" onClick={() => navigate('/ranking')}>
           <Trophy size={24} />
         </div>
-        <div className="sidebar-icon">
+        <div className="sidebar-icon" onClick={() => navigate('/purchase-points')}>
           <ShoppingCart size={24} />
         </div>
-        <div className="sidebar-icon">
+        <div className="sidebar-icon" onClick={() => navigate('/theme-settings')}>
           <Palette size={24} />
         </div>
-        <div className="sidebar-icon">
+        <div className="sidebar-icon" onClick={() => navigate('/faq')}>
           <Headphones size={24} />
         </div>
 
@@ -215,6 +219,10 @@ function App() {
         <Route path="/profile" element={<Profile />} />
         <Route path="/puzzles" element={<Puzzles />} />
         <Route path="/puzzles/:id" element={<PuzzleGame />} />
+        <Route path="/purchase-points" element={<PurchasePoints />} />
+        <Route path="/points-history" element={<PointsHistory />} />
+        <Route path="/faq" element={<FAQ />} />
+        <Route path="/theme-settings" element={<ThemeSettings />} />
         <Route path="/tutorial" element={<Tutorial />} />
       </Routes>
     </Router>

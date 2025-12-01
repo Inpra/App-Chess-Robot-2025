@@ -4,16 +4,26 @@
     height: 100vh;
     display: flex;
     flex-direction: column;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .match-history-header {
+    background-color: var(--color-card);
+    border-bottom: 1px solid var(--color-border);
+    width: 100%;
+}
+
+.header-content {
     display: flex;
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
     padding: 20px 32px;
-    background-color: var(--color-card);
-    border-bottom: 1px solid var(--color-border);
+    max-width: 1000px;
+    margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .header-title {
@@ -27,6 +37,10 @@
     padding: 32px;
     overflow-y: auto;
     flex: 1;
+    width: 100%;
+    max-width: 1000px;
+    margin: 0 auto;
+    box-sizing: border-box;
 }
 
 .stats-summary {

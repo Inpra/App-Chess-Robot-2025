@@ -7,6 +7,8 @@ import React, { useMemo, useState } from 'react';
 import { SafeAreaView, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import ChessBoard from '../game/ChessBoard';
 
+import CameraView from '../camera/CameraView';
+
 // Mock Board State for Puzzle (Example: Mate in 1)
 const puzzleBoard = [
     null, null, null, null, null, null, null, { type: 'k', color: 'b' },
@@ -31,6 +33,7 @@ export default function PuzzleGameScreen() {
     const [possibleMoves, setPossibleMoves] = useState<{ row: number, col: number }[]>([]);
     const [message, setMessage] = useState<string | null>(null);
     const [isConnected, setIsConnected] = useState(false);
+    const [showCamera, setShowCamera] = useState(false);
 
     // Logic helpers
     const handleSquareClick = (row: number, col: number) => {
@@ -176,7 +179,12 @@ export default function PuzzleGameScreen() {
 
                     {/* Robot Status */}
                     <View style={styles.statusCard}>
-                        <Text style={styles.statusText}>Robot Status</Text>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                            <Text style={styles.statusText}>Robot Status</Text>
+                            <TouchableOpacity onPress={() => setShowCamera(true)}>
+                                <Ionicons name="videocam" size={20} color={Colors.light.primary} />
+                            </TouchableOpacity>
+                        </View>
                         <View style={styles.statusIndicator}>
                             <View style={[styles.dot, { backgroundColor: isConnected ? '#10B981' : '#EF4444' }]} />
                             <Text style={{ color: Colors.light.icon }}>{isConnected ? 'Connected' : 'Disconnected'}</Text>
@@ -215,6 +223,13 @@ export default function PuzzleGameScreen() {
                     </View>
                 </View>
             </View>
+
+            <CameraView
+                visible={showCamera}
+                onClose={() => setShowCamera(false)}
+                streamUrl="http://192.168.1.100:8080/video" // Example stream URL
+                title="Robot Camera"
+            />
         </SafeAreaView>
     );
 }
