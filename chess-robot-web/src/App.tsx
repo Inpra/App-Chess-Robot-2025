@@ -20,6 +20,7 @@ import MatchHistory from './pages/MatchHistory';
 import Ranking from './pages/Ranking';
 import Profile from './pages/Profile';
 import Puzzles from './pages/Puzzles';
+import PuzzleGame from './pages/PuzzleGame';
 import Tutorial from './pages/Tutorial';
 import DifficultySelect from './pages/DifficultySelect';
 import VsBot from './pages/VsBot';
@@ -213,6 +214,7 @@ function App() {
         <Route path="/ranking" element={<Ranking />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/puzzles" element={<Puzzles />} />
+        <Route path="/puzzles/:id" element={<PuzzleGame />} />
         <Route path="/tutorial" element={<Tutorial />} />
       </Routes>
     </Router>

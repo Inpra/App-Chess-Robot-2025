@@ -1,3 +1,4 @@
+import NavigationHeader from '@/components/common/NavigationHeader';
 import { Colors } from '@/constants/theme';
 import { styles } from '@/styles/points-history.styles';
 import { Ionicons } from '@expo/vector-icons';
@@ -74,13 +75,7 @@ export default function PointsHistory() {
     return (
         <SafeAreaView style={styles.container}>
             {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color={Colors.light.text} />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Transaction History</Text>
-                <View style={{ width: 40 }} />
-            </View>
+            <NavigationHeader title="Points History" />
 
             {/* Tabs */}
             <View style={styles.tabsContainer}>

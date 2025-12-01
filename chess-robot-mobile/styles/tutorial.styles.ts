@@ -61,6 +61,11 @@ export const getTutorialStyles = ({ width, height }: { width: number, height: nu
             width: '100%',
             height: '100%',
         },
+        boardPlaceholder: {
+            width: '100%',
+            height: '100%',
+            position: 'relative',
+        },
 
         // Tutorial/Lesson Area
         tutorialSection: {
@@ -211,7 +216,7 @@ export const getTutorialStyles = ({ width, height }: { width: number, height: nu
             borderRadius: 20,
             padding: 24,
             width: '100%',
-            maxWidth:800,
+            maxWidth: 800,
             shadowColor: '#000',
             shadowOffset: { width: 0, height: 10 },
             shadowOpacity: 0.3,

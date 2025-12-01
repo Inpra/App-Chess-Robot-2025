@@ -1,10 +1,10 @@
+import NavigationHeader from '@/components/common/NavigationHeader';
 import { Colors } from '@/constants/theme';
 import { getMatchDetailStyles } from '@/styles/match-detail.styles';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import {
-    Image,
     SafeAreaView,
     ScrollView,
     Text,
@@ -12,6 +12,7 @@ import {
     useWindowDimensions,
     View,
 } from 'react-native';
+import ChessBoard from '../game/ChessBoard';
 
 // Mock Board State (Simplified for demo)
 const initialBoard = [
@@ -55,39 +56,19 @@ export default function MatchDetailScreen() {
         }
     };
 
-    const getPieceImageSource = (type: string, color: string) => {
-        const pieceKey = `${color}${type}`;
-        switch (pieceKey) {
-            case 'wp': return require('@/assets/images/wp.png');
-            case 'wr': return require('@/assets/images/wr.png');
-            case 'wn': return require('@/assets/images/wn.png');
-            case 'wb': return require('@/assets/images/wb.png');
-            case 'wq': return require('@/assets/images/wq.png');
-            case 'wk': return require('@/assets/images/wk.png');
-            case 'bp': return require('@/assets/images/bp.png');
-            case 'br': return require('@/assets/images/br.png');
-            case 'bn': return require('@/assets/images/bn.png');
-            case 'bb': return require('@/assets/images/bb.png');
-            case 'bq': return require('@/assets/images/bq.png');
-            case 'bk': return require('@/assets/images/bk.png');
-            default: return null;
-        }
-    };
-
     return (
         <SafeAreaView style={styles.container}>
             <Stack.Screen options={{ headerShown: false }} />
 
             {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color={Colors.light.text} />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Match Replay</Text>
-                <TouchableOpacity style={styles.shareButton}>
-                    <Ionicons name="share-outline" size={24} color={Colors.light.text} />
-                </TouchableOpacity>
-            </View>
+            <NavigationHeader
+                title="Match Replay"
+                rightComponent={
+                    <TouchableOpacity>
+                        <Ionicons name="share-outline" size={24} color={Colors.light.text} />
+                    </TouchableOpacity>
+                }
+            />
 
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
                 {/* Match Info */}
@@ -121,32 +102,12 @@ export default function MatchDetailScreen() {
                     {/* Left Column - Board + Controls */}
                     <View style={styles.leftColumn}>
                         {/* Chess Board */}
-                        <View style={styles.boardContainer}>
-                            <View style={styles.boardPlaceholder}>
-                                <Image
-                                    source={require('@/assets/images/chessboard.png')}
-                                    style={{ width: '100%', height: '100%', resizeMode: 'stretch', borderRadius: 16 }}
-                                />
-                                <View style={styles.gridOverlay}>
-                                    {Array.from({ length: 8 }).map((_, rowIndex) => (
-                                        Array.from({ length: 8 }).map((_, colIndex) => {
-                                            const index = rowIndex * 8 + colIndex;
-                                            const piece = board[index];
-                                            return (
-                                                <View key={`${rowIndex}-${colIndex}`} style={styles.square}>
-                                                    {piece && (
-                                                        <Image
-                                                            source={getPieceImageSource(piece.type, piece.color)}
-                                                            style={{ width: '85%', height: '85%', resizeMode: 'contain' }}
-                                                        />
-                                                    )}
-                                                </View>
-                                            );
-                                        })
-                                    ))}
-                                </View>
-                            </View>
-                        </View>
+                        <ChessBoard
+                            board={board}
+                            styles={styles}
+                            interactive={false}
+                            showPossibleMoves={false}
+                        />
 
 
                     </View>

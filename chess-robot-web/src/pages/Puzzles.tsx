@@ -28,7 +28,7 @@ export default function Puzzles() {
 
             <div className="puzzles-list-content">
                 {puzzles.map((item) => (
-                    <div key={item.id} className="puzzle-card">
+                    <div key={item.id} className="puzzle-card" onClick={() => navigate(`/puzzles/${item.id}`)} style={{ cursor: 'pointer' }}>
                         <div className={`puzzle-icon-container ${item.solved ? 'solved' : ''}`}>
                             {item.solved ? (
                                 <CheckCircle size={24} />

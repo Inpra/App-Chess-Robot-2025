@@ -1,3 +1,4 @@
+import NavigationHeader from '@/components/common/NavigationHeader';
 import { Colors } from '@/constants/theme';
 import { securityStyles as styles } from '@/styles/profile.styles';
 import { Ionicons } from '@expo/vector-icons';
@@ -32,13 +33,7 @@ export default function SecurityScreen() {
             <Stack.Screen options={{ headerShown: false }} />
 
             {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color={Colors.light.text} />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Security</Text>
-                <View style={{ width: 40 }} />
-            </View>
+            <NavigationHeader title="Security" />
 
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}

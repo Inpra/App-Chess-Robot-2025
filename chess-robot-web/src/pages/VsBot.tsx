@@ -18,12 +18,12 @@ export default function VsBot() {
     const [board, setBoard] = useState<BoardState>([...initialBoard]);
     const [selectedSquare, setSelectedSquare] = useState<{ row: number, col: number } | null>(null);
     const [lastMove, setLastMove] = useState<{ from: number; to: number } | null>(null);
-    
+
     // Game state
     const [gameId, setGameId] = useState<string | null>(null);
     const [gameStatus, setGameStatus] = useState<'idle' | 'starting' | 'playing' | 'paused' | 'ended'>('idle');
     const [isStartingGame, setIsStartingGame] = useState(false);
-    
+
     // Notification state
     const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'warning' | 'info', message: string } | null>(null);
     const [gameMessage, setGameMessage] = useState<string>('Waiting to start game...');
@@ -57,7 +57,7 @@ export default function VsBot() {
         // Handle incoming messages
         const unsubscribeMessage = wsService.on('message', (data) => {
             console.log('[VsBot] Received message:', data);
-            
+
             // Update board if FEN string is provided
             if (data.fen_str) {
                 console.log('[VsBot] Updating board with FEN:', data.fen_str);
@@ -68,12 +68,12 @@ export default function VsBot() {
                     console.error('[VsBot] Failed to parse FEN:', error);
                 }
             }
-            
+
             // Handle different message types
             if (data.type === 'board_status') {
                 console.log('[VsBot] Board status:', data);
                 setBoardSetupStatus(data.status === 'correct' ? 'correct' : 'incorrect');
-                
+
                 if (data.status === 'correct') {
                     setNotification({ type: 'success', message: '✓ Board setup correct! Starting game...' });
                     setGameMessage('Board verified - Game in progress');
@@ -88,7 +88,7 @@ export default function VsBot() {
                     const moveText = `${move.from_piece?.replace('_', ' ')} ${move.from} → ${move.to}`;
                     setNotification({ type: 'info', message: `🤖 Robot: ${moveText}` });
                     setGameMessage(`Robot moved: ${move.notation || moveText}`);
-                    
+
                     if (move.results_in_check) {
                         setTimeout(() => {
                             setNotification({ type: 'warning', message: '⚠️ Check!' });
@@ -251,6 +251,8 @@ export default function VsBot() {
                         </div>
                     </div>
 
+
+
                     {/* Chess Board Area */}
                     <div className="vs-bot-board-container">
                         <ChessBoard
@@ -266,27 +268,39 @@ export default function VsBot() {
 
                 {/* Sidebar: Controls & Info */}
                 <div className="vs-bot-sidebar">
+                    {/* Camera View */}
+                    <div style={{ height: '240px', marginBottom: '16px', borderRadius: '16px', overflow: 'hidden', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--color-border)' }}>
+                        <CameraView
+                            streamUrl={CAMERA_CONFIG.STREAM_URL}
+                            title="Robot Camera"
+                            allowFullscreen={true}
+                            showRefresh={true}
+                            onConnectionChange={(connected) => {
+                                console.log('[VsBot] Camera connection status:', connected);
+                            }}
+                        />
+                    </div>
                     {/* Game Status Banner */}
                     {gameStatus === 'playing' && (
                         <div className="game-status-banner" style={{
-                            backgroundColor: boardSetupStatus === 'correct' ? '#D1FAE5' : 
-                                           boardSetupStatus === 'incorrect' ? '#FEE2E2' : '#FEF3C7',
+                            backgroundColor: boardSetupStatus === 'correct' ? '#D1FAE5' :
+                                boardSetupStatus === 'incorrect' ? '#FEE2E2' : '#FEF3C7',
                             padding: '12px 16px',
                             borderRadius: '12px',
                             marginBottom: '16px',
-                            border: `2px solid ${boardSetupStatus === 'correct' ? '#10B981' : 
-                                                  boardSetupStatus === 'incorrect' ? '#EF4444' : '#F59E0B'}`
+                            border: `2px solid ${boardSetupStatus === 'correct' ? '#10B981' :
+                                boardSetupStatus === 'incorrect' ? '#EF4444' : '#F59E0B'}`
                         }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <span style={{ fontSize: '16px' }}>
-                                    {boardSetupStatus === 'correct' ? '✓' : 
-                                     boardSetupStatus === 'incorrect' ? '⚠' : '⏳'}
+                                    {boardSetupStatus === 'correct' ? '✓' :
+                                        boardSetupStatus === 'incorrect' ? '⚠' : '⏳'}
                                 </span>
-                                <span style={{ 
-                                    fontSize: '14px', 
+                                <span style={{
+                                    fontSize: '14px',
                                     fontWeight: '500',
-                                    color: boardSetupStatus === 'correct' ? '#065F46' : 
-                                           boardSetupStatus === 'incorrect' ? '#991B1B' : '#92400E'
+                                    color: boardSetupStatus === 'correct' ? '#065F46' :
+                                        boardSetupStatus === 'incorrect' ? '#991B1B' : '#92400E'
                                 }}>
                                     {gameMessage}
                                 </span>
@@ -298,15 +312,15 @@ export default function VsBot() {
                     <div className="vs-bot-status-card">
                         <div className="vs-bot-status-text">Server Status</div>
                         <div className="vs-bot-status-indicator">
-                            <div className="vs-bot-dot" style={{ 
-                                backgroundColor: connectionStatus === 'connected' ? '#10B981' : 
-                                               connectionStatus === 'connecting' ? '#F59E0B' : 
-                                               connectionStatus === 'error' ? '#EF4444' : '#6B7280'
+                            <div className="vs-bot-dot" style={{
+                                backgroundColor: connectionStatus === 'connected' ? '#10B981' :
+                                    connectionStatus === 'connecting' ? '#F59E0B' :
+                                        connectionStatus === 'error' ? '#EF4444' : '#6B7280'
                             }}></div>
                             <span style={{ color: 'var(--color-icon)' }}>
-                                {connectionStatus === 'connected' ? 'Connected' : 
-                                 connectionStatus === 'connecting' ? 'Connecting...' : 
-                                 connectionStatus === 'error' ? 'Connection Error' : 'Disconnected'}
+                                {connectionStatus === 'connected' ? 'Connected' :
+                                    connectionStatus === 'connecting' ? 'Connecting...' :
+                                        connectionStatus === 'error' ? 'Connection Error' : 'Disconnected'}
                             </span>
                         </div>
                     </div>
@@ -320,8 +334,8 @@ export default function VsBot() {
                         >
                             <Bluetooth size={20} color="#FFF" />
                             <span className="vs-bot-action-button-text vs-bot-primary-button-text">
-                                {connectionStatus === 'connecting' ? 'Connecting...' : 
-                                 isConnected ? 'Disconnect Server' : 'Connect to Server'}
+                                {connectionStatus === 'connecting' ? 'Connecting...' :
+                                    isConnected ? 'Disconnect Server' : 'Connect to Server'}
                             </span>
                         </button>
 
@@ -330,23 +344,23 @@ export default function VsBot() {
                             className="vs-bot-action-button"
                             onClick={handleStartGame}
                             disabled={!isConnected || isStartingGame || gameStatus === 'playing'}
-                            style={{ 
+                            style={{
                                 backgroundColor: gameStatus === 'playing' ? '#10B981' : '#3B82F6',
                                 color: 'white'
                             }}
                         >
                             <Play size={20} color="#FFF" />
                             <span className="vs-bot-action-button-text" style={{ color: 'white' }}>
-                                {isStartingGame ? 'Starting...' : 
-                                 gameStatus === 'playing' ? 'Game Active' : 'Start Game'}
+                                {isStartingGame ? 'Starting...' :
+                                    gameStatus === 'playing' ? 'Game Active' : 'Start Game'}
                             </span>
                         </button>
 
                         <div className="vs-bot-action-row">
-                            <button className="vs-bot-action-button" style={{ flex: 1 }}>
+                            {/* <button className="vs-bot-action-button" style={{ flex: 1 }}>
                                 <RotateCcw size={20} color="var(--color-text)" />
                                 <span className="vs-bot-action-button-text">Undo</span>
-                            </button>
+                            </button> */}
 
                             <button className="vs-bot-action-button" style={{ flex: 1 }}>
                                 <Pause size={20} color="var(--color-text)" />
@@ -365,18 +379,7 @@ export default function VsBot() {
                         </button>
                     </div>
 
-                    {/* Camera View */}
-                    <div style={{ height: '300px', marginTop: '16px' }}>
-                        <CameraView
-                            streamUrl={CAMERA_CONFIG.STREAM_URL}
-                            title="Robot Camera"
-                            allowFullscreen={true}
-                            showRefresh={true}
-                            onConnectionChange={(connected) => {
-                                console.log('[VsBot] Camera connection status:', connected);
-                            }}
-                        />
-                    </div>
+
 
                     {/* Move History */}
                     <div className="vs-bot-history-container">
