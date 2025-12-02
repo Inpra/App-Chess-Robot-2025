@@ -79,6 +79,22 @@ export default function VsBot() {
             }
         });
 
+        // Auto-connect on mount
+        const autoConnect = async () => {
+            if (!wsService.isConnected()) {
+                try {
+                    console.log('[VsBot] Auto-connecting to server...');
+                    setConnectionStatus('connecting');
+                    await wsService.connect();
+                } catch (error) {
+                    console.error('[VsBot] Auto-connect failed:', error);
+                    setConnectionStatus('error');
+                }
+            }
+        };
+        
+        autoConnect();
+
         // Cleanup on unmount only
         return () => {
             unsubscribeConnection();
@@ -291,6 +307,64 @@ export default function VsBot() {
                             return moves;
                         });
                         
+                        // Check for game end conditions
+                        if (chessGame.current.isCheckmate()) {
+                            const winner = madeMove.color === 'w' ? 'white' : 'black';
+                            const result = winner === 'white' ? 'win' : 'lose';
+                            
+                            console.log(`[VsBot] Checkmate! ${winner} wins`);
+                            setGameStatus('ended');
+                            setGameMessage(`Checkmate! ${winner === 'white' ? 'You win!' : 'Robot wins!'}`);
+                            setNotification({ 
+                                type: winner === 'white' ? 'success' : 'error', 
+                                message: `🏆 Checkmate! ${winner === 'white' ? 'You win!' : 'Robot wins!'}` 
+                            });
+                            
+                            // Update game result
+                            (async () => {
+                                try {
+                                    await gameService.updateGameResult(
+                                        gameId,
+                                        result,
+                                        'completed',
+                                        moveNumber,
+                                        newFen
+                                    );
+                                    console.log(`[VsBot] ✓ Game result updated: ${result}`);
+                                } catch (error) {
+                                    console.error('[VsBot] ✗ Failed to update game result:', error);
+                                }
+                            })();
+                        } else if (chessGame.current.isDraw()) {
+                            const drawReason = chessGame.current.isStalemate() ? 'Stalemate' :
+                                              chessGame.current.isThreefoldRepetition() ? 'Threefold Repetition' :
+                                              chessGame.current.isInsufficientMaterial() ? 'Insufficient Material' : 'Draw';
+                            
+                            console.log(`[VsBot] Draw: ${drawReason}`);
+                            setGameStatus('ended');
+                            setGameMessage(`Draw - ${drawReason}`);
+                            setNotification({ 
+                                type: 'info', 
+                                message: `🤝 Game drawn by ${drawReason}` 
+                            });
+                            
+                            // Update game result
+                            (async () => {
+                                try {
+                                    await gameService.updateGameResult(
+                                        gameId,
+                                        'draw',
+                                        'completed',
+                                        moveNumber,
+                                        newFen
+                                    );
+                                    console.log('[VsBot] ✓ Game result updated: draw');
+                                } catch (error) {
+                                    console.error('[VsBot] ✗ Failed to update game result:', error);
+                                }
+                            })();
+                        }
+                        
                         moveFound = true;
                     }
                     // Update UI even without gameId
@@ -403,6 +477,61 @@ export default function VsBot() {
             alert(error.message || 'Failed to start game. Please try again.');
         } finally {
             setIsStartingGame(false);
+        }
+    };
+
+    // Handle resign game
+    const handleResignGame = async () => {
+        if (!gameId || gameStatus !== 'playing') {
+            return;
+        }
+
+        // Show confirmation dialog
+        const confirmed = window.confirm(
+            '⚠️ Are you sure you want to resign?\n\n' +
+            'This will end the game and count as a loss.\n' +
+            'This action cannot be undone.'
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            // Save any pending moves first
+            if (pendingMoves.current.length > 0) {
+                await savePendingMoves();
+            }
+
+            // Get current move count
+            const totalMoves = chessGame.current.history().length;
+            const currentFen = chessGame.current.fen();
+
+            // 1. Update game result in database (this also sends end command to AI)
+            await gameService.updateGameResult(
+                gameId,
+                'lose',
+                'completed',
+                Math.ceil(totalMoves / 2),
+                currentFen
+            );
+
+            console.log('[VsBot] ✓ Game resigned - Database updated and AI notified');
+            
+            // Update UI
+            setGameStatus('ended');
+            setGameMessage('You resigned - Game Over');
+            setNotification({ 
+                type: 'info', 
+                message: '🏳️ You resigned. Better luck next time!' 
+            });
+
+        } catch (error: any) {
+            console.error('[VsBot] ✗ Failed to resign game:', error);
+            setNotification({ 
+                type: 'error', 
+                message: '✗ Failed to resign game. Please try again.' 
+            });
         }
     };
 
@@ -595,7 +724,12 @@ export default function VsBot() {
                             </button>
                         </div>
 
-                        <button className="vs-bot-action-button" style={{ backgroundColor: '#FEF2F2' }}>
+                        <button 
+                            className="vs-bot-action-button" 
+                            style={{ backgroundColor: '#FEF2F2' }}
+                            onClick={handleResignGame}
+                            disabled={gameStatus !== 'playing'}
+                        >
                             <Flag size={20} color="#EF4444" />
                             <span className="vs-bot-action-button-text" style={{ color: '#EF4444' }}>Resign Game</span>
                         </button>

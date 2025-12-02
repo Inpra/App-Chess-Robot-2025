@@ -294,6 +294,65 @@
         throw error;
       }
     }
+
+    /**
+     * Update game result (resign, win, lose, draw)
+     * This will also send end command to AI
+     */
+    async updateGameResult(
+      gameId: string,
+      result: 'win' | 'lose' | 'draw',
+      status: string = 'completed',
+      totalMoves?: number,
+      fenCurrent?: string
+    ): Promise<any> {
+      try {
+        const response = await fetch(`${this.baseUrl}/Games/${gameId}/result`, {
+          method: 'PUT',
+          headers: this.getHeaders(),
+          body: JSON.stringify({
+            gameId,
+            result,
+            status,
+            totalMoves,
+            fenCurrent
+          }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.message || 'Failed to update game result');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('[GameService] Update game result error:', error);
+        throw error;
+      }
+    }
+
+    /**
+     * End game and notify AI to reset (used when resigning or abandoning)
+     */
+    async endGame(gameId: string, reason: string = 'user_ended'): Promise<any> {
+      try {
+        const response = await fetch(`${this.baseUrl}/Games/${gameId}/end`, {
+          method: 'POST',
+          headers: this.getHeaders(),
+          body: JSON.stringify({ gameId, reason }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.message || 'Failed to end game');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('[GameService] End game error:', error);
+        throw error;
+      }
+    }
   }
 
   // Export singleton instance
