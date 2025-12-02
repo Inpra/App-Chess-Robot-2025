@@ -1,53 +1,101 @@
-/* Move History Container */
 .move-history-container {
-    background: var(--color-card);
-    border-radius: 16px;
-    padding: 16px;
-    box-shadow: var(--shadow-sm);
+    background-color: var(--color-card);
+    border-radius: 20px;
+    padding: 20px;
     border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-sm);
     display: flex;
     flex-direction: column;
-    height: 250px; /* Fixed height */
-    flex-shrink: 0; /* Prevent shrinking */
+    flex: 1;
+    min-height: 300px;
+    overflow: hidden;
 }
 
 .move-history-title {
     font-size: 16px;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--color-text);
-    margin-bottom: 12px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid var(--color-border);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-bottom: 0;
+    border-bottom: none;
 }
 
-/* Move List */
 .move-history-list {
     flex: 1;
     overflow-y: auto;
-    overflow-x: hidden;
+    padding-right: 8px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    min-height: 0; /* Important for flex scroll */
-    padding-right: 4px;
+    gap: 4px;
 }
 
-/* Scrollbar styling */
+/* Custom Scrollbar */
 .move-history-list::-webkit-scrollbar {
     width: 6px;
 }
 
 .move-history-list::-webkit-scrollbar-track {
-    background: var(--color-background);
-    border-radius: 3px;
+    background: transparent;
 }
 
 .move-history-list::-webkit-scrollbar-thumb {
-    background: var(--color-border);
+    background-color: var(--color-border);
     border-radius: 3px;
 }
 
-.move-history-list::-webkit-scrollbar-thumb:hover {
+.move-history-empty {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    color: var(--color-text-secondary);
+    font-style: italic;
+}
+
+.move-history-item {
+    display: grid;
+    grid-template-columns: 40px 1fr 1fr;
+    align-items: center;
+    padding: 6px 8px;
+    border-radius: 6px;
+    font-family: 'Roboto Mono', monospace;
+    font-size: 14px;
+}
+
+.move-history-item:nth-child(odd) {
+    background-color: var(--color-background);
+}
+
+.move-history-number {
+    color: var(--color-text-secondary);
+    font-weight: 500;
+}
+
+.move-history-move {
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: default;
+    transition: all 0.2s ease;
+    color: var(--color-text);
+    font-weight: 600;
+}
+
+.move-history-move.clickable {
+    cursor: pointer;
+}
+
+.move-history-move.clickable:hover {
+    background-color: var(--color-border);
+}
+
+.move-history-move.active {
+    background-color: var(--color-primary);
+    color: white;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
     background: var(--color-icon);
 }
 

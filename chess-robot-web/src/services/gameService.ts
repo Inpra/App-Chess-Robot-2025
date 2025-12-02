@@ -60,6 +60,42 @@
     createdAt: string;
   }
 
+  export interface GameStatistics {
+    totalMoves: number;
+    whiteMoves: number;
+    blackMoves: number;
+    captures: number;
+    checks: number;
+    averageMoveTimeSeconds: number;
+    longestThinkingMove?: string;
+    longestThinkingTimeSeconds: number;
+  }
+
+  export interface GameReplayResponse {
+    gameId: string;
+    playerId?: string;
+    playerName?: string;
+    status: string;
+    result?: string;
+    difficulty?: string;
+    startedAt?: string;
+    endedAt?: string;
+    durationSeconds?: number;
+    fenStart?: string;
+    fenCurrent?: string;
+    totalMoves?: number;
+    playerRatingBefore?: number;
+    playerRatingAfter?: number;
+    ratingChange?: number;
+    gameType?: {
+      code: string;
+      name: string;
+      description?: string;
+    };
+    moves: GameMoveResponse[];
+    statistics?: GameStatistics;
+  }
+
   class GameService {
     private baseUrl: string;
 
@@ -350,6 +386,50 @@
         return await response.json();
       } catch (error) {
         console.error('[GameService] End game error:', error);
+        throw error;
+      }
+    }
+
+    /**
+     * Get complete game replay data (optimized for replay feature)
+     */
+    async getGameReplay(gameId: string): Promise<GameReplayResponse> {
+      try {
+        const response = await fetch(`${this.baseUrl}/Games/${gameId}/replay`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.message || 'Failed to get game replay');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('[GameService] Get game replay error:', error);
+        throw error;
+      }
+    }
+
+    /**
+     * Get player games (match history)
+     */
+    async getPlayerGames(playerId: string): Promise<any[]> {
+      try {
+        const response = await fetch(`${this.baseUrl}/Games/player/${playerId}`, {
+          method: 'GET',
+          headers: this.getHeaders(),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.message || 'Failed to get player games');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('[GameService] Get player games error:', error);
         throw error;
       }
     }

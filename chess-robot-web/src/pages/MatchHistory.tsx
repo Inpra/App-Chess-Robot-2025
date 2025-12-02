@@ -1,76 +1,143 @@
+import { useState, useEffect } from 'react';
 import { ArrowLeft, User, Clock, ArrowUpDown, TrendingUp, TrendingDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import gameService from '../services/gameService';
+import authService from '../services/authService';
 import '../styles/MatchHistory.css';
 
-const MATCH_HISTORY = [
-    {
-        id: '1',
-        opponent: 'Robot Arm (Level 1)',
-        result: 'Win',
-        date: '2023-11-23',
-        time: '14:30',
-        duration: '15m 20s',
-        eloChange: '+12',
-        moves: 34,
-        avatar: 'https://i.pravatar.cc/100?img=1',
-    },
-    {
-        id: '2',
-        opponent: 'Grandmaster Bot',
-        result: 'Loss',
-        date: '2023-11-22',
-        time: '09:15',
-        duration: '22m 10s',
-        eloChange: '-8',
-        moves: 45,
-        avatar: 'https://i.pravatar.cc/100?img=2',
-    },
-    {
-        id: '3',
-        opponent: 'Robot Arm (Level 2)',
-        result: 'Draw',
-        date: '2023-11-20',
-        time: '18:45',
-        duration: '45m 00s',
-        eloChange: '+2',
-        moves: 60,
-        avatar: 'https://i.pravatar.cc/100?img=3',
-    },
-    {
-        id: '4',
-        opponent: 'Online Player 123',
-        result: 'Win',
-        date: '2023-11-18',
-        time: '10:00',
-        duration: '12m 05s',
-        eloChange: '+15',
-        moves: 28,
-        avatar: 'https://i.pravatar.cc/100?img=4',
-    },
-    {
-        id: '5',
-        opponent: 'Robot Arm (Level 3)',
-        result: 'Loss',
-        date: '2023-11-15',
-        time: '20:30',
-        duration: '30m 15s',
-        eloChange: '-10',
-        moves: 52,
-        avatar: 'https://i.pravatar.cc/100?img=5',
-    },
-];
+interface GameData {
+    id: string;
+    playerId?: string;
+    playerName?: string;
+    status?: string;
+    result?: string;
+    difficulty?: string;
+    totalMoves?: number;
+    startedAt?: string;
+    endedAt?: string;
+    playerRatingBefore?: number;
+    playerRatingAfter?: number;
+    ratingChange?: number;
+    gameType?: {
+        code: string;
+        name: string;
+    };
+}
 
 export default function MatchHistory() {
     const navigate = useNavigate();
+    const [loading, setLoading] = useState(true);
+    const [games, setGames] = useState<GameData[]>([]);
+    const [playerStats, setPlayerStats] = useState({
+        totalGames: 0,
+        winRate: 0,
+        currentElo: 0,
+        wins: 0,
+        losses: 0,
+        draws: 0,
+    });
+
+    useEffect(() => {
+        loadMatchHistory();
+    }, []);
+
+    const loadMatchHistory = async () => {
+        try {
+            setLoading(true);
+            const currentUser = authService.getCurrentUser();
+            if (!currentUser?.id) {
+                navigate('/login');
+                return;
+            }
+
+            // Fetch player games
+            const gamesData = await gameService.getPlayerGames(currentUser.id);
+            
+            // Filter finished games only
+            const finishedGames = gamesData.filter(
+                (game: GameData) => game.status === 'finished' || game.status === 'aborted'
+            );
+            
+            setGames(finishedGames);
+
+            // Calculate statistics
+            const wins = finishedGames.filter((g: GameData) => g.result?.toLowerCase() === 'win').length;
+            const losses = finishedGames.filter((g: GameData) => g.result?.toLowerCase() === 'lose').length;
+            const draws = finishedGames.filter((g: GameData) => g.result?.toLowerCase() === 'draw').length;
+            const total = finishedGames.length;
+            const winRate = total > 0 ? Math.round((wins / total) * 100) : 0;
+            
+            // Get current Elo from most recent game or user profile
+            const latestGame = finishedGames[0];
+            // prefer playerRatingAfter from latest game, otherwise try to read from current user if available
+            const currentElo = latestGame?.playerRatingAfter ?? (currentUser as any)?.eloRating ?? 0;
+
+            setPlayerStats({
+                totalGames: total,
+                winRate,
+                currentElo,
+                wins,
+                losses,
+                draws,
+            });
+        } catch (error) {
+            console.error('Failed to load match history:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const getResultColor = (result: string) => {
-        switch (result) {
-            case 'Win': return '#10B981';
-            case 'Loss': return '#EF4444';
-            case 'Draw': return '#F59E0B';
+        const lowerResult = result?.toLowerCase();
+        switch (lowerResult) {
+            case 'win': return '#10B981';
+            case 'lose': return '#EF4444';
+            case 'draw': return '#F59E0B';
             default: return 'var(--color-text)';
         }
     };
+
+    const formatDate = (dateStr?: string) => {
+        if (!dateStr) return 'N/A';
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
+    };
+
+    const formatTime = (dateStr?: string) => {
+        if (!dateStr) return 'N/A';
+        const date = new Date(dateStr);
+        return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    };
+
+    const calculateDuration = (startedAt?: string, endedAt?: string) => {
+        if (!startedAt || !endedAt) return 'N/A';
+        const start = new Date(startedAt);
+        const end = new Date(endedAt);
+        const diffMs = end.getTime() - start.getTime();
+        const minutes = Math.floor(diffMs / 60000);
+        const seconds = Math.floor((diffMs % 60000) / 1000);
+        return `${minutes}m ${seconds}s`;
+    };
+
+    const getDifficultyDisplay = (difficulty?: string) => {
+        if (!difficulty) return 'AI';
+        return `AI (${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)})`;
+    };
+
+    if (loading) {
+        return (
+            <div className="match-history-container">
+                <div className="match-history-header">
+                    <div onClick={() => navigate('/')} style={{ cursor: 'pointer', padding: '8px', borderRadius: '12px', backgroundColor: '#F3F4F6' }}>
+                        <ArrowLeft size={24} color="var(--color-text)" />
+                    </div>
+                    <h2 className="header-title">Match History</h2>
+                    <div style={{ width: 40 }}></div>
+                </div>
+                <div className="loading-state">Loading match history...</div>
+            </div>
+        );
+    }
 
     return (
         <div className="match-history-container">
@@ -85,62 +152,74 @@ export default function MatchHistory() {
             <div className="list-content">
                 <div className="stats-summary">
                     <div className="summary-item">
-                        <div className="summary-value">142</div>
+                        <div className="summary-value">{playerStats.totalGames}</div>
                         <div className="summary-label">Total Games</div>
                     </div>
                     <div className="divider" />
                     <div className="summary-item">
-                        <div className="summary-value">58%</div>
+                        <div className="summary-value">{playerStats.winRate}%</div>
                         <div className="summary-label">Win Rate</div>
                     </div>
                     <div className="divider" />
                     <div className="summary-item">
-                        <div className="summary-value">2450</div>
+                        <div className="summary-value">{playerStats.currentElo}</div>
                         <div className="summary-label">Current ELO</div>
                     </div>
                 </div>
 
                 <h3 className="section-title">Recent Matches</h3>
 
-                {MATCH_HISTORY.map((item) => (
-                    <div key={item.id} className="match-card" onClick={() => navigate(`/match-history/${item.id}`)}>
-                        <div className="match-header">
-                            <div className="opponent-info">
-                                <div className="avatar-container">
-                                    <User size={24} color="#9CA3AF" />
-                                </div>
-                                <div>
-                                    <div className="opponent-name">{item.opponent}</div>
-                                    <div className="match-date">{item.date} • {item.time}</div>
-                                </div>
-                            </div>
-                            <div className="result-badge" style={{ backgroundColor: getResultColor(item.result) + '20' }}>
-                                <span className="result-text" style={{ color: getResultColor(item.result) }}>{item.result}</span>
-                            </div>
-                        </div>
-
-                        <div className="match-stats">
-                            <div className="stat-item">
-                                <Clock size={18} color="#9CA3AF" />
-                                <span className="stat-text">{item.duration}</span>
-                            </div>
-                            <div className="stat-item">
-                                <ArrowUpDown size={18} color="#9CA3AF" />
-                                <span className="stat-text">{item.moves} Moves</span>
-                            </div>
-                            <div className="stat-item">
-                                {item.eloChange.startsWith('+') ? (
-                                    <TrendingUp size={18} color="#10B981" />
-                                ) : (
-                                    <TrendingDown size={18} color="#EF4444" />
-                                )}
-                                <span className="stat-text" style={{ color: item.eloChange.startsWith('+') ? '#10B981' : '#EF4444' }}>
-                                    {item.eloChange} ELO
-                                </span>
-                            </div>
-                        </div>
+                {games.length === 0 ? (
+                    <div className="empty-state">
+                        <p>No matches found</p>
                     </div>
-                ))}
+                ) : (
+                    games.map((game) => (
+                        <div key={game.id} className="match-card" onClick={() => navigate(`/match-history/${game.id}`)}>
+                            <div className="match-header">
+                                <div className="opponent-info">
+                                    <div className="avatar-container">
+                                        <User size={24} color="#9CA3AF" />
+                                    </div>
+                                    <div>
+                                        <div className="opponent-name">{getDifficultyDisplay(game.difficulty)}</div>
+                                        <div className="match-date">
+                                            {formatDate(game.startedAt)} • {formatTime(game.startedAt)}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="result-badge" style={{ backgroundColor: getResultColor(game.result || '') + '20' }}>
+                                    <span className="result-text" style={{ color: getResultColor(game.result || '') }}>
+                                        {game.result ? game.result.charAt(0).toUpperCase() + game.result.slice(1) : 'N/A'}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="match-stats">
+                                <div className="stat-item">
+                                    <Clock size={18} color="#9CA3AF" />
+                                    <span className="stat-text">{calculateDuration(game.startedAt, game.endedAt)}</span>
+                                </div>
+                                <div className="stat-item">
+                                    <ArrowUpDown size={18} color="#9CA3AF" />
+                                    <span className="stat-text">{game.totalMoves || 0} Moves</span>
+                                </div>
+                                {game.ratingChange !== undefined && game.ratingChange !== 0 && (
+                                    <div className="stat-item">
+                                        {game.ratingChange > 0 ? (
+                                            <TrendingUp size={18} color="#10B981" />
+                                        ) : (
+                                            <TrendingDown size={18} color="#EF4444" />
+                                        )}
+                                        <span className="stat-text" style={{ color: game.ratingChange > 0 ? '#10B981' : '#EF4444' }}>
+                                            {game.ratingChange > 0 ? '+' : ''}{game.ratingChange} ELO
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    ))
+                )}
             </div>
         </div>
     );

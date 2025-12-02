@@ -1,33 +1,194 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Share2, User, Cpu, SkipBack, SkipForward } from 'lucide-react';
-import { ChessBoard, initialBoard } from '../components/chess';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, Share2, User, Cpu, Trophy, TrendingDown, Equal } from 'lucide-react';
+import { ChessBoard, initialBoard, fenToBoard, INITIAL_FEN } from '../components/chess';
+import ReplayControls from '../components/game/ReplayControls';
+import GameStatistics from '../components/game/GameStatistics';
+import MoveHistory from '../components/game/MoveHistory';
+import type { Move } from '../components/game/MoveHistory';
+import gameService from '../services/gameService';
+import type { GameReplayResponse } from '../services/gameService';
 import '../styles/MatchDetail.css';
 
 export default function MatchDetail() {
-    // const { id } = useParams(); // Unused for now
+    const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    
+    // State
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [replayData, setReplayData] = useState<GameReplayResponse | null>(null);
     const [currentMoveIndex, setCurrentMoveIndex] = useState(0);
-    const [board] = useState([...initialBoard]); // setBoard unused
+    const [board, setBoard] = useState([...initialBoard]);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [playbackSpeed, setPlaybackSpeed] = useState(1);
+    
+    const playIntervalRef = useRef<number | null>(null);
 
-    // Mock Moves
-    const moves = [
-        'e4', 'e5', 'Nf3', 'Nc6', 'Bb5', 'a6', 'Ba4', 'Nf6', 'O-O', 'Be7',
-        'Re1', 'b5', 'Bb3', 'd6', 'c3', 'O-O', 'h3', 'Nb8', 'd4', 'Nbd7',
-        'c4', 'c6', 'cxb5', 'axb5', 'Nc3', 'Bb7', 'Bg5', 'h6', 'Bh4', 'Re8',
-    ];
+    // Load replay data
+    useEffect(() => {
+        if (!id) {
+            setError('Game ID is required');
+            setLoading(false);
+            return;
+        }
 
-    const handleNextMove = () => {
-        if (currentMoveIndex < moves.length) {
-            setCurrentMoveIndex(prev => prev + 1);
+        loadReplayData();
+    }, [id]);
+
+    const loadReplayData = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const data = await gameService.getGameReplay(id!);
+            setReplayData(data);
+            
+            // Initialize board with starting FEN
+            const startFen = data.fenStart || INITIAL_FEN;
+            const startBoard = fenToBoard(startFen);
+            setBoard(startBoard);
+        } catch (err: any) {
+            console.error('Failed to load replay data:', err);
+            setError(err.message || 'Failed to load game replay');
+        } finally {
+            setLoading(false);
         }
     };
 
-    const handlePrevMove = () => {
-        if (currentMoveIndex > 0) {
-            setCurrentMoveIndex(prev => prev - 1);
+    // Apply move to board
+    const applyMove = useCallback((moveIndex: number) => {
+        if (!replayData || moveIndex < 0 || moveIndex > replayData.moves.length) return;
+
+        setCurrentMoveIndex(moveIndex);
+
+        // Apply move based on index
+        if (moveIndex === 0) {
+            // Reset to starting position
+            const startFen = replayData.fenStart || INITIAL_FEN;
+            const startBoard = fenToBoard(startFen);
+            setBoard(startBoard);
+        } else if (moveIndex > 0 && replayData.moves[moveIndex - 1]?.fenStr) {
+            // Parse FEN from move and update board
+            const moveFen = replayData.moves[moveIndex - 1].fenStr;
+            const newBoard = fenToBoard(moveFen);
+            setBoard(newBoard);
+        }
+    }, [replayData]);
+
+    // Auto-play functionality
+    useEffect(() => {
+        if (isPlaying && replayData) {
+            playIntervalRef.current = setInterval(() => {
+                setCurrentMoveIndex(prev => {
+                    if (prev >= replayData.moves.length) {
+                        setIsPlaying(false);
+                        return prev;
+                    }
+                    applyMove(prev + 1);
+                    return prev + 1;
+                });
+            }, 1000 / playbackSpeed);
+        }
+
+        return () => {
+            if (playIntervalRef.current) {
+                clearInterval(playIntervalRef.current);
+            }
+        };
+    }, [isPlaying, playbackSpeed, replayData, applyMove]);
+
+    // Control handlers
+    const handlePlay = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
+    const handleFirst = () => {
+        setIsPlaying(false);
+        applyMove(0);
+    };
+    const handlePrevious = () => {
+        setIsPlaying(false);
+        applyMove(currentMoveIndex - 1);
+    };
+    const handleNext = () => {
+        setIsPlaying(false);
+        applyMove(currentMoveIndex + 1);
+    };
+    const handleLast = () => {
+        setIsPlaying(false);
+        if (replayData) applyMove(replayData.moves.length);
+    };
+    const handleSpeedChange = (speed: number) => setPlaybackSpeed(speed);
+    const handleMoveSelect = (moveIndex: number) => {
+        setIsPlaying(false);
+        applyMove(moveIndex);
+    };
+
+    // Helper to format moves for MoveHistory component
+    const getFormattedMoves = useCallback((): Move[] => {
+        if (!replayData) return [];
+        
+        const formattedMoves: Move[] = [];
+        const moves = replayData.moves;
+        
+        for (let i = 0; i < moves.length; i += 2) {
+            formattedMoves.push({
+                moveNumber: Math.floor(i / 2) + 1,
+                white: moves[i].notation + (moves[i].resultsInCheck ? '+' : ''),
+                black: moves[i + 1] ? moves[i + 1].notation + (moves[i + 1].resultsInCheck ? '+' : '') : undefined
+            });
+        }
+        return formattedMoves;
+    }, [replayData]);
+
+    // Get result icon
+    const getResultIcon = () => {
+        if (!replayData?.result) return null;
+        switch (replayData.result.toLowerCase()) {
+            case 'win':
+                return <Trophy size={20} color="#10B981" />;
+            case 'lose':
+                return <TrendingDown size={20} color="#EF4444" />;
+            case 'draw':
+                return <Equal size={20} color="#6B7280" />;
+            default:
+                return null;
         }
     };
+
+    // Get result color
+    const getResultColor = () => {
+        if (!replayData?.result) return '#6B7280';
+        switch (replayData.result.toLowerCase()) {
+            case 'win':
+                return '#10B981';
+            case 'lose':
+                return '#EF4444';
+            case 'draw':
+                return '#6B7280';
+            default:
+                return '#6B7280';
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="match-detail-container">
+                <div className="loading-state">Loading replay...</div>
+            </div>
+        );
+    }
+
+    if (error || !replayData) {
+        return (
+            <div className="match-detail-container">
+                <div className="error-state">
+                    <p>{error || 'Game not found'}</p>
+                    <button onClick={() => navigate(-1)} className="back-button">
+                        Go Back
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="match-detail-container">
@@ -50,21 +211,33 @@ export default function MatchDetail() {
                             <User size={20} color="#9CA3AF" />
                         </div>
                         <div>
-                            <div className="player-name">You</div>
-                            <div className="player-elo">2450</div>
+                            <div className="player-name">{replayData.playerName || 'You'}</div>
+                            <div className="player-elo">
+                                {replayData.playerRatingBefore || 0}
+                                {replayData.ratingChange !== undefined && replayData.ratingChange !== 0 && (
+                                    <span className={`elo-change ${replayData.ratingChange > 0 ? 'positive' : 'negative'}`}>
+                                        {replayData.ratingChange > 0 ? '+' : ''}{replayData.ratingChange}
+                                    </span>
+                                )}
+                            </div>
                         </div>
                     </div>
                     <div className="score-container">
-                        <div className="score-text">1 - 0</div>
-                        <div className="result-text">Win</div>
+                        {getResultIcon()}
+                        <div className="result-text" style={{ color: getResultColor() }}>
+                            {replayData.result?.toUpperCase() || 'N/A'}
+                        </div>
                     </div>
                     <div className="player-info">
                         <div className="avatar-container">
                             <Cpu size={20} color="#9CA3AF" />
                         </div>
                         <div>
-                            <div className="player-name">Robot</div>
-                            <div className="player-elo">2438</div>
+                            <div className="player-name">AI ({replayData.difficulty || 'Medium'})</div>
+                            <div className="player-elo">
+                                {replayData.difficulty === 'easy' ? '1200' : 
+                                 replayData.difficulty === 'hard' ? '2600' : '2000'}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -80,53 +253,38 @@ export default function MatchDetail() {
                                 size="full"
                             />
                         </div>
+                        
+                        {/* Replay Controls */}
+                        <ReplayControls
+                            isPlaying={isPlaying}
+                            currentMove={currentMoveIndex}
+                            totalMoves={replayData.moves.length}
+                            playbackSpeed={playbackSpeed}
+                            onPlay={handlePlay}
+                            onPause={handlePause}
+                            onFirst={handleFirst}
+                            onPrevious={handlePrevious}
+                            onNext={handleNext}
+                            onLast={handleLast}
+                            onSpeedChange={handleSpeedChange}
+                            onMoveSelect={handleMoveSelect}
+                        />
                     </div>
 
-                    {/* Right Column - Move List */}
+                    {/* Right Column - Move List & Statistics */}
                     <div className="right-column">
-                        <div className="move-list-container">
-                            <h3 className="move-list-title">Move List</h3>
-                            <div className="move-list-scroll">
-                                <div className="move-grid">
-                                    {moves.map((move, index) => (
-                                        <div
-                                            key={index}
-                                            className={`move-item ${index === currentMoveIndex - 1 ? 'active' : ''}`}
-                                            onClick={() => setCurrentMoveIndex(index + 1)}
-                                        >
-                                            <span className="move-item-text">
-                                                {index % 2 === 0 ? `${index / 2 + 1}.` : ''} {move}
-                                            </span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
+                        <MoveHistory 
+                            moves={getFormattedMoves()} 
+                            currentMoveIndex={currentMoveIndex}
+                            onMoveClick={handleMoveSelect}
+                            className="match-detail-move-history"
+                        />
 
-                            {/* Controls */}
-                            <div className="controls-container">
-                                <button
-                                    className="control-button"
-                                    onClick={handlePrevMove}
-                                    disabled={currentMoveIndex === 0}
-                                >
-                                    <SkipBack size={24} color={currentMoveIndex === 0 ? '#D1D5DB' : 'var(--color-text)'} />
-                                </button>
-
-                                <div className="move-display">
-                                    <span className="move-text">
-                                        {currentMoveIndex > 0 ? `${Math.ceil(currentMoveIndex / 2)}. ${moves[currentMoveIndex - 1]}` : 'Start'}
-                                    </span>
-                                </div>
-
-                                <button
-                                    className="control-button"
-                                    onClick={handleNextMove}
-                                    disabled={currentMoveIndex === moves.length}
-                                >
-                                    <SkipForward size={24} color={currentMoveIndex === moves.length ? '#D1D5DB' : 'var(--color-text)'} />
-                                </button>
-                            </div>
-                        </div>
+                        {/* Game Statistics */}
+                        <GameStatistics
+                            statistics={replayData.statistics}
+                            durationSeconds={replayData.durationSeconds}
+                        />
                     </div>
                 </div>
             </div>
