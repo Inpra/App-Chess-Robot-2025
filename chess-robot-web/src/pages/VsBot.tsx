@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { ArrowLeft, User, Cpu, Bluetooth, RotateCcw, Pause, Lightbulb, Flag, Play } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Chess } from 'chess.js';
@@ -38,6 +38,21 @@ export default function VsBot() {
     // Chess.js instance to track game state
     const chessGame = useRef<Chess>(new Chess());
     const lastProcessedFen = useRef<string>('');
+    
+    // Pending moves queue for batch save
+    const pendingMoves = useRef<Array<{
+        gameId: string;
+        moveNumber: number;
+        playerColor: string;
+        fromSquare: string;
+        toSquare: string;
+        fromPiece?: string;
+        toPiece?: string;
+        notation: string;
+        resultsInCheck: boolean;
+        fenStr: string;
+    }>>([]);
+    const saveTimerRef = useRef<number | null>(null);
 
     // Auto-dismiss notification after 5 seconds
     useEffect(() => {
@@ -47,7 +62,7 @@ export default function VsBot() {
         }
     }, [notification]);
 
-    // WebSocket connection setup
+    // WebSocket connection setup (separate from gameId to prevent disconnect on game start)
     useEffect(() => {
         // Handle connection status changes
         const unsubscribeConnection = wsService.on('connection', (data) => {
@@ -64,7 +79,15 @@ export default function VsBot() {
             }
         });
 
-        // Handle incoming messages
+        // Cleanup on unmount only
+        return () => {
+            unsubscribeConnection();
+            wsService.disconnect();
+        };
+    }, []); // ✓ No dependencies - only setup/cleanup on mount/unmount
+
+    // Handle incoming messages (separate effect that can access gameId)
+    useEffect(() => {
         const unsubscribeMessage = wsService.on('message', (data) => {
             console.log('[VsBot] Received message:', data);
             
@@ -97,6 +120,13 @@ export default function VsBot() {
             } else if (data.type === 'ai_move_executed' || data.type === 'move_detected') {
                 console.log('[VsBot] AI move:', data);
                 const move = data.move;
+                
+                // NOTE: We DON'T save move here because:
+                // - Robot moves will be saved via FEN update (updateMoveHistoryFromFen)
+                // - This prevents duplicate saves
+                // - FEN is the source of truth for board state
+                
+                // Just show UI feedback
                 if (move) {
                     const moveText = `${move.from_piece?.replace('_', ' ')} ${move.from} → ${move.to}`;
                     setNotification({ type: 'info', message: `🤖 Robot: ${moveText}` });
@@ -124,15 +154,75 @@ export default function VsBot() {
             }
         });
 
-        // Cleanup on unmount
+        // Cleanup message handler when effect re-runs (gameId changes)
         return () => {
-            unsubscribeConnection();
             unsubscribeMessage();
-            wsService.disconnect();
+        };
+    }, [gameId]);
+
+    // Cleanup pending moves on unmount
+    useEffect(() => {
+        return () => {
+            // Save pending moves before unmount
+            if (pendingMoves.current.length > 0) {
+                savePendingMoves();
+            }
+            
+            // Clear timer
+            if (saveTimerRef.current) {
+                clearTimeout(saveTimerRef.current);
+            }
         };
     }, []);
 
+    // Batch save pending moves
+    const savePendingMoves = async () => {
+        if (pendingMoves.current.length === 0) return;
+        
+        const movesToSave = [...pendingMoves.current];
+        pendingMoves.current = []; // Clear queue
+        
+        try {
+            if (movesToSave.length === 1) {
+                // Save single move
+                await gameService.saveMove(movesToSave[0]);
+                console.log('[VsBot] ✓ Move saved to database');
+            } else {
+                // Batch save multiple moves
+                await gameService.saveMovesBatch(movesToSave[0].gameId, movesToSave);
+                console.log(`[VsBot] ✓ Batch saved ${movesToSave.length} moves to database`);
+            }
+        } catch (error) {
+            console.error('[VsBot] ✗ Failed to save moves:', error);
+            // Put failed moves back in queue
+            pendingMoves.current.unshift(...movesToSave);
+        }
+    };
+    
+    // Queue move for batch save
+    const queueMoveForSave = useCallback((moveData: any) => {
+        pendingMoves.current.push(moveData);
+        
+        // Clear existing timer
+        if (saveTimerRef.current) {
+            clearTimeout(saveTimerRef.current);
+        }
+        
+        // Save after 3 seconds of inactivity OR when 5 moves accumulated
+        if (pendingMoves.current.length >= 5) {
+            savePendingMoves();
+        } else {
+            saveTimerRef.current = window.setTimeout(() => {
+                savePendingMoves();
+            }, 3000);
+        }
+    }, []);
+    
     // Update move history from FEN changes
+    // This is the SINGLE SOURCE OF TRUTH for saving moves:
+    // - Player (White) moves: Camera detects → TCP sends FEN → Save here
+    // - Robot (Black) moves: Robot executes → TCP sends FEN → Save here
+    // FEN updates come from board_status messages (line ~94)
     const updateMoveHistoryFromFen = (newFen: string) => {
         // Skip if this FEN was already processed
         if (newFen === lastProcessedFen.current) {
@@ -163,11 +253,51 @@ export default function VsBot() {
                     // Make the move in our game
                     const madeMove = chessGame.current.move(move.san);
                     
-                    if (madeMove) {
+                    if (madeMove && gameId) {
                         console.log('[VsBot] Move detected from FEN:', madeMove.san);
                         
-                        // Update move history
-                        setMoveHistory(prev => {
+                        // 💾 Queue move for batch save (instead of immediate save)
+                        const totalMoves = chessGame.current.history().length;
+                        const moveNumber = Math.ceil(totalMoves / 2);
+                        
+                        queueMoveForSave({
+                            gameId: gameId,
+                            moveNumber: moveNumber,
+                            playerColor: madeMove.color === 'w' ? 'white' : 'black',
+                            fromSquare: madeMove.from,
+                            toSquare: madeMove.to,
+                            fromPiece: `${madeMove.color === 'w' ? 'white' : 'black'}_${madeMove.piece}`,
+                            toPiece: madeMove.captured ? 
+                                    `${madeMove.color === 'w' ? 'black' : 'white'}_${madeMove.captured}` : 
+                                    undefined,
+                            notation: madeMove.san,
+                            resultsInCheck: chessGame.current.inCheck(),
+                            fenStr: newFen
+                        });
+                        
+                        // Update move history UI
+                        setMoveHistory(() => {
+                            const history = chessGame.current.history();
+                            const moves: Move[] = [];
+                            
+                            for (let i = 0; i < history.length; i += 2) {
+                                moves.push({
+                                    moveNumber: Math.floor(i / 2) + 1,
+                                    white: history[i],
+                                    black: history[i + 1]
+                                });
+                            }
+                            
+                            return moves;
+                        });
+                        
+                        moveFound = true;
+                    }
+                    // Update UI even without gameId
+                    else if (madeMove) {
+                        console.log('[VsBot] Move detected from FEN:', madeMove.san);
+                        
+                        setMoveHistory(() => {
                             const history = chessGame.current.history();
                             const moves: Move[] = [];
                             
@@ -243,10 +373,16 @@ export default function VsBot() {
             setIsStartingGame(true);
             setGameStatus('starting');
 
+            // Save any pending moves before starting new game
+            if (pendingMoves.current.length > 0) {
+                await savePendingMoves();
+            }
+
             // Reset move history and chess game
             setMoveHistory([]);
             chessGame.current = new Chess();
             lastProcessedFen.current = '';
+            pendingMoves.current = [];
 
             // Call API to start game
             const response = await gameService.startGame({
