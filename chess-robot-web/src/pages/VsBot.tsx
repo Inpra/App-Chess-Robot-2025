@@ -161,6 +161,18 @@ export default function VsBot() {
                 } else if (data.status === 'error') {
                     setNotification({ type: 'error', message: '✗ Robot movement failed' });
                 }
+            } else if (data.type === 'check_detected') {
+                console.log('[VsBot] Check detected:', data);
+                const playerInCheck = data.player_in_check;
+                const message = playerInCheck === 'white' 
+                    ? 'Check! Your king is under attack!' 
+                    : 'Check! Robot king is under attack!';
+                
+                setNotification({ 
+                    type: 'warning', 
+                    message: `⚠ ${message}` 
+                });
+                setGameMessage(`Check - ${playerInCheck} king in danger`);
             } else if (data.type === 'illegal_move') {
                 console.log('[VsBot] Illegal move:', data);
                 const move = data.move;

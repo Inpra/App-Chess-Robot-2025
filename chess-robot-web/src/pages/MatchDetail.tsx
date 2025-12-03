@@ -288,13 +288,17 @@ export default function MatchDetail() {
                                     className="match-detail-move-history"
                                 />
 
-                                {/* Game Statistics - only show duration if available */}
-                                {replayData?.durationSeconds && (
-                                    <GameStatistics
-                                        statistics={null}
-                                        durationSeconds={replayData.durationSeconds}
-                                    />
-                                )}
+                                {/* Game Statistics */}
+                                <GameStatistics
+                                    statistics={replayData?.statistics || {
+                                        totalMoves: replayData?.totalMoves || 0,
+                                        whiteMoves: replayData?.moves.filter(m => m.playerColor?.toLowerCase() === 'white').length || 0,
+                                        blackMoves: replayData?.moves.filter(m => m.playerColor?.toLowerCase() === 'black').length || 0,
+                                        captures: replayData?.moves.filter(m => m.toPiece).length || 0,
+                                        checks: replayData?.moves.filter(m => m.resultsInCheck).length || 0
+                                    }}
+                                    durationSeconds={null}
+                                />
                             </>
                         )}
                     </div>
