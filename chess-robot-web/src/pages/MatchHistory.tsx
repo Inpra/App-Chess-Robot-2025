@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, User, Clock, ArrowUpDown, TrendingUp, TrendingDown } from 'lucide-react';
+import { ArrowLeft, User, Clock, ArrowUpDown, TrendingUp, TrendingDown, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import gameService from '../services/gameService';
 import authService from '../services/authService';
@@ -52,12 +52,12 @@ export default function MatchHistory() {
 
             // Fetch player games
             const gamesData = await gameService.getPlayerGames(currentUser.id);
-            
+
             // Filter finished games only
             const finishedGames = gamesData.filter(
                 (game: GameData) => game.status === 'finished' || game.status === 'aborted'
             );
-            
+
             setGames(finishedGames);
 
             // Calculate statistics
@@ -66,7 +66,7 @@ export default function MatchHistory() {
             const draws = finishedGames.filter((g: GameData) => g.result?.toLowerCase() === 'draw').length;
             const total = finishedGames.length;
             const winRate = total > 0 ? Math.round((wins / total) * 100) : 0;
-            
+
             // Get current Elo from most recent game or user profile
             const latestGame = finishedGames[0];
             // prefer playerRatingAfter from latest game, otherwise try to read from current user if available
@@ -124,21 +124,6 @@ export default function MatchHistory() {
         return `AI (${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)})`;
     };
 
-    if (loading) {
-        return (
-            <div className="match-history-container">
-                <div className="match-history-header">
-                    <div onClick={() => navigate('/')} style={{ cursor: 'pointer', padding: '8px', borderRadius: '12px', backgroundColor: '#F3F4F6' }}>
-                        <ArrowLeft size={24} color="var(--color-text)" />
-                    </div>
-                    <h2 className="header-title">Match History</h2>
-                    <div style={{ width: 40 }}></div>
-                </div>
-                <div className="loading-state">Loading match history...</div>
-            </div>
-        );
-    }
-
     return (
         <div className="match-history-container">
             <div className="match-history-header">
@@ -154,24 +139,35 @@ export default function MatchHistory() {
             <div className="list-content">
                 <div className="stats-summary">
                     <div className="summary-item">
-                        <div className="summary-value">{playerStats.totalGames}</div>
+                        <div className="summary-value">{loading ? '-' : playerStats.totalGames}</div>
                         <div className="summary-label">Total Games</div>
                     </div>
                     <div className="divider" />
                     <div className="summary-item">
-                        <div className="summary-value">{playerStats.winRate}%</div>
+                        <div className="summary-value">{loading ? '-' : `${playerStats.winRate}%`}</div>
                         <div className="summary-label">Win Rate</div>
                     </div>
                     <div className="divider" />
                     <div className="summary-item">
-                        <div className="summary-value">{playerStats.currentElo}</div>
+                        <div className="summary-value">{loading ? '-' : playerStats.currentElo}</div>
                         <div className="summary-label">Current ELO</div>
                     </div>
                 </div>
 
                 <h3 className="section-title">Recent Matches</h3>
 
-                {games.length === 0 ? (
+                {loading ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 0', color: 'var(--color-icon)' }}>
+                        <Loader2 size={32} className="animate-spin" style={{ marginBottom: 12, animation: 'spin 1s linear infinite' }} />
+                        <div>Loading history...</div>
+                        <style>{`
+                            @keyframes spin {
+                                from { transform: rotate(0deg); }
+                                to { transform: rotate(360deg); }
+                            }
+                        `}</style>
+                    </div>
+                ) : games.length === 0 ? (
                     <div className="empty-state">
                         <p>No matches found</p>
                     </div>

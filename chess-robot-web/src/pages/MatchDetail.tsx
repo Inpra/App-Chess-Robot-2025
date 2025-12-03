@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Share2, User, Cpu, Trophy, TrendingDown, Equal } from 'lucide-react';
+import { ArrowLeft, Share2, User, Cpu, Trophy, TrendingDown, Equal, Loader2 } from 'lucide-react';
 import { ChessBoard, initialBoard, fenToBoard, INITIAL_FEN } from '../components/chess';
 import ReplayControls from '../components/game/ReplayControls';
 import GameStatistics from '../components/game/GameStatistics';
@@ -13,7 +13,7 @@ import '../styles/MatchDetail.css';
 export default function MatchDetail() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    
+
     // State
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -22,7 +22,7 @@ export default function MatchDetail() {
     const [board, setBoard] = useState([...initialBoard]);
     const [isPlaying, setIsPlaying] = useState(false);
     const [playbackSpeed, setPlaybackSpeed] = useState(1);
-    
+
     const playIntervalRef = useRef<number | null>(null);
 
     // Load replay data
@@ -42,7 +42,7 @@ export default function MatchDetail() {
             setError(null);
             const data = await gameService.getGameReplay(id!);
             setReplayData(data);
-            
+
             // Initialize board with starting FEN
             const startFen = data.fenStart || INITIAL_FEN;
             const startBoard = fenToBoard(startFen);
@@ -125,10 +125,10 @@ export default function MatchDetail() {
     // Helper to format moves for MoveHistory component
     const getFormattedMoves = useCallback((): Move[] => {
         if (!replayData) return [];
-        
+
         const formattedMoves: Move[] = [];
         const moves = replayData.moves;
-        
+
         for (let i = 0; i < moves.length; i += 2) {
             formattedMoves.push({
                 moveNumber: Math.floor(i / 2) + 1,
@@ -169,19 +169,18 @@ export default function MatchDetail() {
         }
     };
 
-    if (loading) {
+    if (error) {
         return (
             <div className="match-detail-container">
-                <div className="loading-state">Loading replay...</div>
-            </div>
-        );
-    }
-
-    if (error || !replayData) {
-        return (
-            <div className="match-detail-container">
+                <div className="match-detail-header">
+                    <div onClick={() => navigate(-1)} style={{ cursor: 'pointer', padding: '8px', borderRadius: '12px', backgroundColor: '#F3F4F6' }}>
+                        <ArrowLeft size={24} color="var(--color-text)" />
+                    </div>
+                    <h2 className="match-detail-title">Match Replay</h2>
+                    <div style={{ width: 40 }}></div>
+                </div>
                 <div className="error-state">
-                    <p>{error || 'Game not found'}</p>
+                    <p>{error}</p>
                     <button onClick={() => navigate(-1)} className="back-button">
                         Go Back
                     </button>
@@ -211,10 +210,10 @@ export default function MatchDetail() {
                             <User size={20} color="#9CA3AF" />
                         </div>
                         <div>
-                            <div className="player-name">{replayData.playerName || 'You'}</div>
+                            <div className="player-name">{loading ? 'Loading...' : (replayData?.playerName || 'You')}</div>
                             <div className="player-elo">
-                                {replayData.playerRatingBefore || 0}
-                                {replayData.ratingChange !== undefined && replayData.ratingChange !== 0 && (
+                                {loading ? '-' : (replayData?.playerRatingBefore || 0)}
+                                {!loading && replayData?.ratingChange !== undefined && replayData.ratingChange !== 0 && (
                                     <span className={`elo-change ${replayData.ratingChange > 0 ? 'positive' : 'negative'}`}>
                                         {replayData.ratingChange > 0 ? '+' : ''}{replayData.ratingChange}
                                     </span>
@@ -223,9 +222,9 @@ export default function MatchDetail() {
                         </div>
                     </div>
                     <div className="score-container">
-                        {getResultIcon()}
+                        {loading ? <Loader2 className="animate-spin" size={20} color="var(--color-primary)" /> : getResultIcon()}
                         <div className="result-text" style={{ color: getResultColor() }}>
-                            {replayData.result?.toUpperCase() || 'N/A'}
+                            {loading ? '' : (replayData?.result?.toUpperCase() || 'N/A')}
                         </div>
                     </div>
                     <div className="player-info">
@@ -233,10 +232,10 @@ export default function MatchDetail() {
                             <Cpu size={20} color="#9CA3AF" />
                         </div>
                         <div>
-                            <div className="player-name">AI ({replayData.difficulty || 'Medium'})</div>
+                            <div className="player-name">{loading ? 'Loading...' : `AI (${replayData?.difficulty || 'Medium'})`}</div>
                             <div className="player-elo">
-                                {replayData.difficulty === 'easy' ? '1200' : 
-                                 replayData.difficulty === 'hard' ? '2600' : '2000'}
+                                {loading ? '-' : (replayData?.difficulty === 'easy' ? '1200' :
+                                    replayData?.difficulty === 'hard' ? '2600' : '2000')}
                             </div>
                         </div>
                     </div>
@@ -253,38 +252,51 @@ export default function MatchDetail() {
                                 size="full"
                             />
                         </div>
-                        
+
                         {/* Replay Controls */}
-                        <ReplayControls
-                            isPlaying={isPlaying}
-                            currentMove={currentMoveIndex}
-                            totalMoves={replayData.moves.length}
-                            playbackSpeed={playbackSpeed}
-                            onPlay={handlePlay}
-                            onPause={handlePause}
-                            onFirst={handleFirst}
-                            onPrevious={handlePrevious}
-                            onNext={handleNext}
-                            onLast={handleLast}
-                            onSpeedChange={handleSpeedChange}
-                            onMoveSelect={handleMoveSelect}
-                        />
+                        <div style={{ opacity: loading ? 0.5 : 1, pointerEvents: loading ? 'none' : 'auto' }}>
+                            <ReplayControls
+                                isPlaying={isPlaying}
+                                currentMove={currentMoveIndex}
+                                totalMoves={replayData?.moves.length || 0}
+                                playbackSpeed={playbackSpeed}
+                                onPlay={handlePlay}
+                                onPause={handlePause}
+                                onFirst={handleFirst}
+                                onPrevious={handlePrevious}
+                                onNext={handleNext}
+                                onLast={handleLast}
+                                onSpeedChange={handleSpeedChange}
+                                onMoveSelect={handleMoveSelect}
+                            />
+                        </div>
                     </div>
 
                     {/* Right Column - Move List & Statistics */}
                     <div className="right-column">
-                        <MoveHistory 
-                            moves={getFormattedMoves()} 
-                            currentMoveIndex={currentMoveIndex}
-                            onMoveClick={handleMoveSelect}
-                            className="match-detail-move-history"
-                        />
+                        {loading ? (
+                            <div style={{ display: 'flex', flex: 1, justifyContent: 'center', alignItems: 'center', flexDirection: 'column', color: 'var(--color-icon)' }}>
+                                <Loader2 size={32} className="animate-spin" style={{ marginBottom: 12 }} />
+                                <div>Loading game data...</div>
+                            </div>
+                        ) : (
+                            <>
+                                <MoveHistory
+                                    moves={getFormattedMoves()}
+                                    currentMoveIndex={currentMoveIndex}
+                                    onMoveClick={handleMoveSelect}
+                                    className="match-detail-move-history"
+                                />
 
-                        {/* Game Statistics */}
-                        <GameStatistics
-                            statistics={replayData.statistics}
-                            durationSeconds={replayData.durationSeconds}
-                        />
+                                {/* Game Statistics - only show duration if available */}
+                                {replayData?.durationSeconds && (
+                                    <GameStatistics
+                                        statistics={null}
+                                        durationSeconds={replayData.durationSeconds}
+                                    />
+                                )}
+                            </>
+                        )}
                     </div>
                 </div>
             </div>
