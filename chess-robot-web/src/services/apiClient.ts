@@ -38,7 +38,7 @@ class ApiClient {
     /**
      * Build headers with authentication
      */
-    private buildHeaders(customHeaders?: HeadersInit): Headers {
+    private buildHeaders(customHeaders?: HeadersInit, skipAuth: boolean = false): Headers {
         const headers = new Headers({
             'Content-Type': 'application/json',
         });
@@ -54,10 +54,12 @@ class ApiClient {
             }
         }
 
-        // Add auth token
-        const token = this.getAuthToken();
-        if (token) {
-            headers.set('Authorization', `Bearer ${token}`);
+        // Add auth token (skip for public endpoints)
+        if (!skipAuth) {
+            const token = this.getAuthToken();
+            if (token) {
+                headers.set('Authorization', `Bearer ${token}`);
+            }
         }
 
         return headers;
@@ -109,7 +111,8 @@ class ApiClient {
      */
     private async makeRequest<T>(
         endpoint: string,
-        options: RequestOptions = {}
+        options: RequestOptions = {},
+        skipAuth: boolean = false
     ): Promise<T> {
         const { params, ...fetchOptions } = options;
         const url = this.buildURL(endpoint, params);
@@ -120,7 +123,7 @@ class ApiClient {
         try {
             const response = await fetch(url, {
                 ...fetchOptions,
-                headers: this.buildHeaders(fetchOptions.headers),
+                headers: this.buildHeaders(fetchOptions.headers, skipAuth),
                 signal: controller.signal,
             });
 
@@ -151,11 +154,11 @@ class ApiClient {
     /**
      * POST request
      */
-    async post<T>(endpoint: string, body?: any): Promise<T> {
+    async post<T>(endpoint: string, body?: any, skipAuth: boolean = false): Promise<T> {
         return this.makeRequest<T>(endpoint, {
             method: 'POST',
             body: body ? JSON.stringify(body) : undefined,
-        });
+        }, skipAuth);
     }
 
     /**

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { User, Mail, Lock, Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import { User, Mail, Lock, Eye, EyeOff, ArrowLeft, CheckCircle } from 'lucide-react';
 import authService from '../services/authService';
 import '../styles/Auth.css';
 
@@ -15,6 +15,7 @@ export default function Register() {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [showSuccessMessage, setShowSuccessMessage] = useState(false);
 
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -44,8 +45,8 @@ export default function Register() {
             });
 
             if (response.success) {
-                alert('Account created successfully!');
-                navigate('/login');
+                setShowSuccessMessage(true);
+                // Don't navigate immediately - show the success message
             } else {
                 setError(response.error || 'Registration failed. Please try again.');
             }
@@ -55,6 +56,54 @@ export default function Register() {
             setLoading(false);
         }
     };
+
+    // Show success message instead of form
+    if (showSuccessMessage) {
+        return (
+            <div className="auth-container">
+                <div className="auth-card">
+                    <div className="success-verification-container">
+                        <div className="success-icon">
+                            <CheckCircle size={64} />
+                        </div>
+                        <h1 className="success-title">Account Created Successfully!</h1>
+                        <div className="success-message">
+                            <p>
+                                <strong>Please check your email to verify your account.</strong>
+                            </p>
+                            <p className="email-info">
+                                We've sent a verification link to <strong>{email}</strong>
+                            </p>
+                            <p className="instructions">
+                                Click the link in the email to activate your account and start playing.
+                            </p>
+                        </div>
+                        
+                        <div className="success-actions">
+                            <button 
+                                className="btn-primary"
+                                onClick={() => navigate('/login')}
+                            >
+                                Go to Login
+                            </button>
+                            <Link to="/resend-verification" className="btn-secondary">
+                                Didn't receive email? Resend
+                            </Link>
+                        </div>
+
+                        <div className="email-check-note">
+                            <p>💡 <strong>Tips:</strong></p>
+                            <ul>
+                                <li>Check your spam/junk folder</li>
+                                <li>Make sure you entered the correct email</li>
+                                <li>The verification link expires in 24 hours</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="auth-container">

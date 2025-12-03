@@ -31,6 +31,10 @@ import FAQ from './pages/FAQ';
 import ThemeSettings from './pages/ThemeSettings';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import VerifyEmail from './pages/VerifyEmail';
+import ResendVerification from './pages/ResendVerification';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -211,6 +215,10 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
+        <Route path="/resend-verification" element={<ResendVerification />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/" element={<Dashboard />} />
         <Route path="/game/vs-bot" element={<VsBot />} />
         <Route path="/match-history" element={<MatchHistory />} />
