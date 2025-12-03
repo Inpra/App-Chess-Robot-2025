@@ -145,6 +145,98 @@ class AuthService {
             return null;
         }
     }
+
+    /**
+     * Verify email with token
+     */
+    async verifyEmail(token: string): Promise<{ success: boolean; message?: string; error?: string }> {
+        try {
+            const response = await apiClient.post<{ success: boolean; message: string }>(
+                AUTH_ENDPOINTS.VERIFY_EMAIL,
+                { token },
+                true // Skip authentication for public endpoint
+            );
+
+            return {
+                success: response.success,
+                message: response.message,
+            };
+        } catch (error: any) {
+            return {
+                success: false,
+                error: error.message || 'Email verification failed',
+            };
+        }
+    }
+
+    /**
+     * Resend verification email
+     */
+    async resendVerification(email: string): Promise<{ success: boolean; message?: string; error?: string }> {
+        try {
+            const response = await apiClient.post<{ success: boolean; message: string }>(
+                AUTH_ENDPOINTS.RESEND_VERIFICATION,
+                { email },
+                true // Skip authentication for public endpoint
+            );
+
+            return {
+                success: response.success,
+                message: response.message,
+            };
+        } catch (error: any) {
+            return {
+                success: false,
+                error: error.message || 'Failed to resend verification email',
+            };
+        }
+    }
+
+    /**
+     * Request password reset
+     */
+    async forgotPassword(email: string): Promise<{ success: boolean; message?: string; error?: string }> {
+        try {
+            const response = await apiClient.post<{ success: boolean; message: string }>(
+                AUTH_ENDPOINTS.FORGOT_PASSWORD,
+                { email },
+                true // Skip authentication for public endpoint
+            );
+
+            return {
+                success: response.success,
+                message: response.message,
+            };
+        } catch (error: any) {
+            return {
+                success: false,
+                error: error.message || 'Failed to send password reset email',
+            };
+        }
+    }
+
+    /**
+     * Reset password with token
+     */
+    async resetPassword(token: string, newPassword: string): Promise<{ success: boolean; message?: string; error?: string }> {
+        try {
+            const response = await apiClient.post<{ success: boolean; message: string }>(
+                AUTH_ENDPOINTS.RESET_PASSWORD,
+                { token, newPassword },
+                true // Skip authentication for public endpoint
+            );
+
+            return {
+                success: response.success,
+                message: response.message,
+            };
+        } catch (error: any) {
+            return {
+                success: false,
+                error: error.message || 'Failed to reset password',
+            };
+        }
+    }
 }
 
 // Export singleton instance
