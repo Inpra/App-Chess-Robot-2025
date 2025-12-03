@@ -233,61 +233,6 @@
     color: var(--color-text);
 }
 
-/* Toast Notifications */
-.toast-notification {
-    position: fixed;
-    top: 90px;
-    right: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    min-width: 320px;
-    max-width: 500px;
-    padding: 16px 20px;
-    border-radius: 12px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-    font-size: 15px;
-    font-weight: 500;
-    z-index: 1000;
-    animation: slideInRight 0.3s ease-out;
-}
-
-@keyframes slideInRight {
-    from {
-        transform: translateX(400px);
-        opacity: 0;
-    }
-
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
-}
-
-.toast-success {
-    background-color: #D1FAE5;
-    color: #065F46;
-    border-left: 4px solid #10B981;
-}
-
-.toast-error {
-    background-color: #FEE2E2;
-    color: #991B1B;
-    border-left: 4px solid #EF4444;
-}
-
-.toast-warning {
-    background-color: #FEF3C7;
-    color: #92400E;
-    border-left: 4px solid #F59E0B;
-}
-
-.toast-info {
-    background-color: #DBEAFE;
-    color: #1E40AF;
-    border-left: 4px solid #3B82F6;
-}
-
 /* Game Status Banner */
 .game-status-banner {
     animation: fadeIn 0.3s ease-in;
@@ -313,12 +258,5 @@
 
     .vs-bot-sidebar {
         max-width: 100%;
-    }
-
-    .toast-notification {
-        right: 16px;
-        left: 16px;
-        max-width: calc(100% - 32px);
-        min-width: auto;
     }
 }

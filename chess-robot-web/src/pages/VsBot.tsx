@@ -2,12 +2,14 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { ArrowLeft, User, Cpu, Bluetooth, RotateCcw, Pause, Lightbulb, Flag, Play } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Chess } from 'chess.js';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import wsService from '../services/websocketService';
 import gameService from '../services/gameService';
 import { ChessBoard, initialBoard, fenToBoard } from '../components/chess';
 import type { BoardState } from '../components/chess';
 import { CameraView } from '../components/camera';
-import { MoveHistory } from '../components/game';
+import { MoveHistory, GameOverModal } from '../components/game';
 import type { Move } from '../components/game';
 import { CAMERA_CONFIG } from '../services/apiConfig';
 import '../styles/VsBot.css';
@@ -27,13 +29,25 @@ export default function VsBot() {
     const [gameStatus, setGameStatus] = useState<'idle' | 'starting' | 'playing' | 'paused' | 'ended'>('idle');
     const [isStartingGame, setIsStartingGame] = useState(false);
     
-    // Notification state
-    const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'warning' | 'info', message: string } | null>(null);
+    // Game message state
     const [gameMessage, setGameMessage] = useState<string>('Waiting to start game...');
     const [boardSetupStatus, setBoardSetupStatus] = useState<'checking' | 'correct' | 'incorrect' | null>(null);
     
     // Move history state
     const [moveHistory, setMoveHistory] = useState<Move[]>([]);
+    
+    // Game over modal state
+    const [gameOverModal, setGameOverModal] = useState<{
+        isOpen: boolean;
+        result: 'win' | 'lose' | 'draw';
+        reason: string;
+        message: string;
+    }>({
+        isOpen: false,
+        result: 'draw',
+        reason: '',
+        message: ''
+    });
     
     // Chess.js instance to track game state
     const chessGame = useRef<Chess>(new Chess());
@@ -54,13 +68,55 @@ export default function VsBot() {
     }>>([]);
     const saveTimerRef = useRef<number | null>(null);
 
-    // Auto-dismiss notification after 5 seconds
-    useEffect(() => {
-        if (notification) {
-            const timer = setTimeout(() => setNotification(null), 5000);
-            return () => clearTimeout(timer);
+    // Toast throttling - prevent duplicate notifications
+    const lastToastRef = useRef<{
+        type: string;
+        message: string;
+        timestamp: number;
+    } | null>(null);
+
+    // Helper: Show toast only if not duplicate within 3 seconds
+    const showToast = (type: 'success' | 'error' | 'warning' | 'info', message: string, force = false) => {
+        const now = Date.now();
+        
+        // Check if same toast was shown recently (within 3 seconds)
+        if (!force && lastToastRef.current) {
+            const timeSinceLastToast = now - lastToastRef.current.timestamp;
+            const isSameToast = lastToastRef.current.type === type && lastToastRef.current.message === message;
+            
+            if (isSameToast && timeSinceLastToast < 3000) {
+                console.log(`[Toast] Blocked duplicate: ${message}`);
+                return; // Skip duplicate toast
+            }
         }
-    }, [notification]);
+        
+        // Show toast and update tracker
+        lastToastRef.current = { type, message, timestamp: now };
+        
+        // Use toastId to prevent react-toastify duplicates
+        const toastId = `${type}-${message}`;
+        const toastOptions = {
+            toastId: toastId,
+            autoClose: 3000
+        };
+        
+        switch (type) {
+            case 'success':
+                toast.success(message, toastOptions);
+                break;
+            case 'error':
+                toast.error(message, toastOptions);
+                break;
+            case 'warning':
+                toast.warning(message, toastOptions);
+                break;
+            case 'info':
+                toast.info(message, toastOptions);
+                break;
+        }
+    };
+
+
 
     // WebSocket connection setup (separate from gameId to prevent disconnect on game start)
     useEffect(() => {
@@ -102,6 +158,84 @@ export default function VsBot() {
         };
     }, []); // ✓ No dependencies - only setup/cleanup on mount/unmount
 
+    // Handle game over (checkmate/stalemate) - defined before useEffect to avoid dependency issues
+    const handleGameOver = useCallback(async (data: any) => {
+        console.log('[handleGameOver] ========== CALLED ==========');
+        console.log('[handleGameOver] gameId:', gameId);
+        console.log('[handleGameOver] data:', data);
+        
+        if (!gameId) {
+            console.warn('[handleGameOver] ✗ No gameId - skipping game over handling');
+            return;
+        }
+
+        const { reason, winner, message } = data;
+        console.log('[handleGameOver] ✓ Processing - reason:', reason, 'winner:', winner);
+        
+        try {
+            // Save any pending moves first
+            if (pendingMoves.current.length > 0) {
+                await savePendingMoves();
+            }
+
+            // Get current move count
+            const totalMoves = chessGame.current.history().length;
+            const currentFen = chessGame.current.fen();
+
+            // Determine result based on winner
+            let result: 'win' | 'lose' | 'draw';
+            let notificationMessage: string;
+            let emoji: string;
+
+            if (reason === 'checkmate') {
+                if (winner === 'white') {
+                    result = 'win';
+                    emoji = '🎉';
+                    notificationMessage = 'Checkmate! You won!';
+                } else {
+                    result = 'lose';
+                    emoji = '😔';
+                    notificationMessage = 'Checkmate! Robot won!';
+                }
+            } else if (reason === 'stalemate') {
+                result = 'draw';
+                emoji = '🤝';
+                notificationMessage = 'Stalemate! Game is a draw';
+            } else {
+                result = 'draw';
+                emoji = '🤝';
+                notificationMessage = message || 'Game Over - Draw';
+            }
+
+            // Update game result in database (this also sends end command to AI)
+            await gameService.updateGameResult(
+                gameId,
+                result,
+                'completed',
+                Math.ceil(totalMoves / 2),
+                currentFen
+            );
+
+            console.log(`[VsBot] ✓ Game over - Result: ${result}, Reason: ${reason}`);
+            
+            // Update UI
+            setGameStatus('ended');
+            setGameMessage(notificationMessage);
+            
+            // Show game over modal instead of toast
+            setGameOverModal({
+                isOpen: true,
+                result: result,
+                reason: reason.charAt(0).toUpperCase() + reason.slice(1),
+                message: notificationMessage
+            });
+
+        } catch (error: any) {
+            console.error('[VsBot] ✗ Failed to update game over:', error);
+            showToast('error', '✗ Failed to save game result. Please try again.');
+        }
+    }, [gameId]);
+
     // Handle incoming messages (separate effect that can access gameId)
     useEffect(() => {
         const unsubscribeMessage = wsService.on('message', (data) => {
@@ -124,14 +258,19 @@ export default function VsBot() {
             // Handle different message types
             if (data.type === 'board_status') {
                 console.log('[VsBot] Board status:', data);
-                setBoardSetupStatus(data.status === 'correct' ? 'correct' : 'incorrect');
+                const newStatus = data.status === 'correct' ? 'correct' : 'incorrect';
                 
-                if (data.status === 'correct') {
-                    setNotification({ type: 'success', message: '✓ Board setup correct! Starting game...' });
-                    setGameMessage('Board verified - Game in progress');
-                } else {
-                    setNotification({ type: 'warning', message: '⚠ Please adjust pieces to match starting position' });
-                    setGameMessage('Waiting for correct board setup...');
+                // Only show toast if status changed (prevent spam)
+                if (boardSetupStatus !== newStatus) {
+                    setBoardSetupStatus(newStatus);
+                    
+                    if (data.status === 'correct') {
+                        showToast('success', '✓ Board setup correct! Starting game...');
+                        setGameMessage('Board verified - Game in progress');
+                    } else {
+                        showToast('warning', '⚠ Please adjust pieces to match starting position');
+                        setGameMessage('Waiting for correct board setup...');
+                    }
                 }
             } else if (data.type === 'ai_move_executed' || data.type === 'move_detected') {
                 console.log('[VsBot] AI move:', data);
@@ -145,40 +284,46 @@ export default function VsBot() {
                 // Just show UI feedback
                 if (move) {
                     const moveText = `${move.from_piece?.replace('_', ' ')} ${move.from} → ${move.to}`;
-                    setNotification({ type: 'info', message: `🤖 Robot: ${moveText}` });
+                    showToast('info', `🤖 Robot: ${moveText}`);
                     setGameMessage(`Robot moved: ${move.notation || moveText}`);
                     
                     if (move.results_in_check) {
                         setTimeout(() => {
-                            setNotification({ type: 'warning', message: '⚠️ Check!' });
+                            showToast('warning', '⚠️ Check!');
                         }, 1000);
                     }
                 }
             } else if (data.type === 'robot_response') {
                 console.log('[VsBot] Robot response:', data);
                 if (data.status === 'completed') {
-                    setNotification({ type: 'success', message: '✓ Robot movement completed' });
+                    showToast('success', '✓ Robot movement completed');
                 } else if (data.status === 'error') {
-                    setNotification({ type: 'error', message: '✗ Robot movement failed' });
+                    showToast('error', '✗ Robot movement failed');
                 }
             } else if (data.type === 'check_detected') {
                 console.log('[VsBot] Check detected:', data);
                 const playerInCheck = data.player_in_check;
                 const message = playerInCheck === 'white' 
-                    ? 'Check! Your king is under attack!' 
-                    : 'Check! Robot king is under attack!';
+                    ? '⚠ Check! Your king is under attack!' 
+                    : '⚠ Check! Robot king is under attack!';
                 
-                setNotification({ 
-                    type: 'warning', 
-                    message: `⚠ ${message}` 
-                });
+                showToast('warning', message);
                 setGameMessage(`Check - ${playerInCheck} king in danger`);
             } else if (data.type === 'illegal_move') {
                 console.log('[VsBot] Illegal move:', data);
                 const move = data.move;
                 const moveText = move ? `${move.piece} from ${move.from} to ${move.to}` : 'Unknown move';
-                setNotification({ type: 'error', message: `✗ Illegal move: ${moveText}` });
+                showToast('error', `✗ Illegal move: ${moveText}`);
                 setGameMessage('Illegal move detected - please try again');
+            } else if (data.type === 'game_over') {
+                console.log('[VsBot] ========== GAME OVER RECEIVED ==========');
+                console.log('[VsBot] Full data:', JSON.stringify(data, null, 2));
+                console.log('[VsBot] Reason:', data.reason);
+                console.log('[VsBot] Winner:', data.winner);
+                console.log('[VsBot] Message:', data.message);
+                console.log('[VsBot] Current gameId:', gameId);
+                console.log('[VsBot] ==========================================');
+                handleGameOver(data);
             }
         });
 
@@ -186,7 +331,7 @@ export default function VsBot() {
         return () => {
             unsubscribeMessage();
         };
-    }, [gameId]);
+    }, [gameId, handleGameOver]);
 
     // Cleanup pending moves on unmount
     useEffect(() => {
@@ -323,14 +468,11 @@ export default function VsBot() {
                         if (chessGame.current.isCheckmate()) {
                             const winner = madeMove.color === 'w' ? 'white' : 'black';
                             const result = winner === 'white' ? 'win' : 'lose';
+                            const message = winner === 'white' ? 'Checkmate! You won!' : 'Checkmate! Robot won!';
                             
                             console.log(`[VsBot] Checkmate! ${winner} wins`);
                             setGameStatus('ended');
-                            setGameMessage(`Checkmate! ${winner === 'white' ? 'You win!' : 'Robot wins!'}`);
-                            setNotification({ 
-                                type: winner === 'white' ? 'success' : 'error', 
-                                message: `🏆 Checkmate! ${winner === 'white' ? 'You win!' : 'Robot wins!'}` 
-                            });
+                            setGameMessage(message);
                             
                             // Update game result
                             (async () => {
@@ -343,6 +485,14 @@ export default function VsBot() {
                                         newFen
                                     );
                                     console.log(`[VsBot] ✓ Game result updated: ${result}`);
+                                    
+                                    // Show modal after successful update
+                                    setGameOverModal({
+                                        isOpen: true,
+                                        result: result,
+                                        reason: 'Checkmate',
+                                        message: message
+                                    });
                                 } catch (error) {
                                     console.error('[VsBot] ✗ Failed to update game result:', error);
                                 }
@@ -351,14 +501,11 @@ export default function VsBot() {
                             const drawReason = chessGame.current.isStalemate() ? 'Stalemate' :
                                               chessGame.current.isThreefoldRepetition() ? 'Threefold Repetition' :
                                               chessGame.current.isInsufficientMaterial() ? 'Insufficient Material' : 'Draw';
+                            const message = `Game drawn by ${drawReason}`;
                             
                             console.log(`[VsBot] Draw: ${drawReason}`);
                             setGameStatus('ended');
-                            setGameMessage(`Draw - ${drawReason}`);
-                            setNotification({ 
-                                type: 'info', 
-                                message: `🤝 Game drawn by ${drawReason}` 
-                            });
+                            setGameMessage(message);
                             
                             // Update game result
                             (async () => {
@@ -371,6 +518,14 @@ export default function VsBot() {
                                         newFen
                                     );
                                     console.log('[VsBot] ✓ Game result updated: draw');
+                                    
+                                    // Show modal after successful update
+                                    setGameOverModal({
+                                        isOpen: true,
+                                        result: 'draw',
+                                        reason: drawReason,
+                                        message: message
+                                    });
                                 } catch (error) {
                                     console.error('[VsBot] ✗ Failed to update game result:', error);
                                 }
@@ -481,7 +636,7 @@ export default function VsBot() {
             setGameStatus('playing');
             setBoardSetupStatus('checking');
             setGameMessage('Verifying board setup...');
-            setNotification({ type: 'success', message: '✓ Game started! Please set up your board' });
+            showToast('success', '✓ Game started! Please set up your board');
 
         } catch (error: any) {
             console.error('[VsBot] Failed to start game:', error);
@@ -533,17 +688,18 @@ export default function VsBot() {
             // Update UI
             setGameStatus('ended');
             setGameMessage('You resigned - Game Over');
-            setNotification({ 
-                type: 'info', 
-                message: '🏳️ You resigned. Better luck next time!' 
+            
+            // Show modal for resignation
+            setGameOverModal({
+                isOpen: true,
+                result: 'lose',
+                reason: 'Resignation',
+                message: 'You resigned the game'
             });
 
         } catch (error: any) {
             console.error('[VsBot] ✗ Failed to resign game:', error);
-            setNotification({ 
-                type: 'error', 
-                message: '✗ Failed to resign game. Please try again.' 
-            });
+            showToast('error', '✗ Failed to resign game. Please try again.');
         }
     };
 
@@ -576,13 +732,21 @@ export default function VsBot() {
 
     return (
         <div className="vs-bot-container">
-            {/* Toast Notification */}
-            {notification && (
-                <div className={`toast-notification toast-${notification.type}`}>
-                    <span>{notification.message}</span>
-                    <button onClick={() => setNotification(null)} style={{ marginLeft: '12px', background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: '18px' }}>×</button>
-                </div>
-            )}
+            {/* Toast Container */}
+            <ToastContainer 
+                aria-label="Notifications"
+                position="top-right"
+                autoClose={3000}
+                hideProgressBar={false}
+                newestOnTop={true}
+                closeOnClick
+                rtl={false}
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+                limit={3}
+                preventDuplicates={true}
+            />
 
             {/* Header */}
             <div className="vs-bot-header">
@@ -764,6 +928,18 @@ export default function VsBot() {
                     <MoveHistory moves={moveHistory} />
                 </div>
             </div>
+
+            {/* Game Over Modal */}
+            <GameOverModal
+                isOpen={gameOverModal.isOpen}
+                result={gameOverModal.result}
+                reason={gameOverModal.reason}
+                message={gameOverModal.message}
+                onClose={() => {
+                    setGameOverModal({ ...gameOverModal, isOpen: false });
+                    navigate(-1); // Go back to previous page
+                }}
+            />
         </div>
     );
 }
