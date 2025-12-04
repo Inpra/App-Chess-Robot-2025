@@ -205,12 +205,16 @@ export const getGameStyles = ({ width, height }: ScaledSize) => {
             padding: 20,
             borderRadius: 20,
             ...Styles.shadow,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
+            flexDirection: 'column',
+            alignItems: 'flex-start',
+        },
+        statusTitle: {
+            fontSize: 16,
+            fontWeight: '700',
+            color: Colors.light.text,
         },
         statusText: {
-            fontSize: 16,
+            fontSize: 14,
             fontWeight: '600',
             color: Colors.light.text,
         },
@@ -218,6 +222,11 @@ export const getGameStyles = ({ width, height }: ScaledSize) => {
             flexDirection: 'row',
             alignItems: 'center',
             gap: 8,
+        },
+        statusDot: {
+            width: 10,
+            height: 10,
+            borderRadius: 5,
         },
         dot: {
             width: 10,

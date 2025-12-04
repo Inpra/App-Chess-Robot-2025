@@ -1,3 +1,5 @@
+89
+import NavigationHeader from '@/components/common/NavigationHeader';
 import { Colors } from '@/constants/theme';
 import { editProfileStyles as styles } from '@/styles/profile.styles';
 import { Ionicons } from '@expo/vector-icons';
@@ -32,15 +34,14 @@ export default function EditProfileScreen() {
             <Stack.Screen options={{ headerShown: false }} />
 
             {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color={Colors.light.text} />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Edit Profile</Text>
-                <TouchableOpacity onPress={handleSave} style={styles.saveButton}>
-                    <Text style={styles.saveButtonText}>Save</Text>
-                </TouchableOpacity>
-            </View>
+            <NavigationHeader
+                title="Edit Profile"
+                rightComponent={
+                    <TouchableOpacity onPress={handleSave}>
+                        <Text style={{ color: Colors.light.primary, fontSize: 16, fontWeight: '600' }}>Save</Text>
+                    </TouchableOpacity>
+                }
+            />
 
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}

@@ -1,0 +1,135 @@
+/* ChessBoard Component Styles */
+
+.chess-board-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Size variants */
+.chess-board-small {
+    max-width: 200px;
+}
+
+.chess-board-medium {
+    max-width: 400px;
+}
+
+.chess-board-large {
+    max-width: 600px;
+}
+
+.chess-board-full {
+    width: 100%;
+    max-width: 100%;
+}
+
+.chess-board-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.chess-board-background {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    border-radius: 16px;
+    pointer-events: none;
+}
+
+.chess-board-grid {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-wrap: wrap;
+}
+
+/* Square styles */
+.chess-square {
+    width: 12.5%;
+    height: 12.5%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    box-sizing: border-box;
+}
+
+.chess-square.interactive {
+    cursor: pointer;
+}
+
+.chess-square.interactive:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Selected square */
+.chess-square.selected {
+    background-color: rgba(255, 255, 0, 0.5);
+}
+
+/* Valid move indicators */
+.chess-square.valid-move {
+    background-color: rgba(0, 255, 0, 0.1);
+}
+
+.valid-move-dot {
+    width: 30%;
+    height: 30%;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 50%;
+    position: absolute;
+    z-index: 1;
+}
+
+.valid-capture-ring {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border: 4px solid rgba(0, 0, 0, 0.2);
+    border-radius: 50%;
+    box-sizing: border-box;
+    z-index: 1;
+}
+
+/* Last move highlight */
+.chess-square.last-move-from,
+.chess-square.last-move-to {
+    background-color: rgba(255, 255, 0, 0.3);
+}
+
+/* Check highlight */
+.chess-square.in-check {
+    background: radial-gradient(circle, rgba(255, 0, 0, 0.8) 0%, rgba(255, 0, 0, 0.4) 70%);
+    box-shadow: inset 0 0 10px rgba(255, 0, 0, 0.6);
+}
+
+/* Chess piece */
+.chess-piece {
+    width: 85%;
+    height: 85%;
+    object-fit: contain;
+    pointer-events: none;
+    z-index: 2;
+    position: relative;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .chess-board-large {
+        max-width: 100%;
+    }
+    
+    .chess-board-medium {
+        max-width: 100%;
+    }
+}

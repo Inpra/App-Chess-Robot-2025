@@ -1,0 +1,196 @@
+import { API_CONFIG } from './apiConfig';
+
+// Types
+export interface ApiResponse<T = any> {
+    success: boolean;
+    data?: T;
+    error?: string;
+    message?: string;
+}
+
+export interface ApiError {
+    message: string;
+    status?: number;
+    errors?: Record<string, string[]>;
+}
+
+// Request options
+interface RequestOptions extends RequestInit {
+    params?: Record<string, string>;
+}
+
+class ApiClient {
+    private baseURL: string;
+    private timeout: number;
+
+    constructor(baseURL: string, timeout: number = 30000) {
+        this.baseURL = baseURL;
+        this.timeout = timeout;
+    }
+
+    /**
+     * Get authorization token from localStorage
+     */
+    private getAuthToken(): string | null {
+        return localStorage.getItem('auth_token');
+    }
+
+    /**
+     * Build headers with authentication
+     */
+    private buildHeaders(customHeaders?: HeadersInit, skipAuth: boolean = false): Headers {
+        const headers = new Headers({
+            'Content-Type': 'application/json',
+        });
+
+        // Add custom headers
+        if (customHeaders) {
+            if (customHeaders instanceof Headers) {
+                customHeaders.forEach((value, key) => headers.set(key, value));
+            } else if (Array.isArray(customHeaders)) {
+                customHeaders.forEach(([key, value]) => headers.set(key, value));
+            } else {
+                Object.entries(customHeaders).forEach(([key, value]) => headers.set(key, value));
+            }
+        }
+
+        // Add auth token (skip for public endpoints)
+        if (!skipAuth) {
+            const token = this.getAuthToken();
+            if (token) {
+                headers.set('Authorization', `Bearer ${token}`);
+            }
+        }
+
+        return headers;
+    }
+
+    /**
+     * Build URL with query parameters
+     */
+    private buildURL(endpoint: string, params?: Record<string, string>): string {
+        const url = new URL(`${this.baseURL}${endpoint}`);
+        
+        if (params) {
+            Object.entries(params).forEach(([key, value]) => {
+                url.searchParams.append(key, value);
+            });
+        }
+
+        return url.toString();
+    }
+
+    /**
+     * Handle API response
+     */
+    private async handleResponse<T>(response: Response): Promise<T> {
+        const contentType = response.headers.get('content-type');
+        const isJson = contentType?.includes('application/json');
+
+        let data: any;
+        if (isJson) {
+            data = await response.json();
+        } else {
+            data = await response.text();
+        }
+
+        if (!response.ok) {
+            const error: ApiError = {
+                message: data?.error || data?.message || `HTTP ${response.status}: ${response.statusText}`,
+                status: response.status,
+                errors: data?.errors,
+            };
+            throw error;
+        }
+
+        return data as T;
+    }
+
+    /**
+     * Make API request with timeout
+     */
+    private async makeRequest<T>(
+        endpoint: string,
+        options: RequestOptions = {},
+        skipAuth: boolean = false
+    ): Promise<T> {
+        const { params, ...fetchOptions } = options;
+        const url = this.buildURL(endpoint, params);
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+
+        try {
+            const response = await fetch(url, {
+                ...fetchOptions,
+                headers: this.buildHeaders(fetchOptions.headers, skipAuth),
+                signal: controller.signal,
+            });
+
+            return await this.handleResponse<T>(response);
+        } catch (error: any) {
+            if (error.name === 'AbortError') {
+                throw {
+                    message: 'Request timeout',
+                    status: 408,
+                } as ApiError;
+            }
+            throw error;
+        } finally {
+            clearTimeout(timeoutId);
+        }
+    }
+
+    /**
+     * GET request
+     */
+    async get<T>(endpoint: string, params?: Record<string, string>): Promise<T> {
+        return this.makeRequest<T>(endpoint, {
+            method: 'GET',
+            params,
+        });
+    }
+
+    /**
+     * POST request
+     */
+    async post<T>(endpoint: string, body?: any, skipAuth: boolean = false): Promise<T> {
+        return this.makeRequest<T>(endpoint, {
+            method: 'POST',
+            body: body ? JSON.stringify(body) : undefined,
+        }, skipAuth);
+    }
+
+    /**
+     * PUT request
+     */
+    async put<T>(endpoint: string, body?: any): Promise<T> {
+        return this.makeRequest<T>(endpoint, {
+            method: 'PUT',
+            body: body ? JSON.stringify(body) : undefined,
+        });
+    }
+
+    /**
+     * DELETE request
+     */
+    async delete<T>(endpoint: string): Promise<T> {
+        return this.makeRequest<T>(endpoint, {
+            method: 'DELETE',
+        });
+    }
+
+    /**
+     * PATCH request
+     */
+    async patch<T>(endpoint: string, body?: any): Promise<T> {
+        return this.makeRequest<T>(endpoint, {
+            method: 'PATCH',
+            body: body ? JSON.stringify(body) : undefined,
+        });
+    }
+}
+
+// Export singleton instance
+const apiClient = new ApiClient(API_CONFIG.BASE_URL, API_CONFIG.TIMEOUT);
+export default apiClient;

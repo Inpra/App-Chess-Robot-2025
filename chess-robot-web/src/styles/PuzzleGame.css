@@ -1,0 +1,250 @@
+.puzzle-game-container {
+    flex: 1;
+    background-color: var(--color-background);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.puzzle-game-header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px 32px;
+    background-color: var(--color-card);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.puzzle-game-content {
+    flex: 1;
+    display: flex;
+    flex-direction: row;
+    padding: 24px;
+    gap: 32px;
+    justify-content: center;
+}
+
+.puzzle-board-section {
+    flex: 3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    max-width: 800px;
+}
+
+.puzzle-match-header {
+    width: 100%;
+    max-width: 800px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    background-color: var(--color-card);
+    border-radius: 20px;
+    padding: 16px;
+    box-shadow: var(--shadow-sm);
+}
+
+.puzzle-player-side {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+}
+
+.puzzle-player-side-right {
+    display: flex;
+    flex-direction: row-reverse;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+}
+
+.puzzle-player-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.puzzle-player-details-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.puzzle-player-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.puzzle-player-elo {
+    font-size: 14px;
+    color: var(--color-icon);
+}
+
+.puzzle-score-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0 16px;
+}
+
+.puzzle-timer-pill {
+    background-color: #F3F4F6;
+    padding: 4px 10px;
+    border-radius: 8px;
+}
+
+.puzzle-timer-text {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-text);
+    font-family: 'Courier New', monospace;
+}
+
+.puzzle-board-container {
+    width: 100%;
+    max-width: 800px;
+    aspect-ratio: 1;
+    background-color: var(--color-card);
+    border-radius: 24px;
+    padding: 4px;
+    box-shadow: var(--shadow-sm);
+    position: relative;
+}
+
+.puzzle-sidebar {
+    flex: 1.2;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-width: 450px;
+}
+
+.puzzle-feedback-card {
+    padding: 16px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 16px;
+    animation: fadeIn 0.3s ease-in;
+}
+
+.puzzle-status-card {
+    background-color: var(--color-card);
+    padding: 20px;
+    border-radius: 20px;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.puzzle-status-text {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.puzzle-status-indicator {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+}
+
+.puzzle-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 5px;
+}
+
+.puzzle-actions-card {
+    background-color: var(--color-card);
+    padding: 20px;
+    border-radius: 20px;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.puzzle-action-button {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    border-radius: 16px;
+    background-color: #F8FAFC;
+    gap: 12px;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.puzzle-action-button:hover {
+    transform: translateY(-2px);
+}
+
+.puzzle-action-button-text {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.puzzle-primary-button {
+    background-color: var(--color-primary);
+}
+
+.puzzle-primary-button-text {
+    color: #FFFFFF;
+}
+
+.puzzle-action-row {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        max-height: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        max-height: 500px;
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 1024px) {
+    .puzzle-game-content {
+        flex-direction: column;
+    }
+
+    .puzzle-sidebar {
+        max-width: 100%;
+    }
+}

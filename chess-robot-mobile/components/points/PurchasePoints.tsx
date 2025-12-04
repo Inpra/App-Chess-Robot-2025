@@ -1,3 +1,4 @@
+import NavigationHeader from '@/components/common/NavigationHeader';
 import { Colors } from '@/constants/theme';
 import { styles } from '@/styles/purchase-points.styles';
 import { Ionicons } from '@expo/vector-icons';
@@ -62,15 +63,15 @@ export default function PurchasePoints() {
     return (
         <SafeAreaView style={styles.container}>
             {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.navigate('/(tabs)')} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color={Colors.light.text} />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Store</Text>
-                <TouchableOpacity style={styles.historyButton} onPress={() => router.push('/points-history')}>
-                    <Ionicons name="time-outline" size={24} color={Colors.light.text} />
-                </TouchableOpacity>
-            </View>
+            <NavigationHeader
+                title="Store"
+                onBack={() => router.navigate('/(tabs)')}
+                rightComponent={
+                    <TouchableOpacity onPress={() => router.push('/points-history')}>
+                        <Ionicons name="time-outline" size={24} color={Colors.light.text} />
+                    </TouchableOpacity>
+                }
+            />
 
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
                 <View style={styles.heroSection}>
