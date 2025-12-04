@@ -1,16 +1,25 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { ArrowLeft, User, Cpu, RotateCcw, Pause, Lightbulb, Bluetooth } from 'lucide-react';
+import { RotateCcw, Pause, Lightbulb, Bluetooth, Play, ChevronDown, ChevronUp } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { Chess } from 'chess.js';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import { ChessBoard, fenToBoard } from '../components/chess';
 import type { BoardState } from '../components/chess';
-import '../styles/PuzzleGame.css';
-import { CAMERA_CONFIG } from '../services/apiConfig';
 import { CameraView } from '../components/camera';
+import {
+    GameHeader,
+    MatchHeader,
+    ServerStatusCard,
+    MoveHistory,
+    GameOverModal
+} from '../components/game';
+import type { Move } from '../components/game';
 import puzzleService, { type TrainingPuzzle } from '../services/puzzleService';
 import gameService from '../services/gameService';
-import { toast, ToastContainer } from 'react-toastify';
 import wsService from '../services/websocketService';
-import { Chess } from 'chess.js';
+import { CAMERA_CONFIG } from '../services/apiConfig';
+import '../styles/PuzzleGame.css';
 
 export default function PuzzleGame() {
     const navigate = useNavigate();
@@ -21,16 +30,40 @@ export default function PuzzleGame() {
     const [board, setBoard] = useState<BoardState>([]);
     const [selectedSquare, setSelectedSquare] = useState<{ row: number, col: number } | null>(null);
     const [lastMove, setLastMove] = useState<{ from: number; to: number } | null>(null);
+    const [checkSquare, setCheckSquare] = useState<{ row: number, col: number } | null>(null);
     const [message, setMessage] = useState<string | null>(null);
     const [isConnected, setIsConnected] = useState(false);
     const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected');
     const [loading, setLoading] = useState(true);
     const [boardSetupStatus, setBoardSetupStatus] = useState<'checking' | 'correct' | 'incorrect' | null>(null);
-    
+
+    // Game state
+    const [gameStatus, setGameStatus] = useState<'idle' | 'starting' | 'playing' | 'paused' | 'ended'>('idle');
+    const [isStartingGame, setIsStartingGame] = useState(false);
+
+    // UI state
+    const [isGoalExpanded, setIsGoalExpanded] = useState(true);
+
+    // Move history state
+    const [moveHistory, setMoveHistory] = useState<Move[]>([]);
+
+    // Game over modal state
+    const [gameOverModal, setGameOverModal] = useState<{
+        isOpen: boolean;
+        result: 'win' | 'lose' | 'draw';
+        reason: string;
+        message: string;
+    }>({
+        isOpen: false,
+        result: 'draw',
+        reason: '',
+        message: ''
+    });
+
     // Chess.js instance to track game state
     const chessGame = useRef<Chess>(new Chess());
     const lastProcessedFen = useRef<string>('');
-    
+
     // Message deduplication
     const lastMessageHash = useRef<Map<string, string>>(new Map());
 
@@ -124,27 +157,55 @@ export default function PuzzleGame() {
         return key;
     };
 
+    // Helper to update check square
+    const updateCheckSquare = () => {
+        if (chessGame.current.inCheck()) {
+            const turn = chessGame.current.turn();
+            const board = chessGame.current.board();
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    const piece = board[row][col];
+                    if (piece && piece.type === 'k' && piece.color === turn) {
+                        setCheckSquare({ row, col });
+                        return;
+                    }
+                }
+            }
+        } else {
+            setCheckSquare(null);
+        }
+    };
+
     // Handle puzzle solution check
     const handlePuzzleSolution = useCallback((data: any) => {
         console.log('[PuzzleGame] Puzzle solution:', data);
-        
+
         if (data.correct) {
             setMessage('✓ Correct! Well done!');
             showToast('success', '✓ Puzzle solved correctly!');
-            
+
+            // Show game over modal
+            setGameOverModal({
+                isOpen: true,
+                result: 'win',
+                reason: 'Puzzle Solved',
+                message: 'Congratulations! You solved the puzzle!'
+            });
+
             setTimeout(() => {
                 navigate('/puzzles');
-            }, 2000);
+            }, 3000);
         } else {
             setMessage('✗ Incorrect move. Try again!');
             showToast('error', '✗ That\'s not the solution');
-            
+
             // Reset board after incorrect move
             setTimeout(() => {
                 if (puzzle) {
                     const resetBoard = fenToBoard(puzzle.fenStr);
                     setBoard(resetBoard);
                     chessGame.current = new Chess(puzzle.fenStr);
+                    updateCheckSquare();
                 }
                 setMessage(null);
                 setLastMove(null);
@@ -161,12 +222,12 @@ export default function PuzzleGame() {
             if (data.type) {
                 const hash = computeMessageHash(data.type, data);
                 const lastHash = lastMessageHash.current.get(data.type);
-                
+
                 if (lastHash === hash) {
                     console.log('[PuzzleGame] Duplicate message ignored:', data.type);
                     return;
                 }
-                
+
                 lastMessageHash.current.set(data.type, hash);
             }
 
@@ -211,7 +272,7 @@ export default function PuzzleGame() {
         };
     }, [gameId, puzzle, handlePuzzleSolution]);
 
-    // Load puzzle data and start game
+    // Load puzzle data on mount (don't start game yet)
     useEffect(() => {
         if (!id) {
             toast.error('Puzzle ID is required');
@@ -219,44 +280,79 @@ export default function PuzzleGame() {
             return;
         }
 
-        loadPuzzleAndStartGame();
+        loadPuzzleData();
     }, [id]);
 
-    const loadPuzzleAndStartGame = async () => {
+    // Load puzzle data only (no API call to start game)
+    const loadPuzzleData = async () => {
         try {
             setLoading(true);
 
-            // 1. Load puzzle data from API
             console.log('[PuzzleGame] Loading puzzle:', id);
             const puzzleData = await puzzleService.getPuzzleById(id!);
             setPuzzle(puzzleData);
 
-            // 2. Parse FEN and set board
+            // Parse FEN and set board
             const newBoard = fenToBoard(puzzleData.fenStr);
             setBoard(newBoard);
             chessGame.current = new Chess(puzzleData.fenStr);
             lastProcessedFen.current = puzzleData.fenStr;
 
-            // 3. Start game via API (sends command to AI)
-            console.log('[PuzzleGame] Starting puzzle game...');
-            const gameResponse = await gameService.startGame({
-                gameTypeCode: 'training_puzzle',
-                difficulty: puzzleData.difficulty || 'medium',
-                puzzleId: id
-            });
-            
-            setGameId(gameResponse.gameId);
-            console.log('[PuzzleGame] Game started:', gameResponse);
-            
-            setBoardSetupStatus('checking');
-            setMessage('Verifying board setup...');
-            showToast('success', `✓ ${puzzleData.name} loaded!`);
+            setMessage('Please arrange the board as shown on screen to start.');
+            showToast('info', 'ℹ️ Please setup the board to match the puzzle position');
+            console.log('[PuzzleGame] ✓ Puzzle loaded:', puzzleData.name);
         } catch (error: any) {
             console.error('[PuzzleGame] Error loading puzzle:', error);
             showToast('error', error.message || 'Failed to load puzzle');
             setTimeout(() => navigate('/puzzles'), 2000);
         } finally {
             setLoading(false);
+        }
+    };
+
+    // Start game (call API to start game with robot)
+    const handleStartGame = async () => {
+        if (!isConnected) {
+            alert('Please connect to server first');
+            return;
+        }
+
+        if (!puzzle) {
+            alert('Puzzle not loaded');
+            return;
+        }
+
+        try {
+            setIsStartingGame(true);
+            setGameStatus('starting');
+
+            // Reset game state
+            setMoveHistory([]);
+            chessGame.current = new Chess(puzzle.fenStr);
+            lastProcessedFen.current = puzzle.fenStr;
+            setCheckSquare(null);
+
+            // Call API to start game
+            console.log('[PuzzleGame] Starting puzzle game...');
+            const gameResponse = await gameService.startGame({
+                gameTypeCode: 'training_puzzle',
+                difficulty: puzzle.difficulty || 'medium',
+                puzzleId: id
+            });
+
+            setGameId(gameResponse.gameId);
+            setGameStatus('playing');
+            setBoardSetupStatus('checking');
+            setMessage('Verifying board setup...');
+            showToast('success', '✓ Game started! Please set up your board');
+            console.log('[PuzzleGame] ✓ Game started:', gameResponse);
+
+        } catch (error: any) {
+            console.error('[PuzzleGame] Failed to start game:', error);
+            setGameStatus('idle');
+            showToast('error', error.message || 'Failed to start game. Please try again.');
+        } finally {
+            setIsStartingGame(false);
         }
     };
 
@@ -332,17 +428,10 @@ export default function PuzzleGame() {
         }
     };
 
-    if (loading) {
-        return (
-            <div className="puzzle-game-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-                <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '18px', color: '#6B7280' }}>Loading puzzle...</div>
-                </div>
-            </div>
-        );
-    }
+    // Remove early return for loading
+    // if (loading) { ... }
 
-    if (!puzzle) {
+    if (!puzzle && !loading) {
         return (
             <div className="puzzle-game-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
                 <div style={{ textAlign: 'center' }}>
@@ -369,46 +458,117 @@ export default function PuzzleGame() {
                 limit={3}
             />
 
+            {/* Game Over Modal */}
+            <GameOverModal
+                isOpen={gameOverModal.isOpen}
+                result={gameOverModal.result}
+                reason={gameOverModal.reason}
+                message={gameOverModal.message}
+                onClose={() => navigate('/puzzles')}
+            />
+
             {/* Header */}
-            <div className="puzzle-game-header">
-                <div onClick={() => navigate('/puzzles')} style={{ cursor: 'pointer', padding: '8px', borderRadius: '12px', backgroundColor: '#F3F4F6' }}>
-                    <ArrowLeft size={24} color="var(--color-text)" />
-                </div>
-                <h2 style={{ fontSize: '20px', fontWeight: 'bold', margin: 0 }}>{puzzle.name}</h2>
-                <div style={{ width: 40 }}></div>
-            </div>
+            <GameHeader
+                onBack={() => navigate('/puzzles')}
+                title={puzzle?.name || 'Loading Puzzle...'}
+            />
 
             <div className="puzzle-game-content">
                 {/* Board Section */}
                 <div className="puzzle-board-section">
                     {/* Match Header */}
-                    <div className="puzzle-match-header">
-                        <div className="puzzle-player-side">
-                            <div className="avatar-container">
-                                <Cpu size={20} color="#6B7280" />
-                            </div>
-                            <div className="puzzle-player-details">
-                                <div className="puzzle-player-name">Puzzle Bot</div>
-                                <div className="puzzle-player-elo">1200</div>
-                            </div>
-                        </div>
+                    <MatchHeader
+                        userElo={1200}
+                        robotElo={1200}
+                        difficultyName={puzzle?.difficulty || 'Medium'}
+                        timer="--:--"
+                    />
 
-                        <div className="puzzle-score-container">
-                            <div className="puzzle-timer-pill">
-                                <div className="puzzle-timer-text">--:--</div>
-                            </div>
-                        </div>
 
-                        <div className="puzzle-player-side-right">
-                            <div className="avatar-container">
-                                <User size={20} color="#6B7280" />
+                    {/* Puzzle Goal - Collapsible */}
+                    {puzzle?.description && (
+                        <div style={{
+                            backgroundColor: '#EFF6FF',
+                            border: '2px solid #3B82F6',
+                            borderRadius: '12px',
+                            marginBottom: '16px',
+                            boxShadow: '0 2px 8px rgba(59, 130, 246, 0.1)',
+                            overflow: 'hidden',
+                            transition: 'all 0.3s ease'
+                        }}>
+                            {/* Header - Always visible */}
+                            <div
+                                onClick={() => setIsGoalExpanded(!isGoalExpanded)}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    padding: '16px 20px',
+                                    cursor: 'pointer',
+                                    userSelect: 'none'
+                                }}
+                            >
+                                <div style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '12px',
+                                    flex: 1
+                                }}>
+                                    <div style={{
+                                        backgroundColor: '#3B82F6',
+                                        borderRadius: '8px',
+                                        padding: '8px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        minWidth: '36px',
+                                        height: '36px'
+                                    }}>
+                                        <Lightbulb size={20} color="#FFF" />
+                                    </div>
+                                    <div style={{
+                                        fontSize: '14px',
+                                        fontWeight: '600',
+                                        color: '#1E40AF',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.5px'
+                                    }}>
+                                        Puzzle Goal
+                                    </div>
+                                </div>
+                                {/* Toggle Button */}
+                                <div style={{
+                                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                    borderRadius: '6px',
+                                    padding: '4px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    transition: 'all 0.2s ease'
+                                }}>
+                                    {isGoalExpanded ? (
+                                        <ChevronUp size={18} color="#3B82F6" />
+                                    ) : (
+                                        <ChevronDown size={18} color="#3B82F6" />
+                                    )}
+                                </div>
                             </div>
-                            <div className="puzzle-player-details-right">
-                                <div className="puzzle-player-name">You</div>
-                                <div className="puzzle-player-elo">1200</div>
-                            </div>
+
+                            {/* Content - Collapsible */}
+                            {isGoalExpanded && (
+                                <div style={{
+                                    padding: '0 20px 16px 68px',
+                                    fontSize: '15px',
+                                    color: '#1E3A8A',
+                                    lineHeight: '1.6',
+                                    animation: 'slideDown 0.3s ease'
+                                }}>
+                                    {puzzle.description}
+                                </div>
+                            )}
                         </div>
-                    </div>
+                    )}
+
 
                     {/* Board */}
                     <div className="puzzle-board-container">
@@ -416,6 +576,7 @@ export default function PuzzleGame() {
                             board={board}
                             selectedSquare={selectedSquare}
                             lastMove={lastMove}
+                            checkSquare={checkSquare}
                             interactive={true}
                             onSquareClick={handleSquareClick}
                             size="full"
@@ -426,65 +587,40 @@ export default function PuzzleGame() {
                 {/* Sidebar */}
                 <div className="puzzle-sidebar">
                     <div className="puzzle-sidebar-header">
-                        <h3>Actions</h3>
+                        <h3>Puzzle Info</h3>
                     </div>
-                    {/* Camera View */}
-                    <div style={{ height: '240px', marginBottom: '16px', borderRadius: '16px', overflow: 'hidden', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--color-border)' }}>
-                        <CameraView
-                            streamUrl={CAMERA_CONFIG.STREAM_URL}
-                            title="Robot Camera"
-                            allowFullscreen={true}
-                            showRefresh={true}
-                            onConnectionChange={(connected) => {
-                                console.log('[VsBot] Camera connection status:', connected);
-                            }}
-                        />
-                    </div>
-                    {/* Puzzle Info */}
-                    {puzzle.description && (
-                        <div className="puzzle-feedback-card" style={{
-                            backgroundColor: '#EFF6FF',
-                            color: '#1E40AF',
-                            border: '1px solid #3B82F6',
-                            marginBottom: '16px'
-                        }}>
-                            <strong>Goal:</strong> {puzzle.description}
-                        </div>
-                    )}
 
-                    {/* Feedback */}
-                    {message && (
-                        <div className="puzzle-feedback-card" style={{
-                            backgroundColor: message.includes('Correct') ? '#D1FAE5' : '#FEE2E2',
-                            color: message.includes('Correct') ? '#065F46' : '#991B1B',
-                            border: `1px solid ${message.includes('Correct') ? '#10B981' : '#EF4444'}`
-                        }}>
-                            {message}
-                        </div>
-                    )}
-
-                    {/* Status */}
-                    <div className="puzzle-status-card">
-                        <div className="puzzle-status-text">Robot Status</div>
-                        <div className="puzzle-status-indicator">
-                            <div className="puzzle-dot" style={{
-                                backgroundColor: isConnected ? '#10B981' : '#EF4444'
-                            }}></div>
-                            <span style={{ color: 'var(--color-icon)' }}>
-                                {isConnected ? 'Connected' : 'Disconnected'}
-                            </span>
-                        </div>
-                    </div>
+                    {/* Server Status */}
+                    <ServerStatusCard connectionStatus={connectionStatus} />
 
                     {/* Actions */}
                     <div className="puzzle-actions-card">
                         <button
                             className="puzzle-action-button puzzle-primary-button"
                             onClick={handleConnect}
+                            disabled={connectionStatus === 'connecting'}
                         >
                             <Bluetooth size={20} color="#FFF" />
                             <span className="puzzle-action-button-text puzzle-primary-button-text">
-                                {isConnected ? 'Disconnect Robot' : 'Connect Robot'}
+                                {connectionStatus === 'connecting' ? 'Connecting...' :
+                                    isConnected ? 'Disconnect Robot' : 'Connect Robot'}
+                            </span>
+                        </button>
+
+                        {/* Start Game Button */}
+                        <button
+                            className="puzzle-action-button"
+                            onClick={handleStartGame}
+                            disabled={!isConnected || isStartingGame || gameStatus === 'playing'}
+                            style={{
+                                backgroundColor: gameStatus === 'playing' ? '#10B981' : '#3B82F6',
+                                color: 'white'
+                            }}
+                        >
+                            <Play size={20} color="#FFF" />
+                            <span className="puzzle-action-button-text" style={{ color: 'white' }}>
+                                {isStartingGame ? 'Starting...' :
+                                    gameStatus === 'playing' ? 'Game Active' : 'Start Game'}
                             </span>
                         </button>
 
@@ -505,6 +641,39 @@ export default function PuzzleGame() {
                             </button>
                         </div>
                     </div>
+
+                    {/* Feedback Message */}
+                    {message && (
+                        <div className="puzzle-feedback-card" style={{
+                            backgroundColor: message.includes('Correct') || message.includes('✓') ? '#D1FAE5' :
+                                message.includes('Incorrect') || message.includes('✗') ? '#FEE2E2' :
+                                    '#EFF6FF',
+                            color: message.includes('Correct') || message.includes('✓') ? '#065F46' :
+                                message.includes('Incorrect') || message.includes('✗') ? '#991B1B' :
+                                    '#1E40AF',
+                            border: `1px solid ${message.includes('Correct') || message.includes('✓') ? '#10B981' :
+                                message.includes('Incorrect') || message.includes('✗') ? '#EF4444' :
+                                    '#3B82F6'}`
+                        }}>
+                            {message}
+                        </div>
+                    )}
+
+                    {/* Camera View */}
+                    <div style={{ height: '300px', marginTop: '16px' }}>
+                        <CameraView
+                            streamUrl={CAMERA_CONFIG.STREAM_URL}
+                            title="Robot Camera"
+                            allowFullscreen={true}
+                            showRefresh={true}
+                            onConnectionChange={(connected) => {
+                                console.log('[PuzzleGame] Camera connection status:', connected);
+                            }}
+                        />
+                    </div>
+
+                    {/* Move History */}
+                    <MoveHistory moves={moveHistory} />
                 </div>
             </div>
         </div>

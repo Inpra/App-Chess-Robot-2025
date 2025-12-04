@@ -225,6 +225,20 @@
     }
 }
 
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        max-height: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        max-height: 500px;
+        transform: translateY(0);
+    }
+}
+
 @media (max-width: 1024px) {
     .puzzle-game-content {
         flex-direction: column;

@@ -32,7 +32,7 @@ class PuzzleService {
    */
   async getAllPuzzles(): Promise<TrainingPuzzle[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/TrainingPuzzles`, {
+      const response = await fetch(`${this.baseUrl}/TrainingPuzzles`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -55,7 +55,7 @@ class PuzzleService {
    */
   async getPuzzlesByDifficulty(difficulty: string): Promise<TrainingPuzzle[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/TrainingPuzzles/difficulty/${difficulty}`, {
+      const response = await fetch(`${this.baseUrl}/TrainingPuzzles/difficulty/${difficulty}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -78,7 +78,7 @@ class PuzzleService {
    */
   async getRandomPuzzle(difficulty: string): Promise<TrainingPuzzle> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/TrainingPuzzles/random/${difficulty}`, {
+      const response = await fetch(`${this.baseUrl}/TrainingPuzzles/random/${difficulty}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -101,7 +101,7 @@ class PuzzleService {
    */
   async getPuzzleById(id: string): Promise<TrainingPuzzle> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/TrainingPuzzles/${id}`, {
+      const response = await fetch(`${this.baseUrl}/TrainingPuzzles/${id}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -124,7 +124,7 @@ class PuzzleService {
    */
   async initializePuzzles(): Promise<void> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/TrainingPuzzles/initialize`, {
+      const response = await fetch(`${this.baseUrl}/TrainingPuzzles/initialize`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
