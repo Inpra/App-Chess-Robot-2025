@@ -5,8 +5,8 @@ export const getMatchDetailStyles = ({ width, height }: ScaledSize) => {
     const isTablet = width >= 600;
     // Calculate board size for two-column layout (board now gets ~70% of width)
     const availableWidth = width - (isTablet ? 64 : 40); // Subtract padding
-    const leftColumnWidth = availableWidth * 0.7; // Left column is 70% of available width
-    const boardSize = Math.min(leftColumnWidth - (isTablet ? 32 : 24), isTablet ? 500 : 360);
+    const leftColumnWidth = isTablet ? availableWidth * 0.7 : availableWidth;
+    const boardSize = Math.min(leftColumnWidth - (isTablet ? 32 : 24), isTablet ? 500 : width - 40);
 
     return StyleSheet.create({
         container: {
@@ -57,18 +57,20 @@ export const getMatchDetailStyles = ({ width, height }: ScaledSize) => {
             ...Styles.shadow,
         },
         mainLayout: {
-            flexDirection: 'row',
+            flexDirection: isTablet ? 'row' : 'column',
             gap: isTablet ? 20 : 16,
             width: '100%',
             flex: 1,
         },
         leftColumn: {
-            flex: 3,
+            flex: isTablet ? 3 : 0,
+            width: isTablet ? 'auto' : '100%',
             alignItems: 'center',
         },
         rightColumn: {
-            flex: 1.2,
-            minWidth: isTablet ? 200 : 150,
+            flex: isTablet ? 1.2 : 0,
+            width: isTablet ? 'auto' : '100%',
+            minWidth: isTablet ? 200 : '100%',
         },
         playerInfo: {
             flexDirection: 'row',
@@ -135,45 +137,104 @@ export const getMatchDetailStyles = ({ width, height }: ScaledSize) => {
             justifyContent: 'center',
             alignItems: 'center',
         },
-        controlsContainer: {
+        // Replay Controls
+        replayControlsCard: {
+            width: '100%',
+            backgroundColor: Colors.light.card,
+            borderRadius: 16,
+            padding: isTablet ? 20 : 16,
+            borderWidth: 1,
+            borderColor: Colors.light.border,
+            ...Styles.shadow,
+            alignItems: 'center',
+            gap: 16,
+        },
+        progressBarContainer: {
+            width: '100%',
+            height: 20,
+            justifyContent: 'center',
+        },
+        progressBarTrack: {
+            width: '100%',
+            height: 4,
+            backgroundColor: '#E5E7EB',
+            borderRadius: 2,
+        },
+        progressBarFill: {
+            height: '100%',
+            backgroundColor: Colors.light.primary,
+            borderRadius: 2,
+        },
+        progressBarThumb: {
+            position: 'absolute',
+            top: 2, // (20 - 16) / 2
+            width: 16,
+            height: 16,
+            borderRadius: 8,
+            backgroundColor: Colors.light.primary,
+            borderWidth: 2,
+            borderColor: '#FFFFFF',
+            ...Styles.shadow,
+        },
+        moveCounterText: {
+            fontSize: 14,
+            color: Colors.light.textSecondary,
+            fontWeight: '600',
+        },
+        mainControls: {
             flexDirection: 'row',
             alignItems: 'center',
-            justifyContent: 'center',
-            gap: isTablet ? 20 : 16,
-            marginTop: isTablet ? 16 : 12,
-            paddingHorizontal: isTablet ? 12 : 8,
+            gap: 16,
         },
         controlButton: {
-            width: isTablet ? 48 : 44,
-            height: isTablet ? 48 : 44,
-            borderRadius: isTablet ? 24 : 22,
-            backgroundColor: Colors.light.card,
+            width: 40,
+            height: 40,
+            borderRadius: 12,
+            backgroundColor: '#FFFFFF',
             justifyContent: 'center',
             alignItems: 'center',
             borderWidth: 1,
             borderColor: Colors.light.border,
-            ...Styles.shadow,
         },
-        disabledButton: {
-            opacity: 0.4,
-            backgroundColor: '#F9FAFB',
-        },
-        moveDisplay: {
-            paddingHorizontal: isTablet ? 20 : 16,
-            paddingVertical: isTablet ? 12 : 10,
-            backgroundColor: Colors.light.card,
-            borderRadius: 12,
-            borderWidth: 1,
-            borderColor: Colors.light.border,
-            minWidth: isTablet ? 100 : 90,
+        playButton: {
+            width: 48,
+            height: 48,
+            borderRadius: 16,
+            backgroundColor: Colors.light.primary,
+            justifyContent: 'center',
             alignItems: 'center',
             ...Styles.shadow,
         },
-        moveText: {
-            fontSize: isTablet ? 16 : 14,
-            fontWeight: '700',
-            color: Colors.light.text,
-            fontFamily: Platform.select({ ios: 'Courier New', android: 'monospace' }),
+        speedControls: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+            marginTop: 4,
+        },
+        speedLabel: {
+            fontSize: 12,
+            color: Colors.light.textSecondary,
+            marginRight: 4,
+        },
+        speedButton: {
+            paddingHorizontal: 8,
+            paddingVertical: 4,
+            borderRadius: 6,
+            borderWidth: 1,
+            borderColor: Colors.light.border,
+            backgroundColor: '#FFFFFF',
+        },
+        speedButtonActive: {
+            backgroundColor: Colors.light.primary,
+            borderColor: Colors.light.primary,
+        },
+        speedButtonText: {
+            fontSize: 12,
+            color: Colors.light.textSecondary,
+            fontWeight: '600',
+        },
+        speedButtonTextActive: {
+            color: '#FFFFFF',
         },
         moveListContainer: {
             width: '100%',
@@ -199,12 +260,44 @@ export const getMatchDetailStyles = ({ width, height }: ScaledSize) => {
             flexDirection: 'column',
             gap: 6,
         },
+        moveListHeader: {
+            flexDirection: 'row',
+            marginBottom: 8,
+            paddingBottom: 8,
+            borderBottomWidth: 1,
+            borderBottomColor: Colors.light.border,
+        },
+        moveListHeaderLabel: {
+            flex: 1,
+            fontSize: 12,
+            fontWeight: '600',
+            color: Colors.light.textSecondary,
+            textAlign: 'center',
+        },
+        moveRow: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            marginBottom: 8,
+            gap: 8,
+        },
+        moveNumber: {
+            width: 40,
+            fontSize: 14,
+            color: Colors.light.textSecondary,
+            fontFamily: Platform.select({ ios: 'Courier New', android: 'monospace' }),
+            textAlign: 'center',
+        },
         moveItem: {
+            flex: 1,
             paddingHorizontal: 10,
             paddingVertical: 8,
             borderRadius: 8,
             backgroundColor: '#F9FAFB',
-            width: '100%',
+            alignItems: 'center',
+            justifyContent: 'center',
+        },
+        moveItemPlaceholder: {
+            flex: 1,
         },
         activeMove: {
             backgroundColor: '#DBEAFE',
@@ -218,6 +311,57 @@ export const getMatchDetailStyles = ({ width, height }: ScaledSize) => {
         activeMoveText: {
             color: '#1E40AF',
             fontWeight: '700',
+        },
+        gameStatsContainer: {
+            marginTop: 16,
+            width: '100%',
+            backgroundColor: Colors.light.card,
+            borderRadius: 16,
+            padding: isTablet ? 16 : 12,
+            borderWidth: 1,
+            borderColor: Colors.light.border,
+            ...Styles.shadow,
+        },
+        gameStatsTitle: {
+            fontSize: isTablet ? 18 : 16,
+            fontWeight: '700',
+            color: Colors.light.text,
+            marginBottom: 12,
+        },
+        statsGrid: {
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            gap: 12,
+        },
+        statCard: {
+            flex: 1,
+            minWidth: '45%',
+            backgroundColor: '#F9FAFB',
+            borderRadius: 12,
+            padding: 12,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 12,
+        },
+        statIconContainer: {
+            width: 40,
+            height: 40,
+            borderRadius: 10,
+            justifyContent: 'center',
+            alignItems: 'center',
+        },
+        statContent: {
+            flex: 1,
+        },
+        statValue: {
+            fontSize: 18,
+            fontWeight: '700',
+            color: Colors.light.text,
+        },
+        statLabel: {
+            fontSize: 12,
+            color: Colors.light.textSecondary,
+            marginTop: 2,
         },
     });
 };

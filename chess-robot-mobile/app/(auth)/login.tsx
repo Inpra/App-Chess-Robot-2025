@@ -10,8 +10,10 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
+  ActivityIndicator
 } from 'react-native';
+import authService from '@/services/authService';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -19,14 +21,29 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleLogin = () => {
-    // Bypass login validation for now
-    // if (!email || !password) {
-    //   Alert.alert('Error', 'Please enter both email and password.');
-    //   return;
-    // }
-    // Mock login success
-    router.replace('/(tabs)');
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async () => {
+    if (!email || !password) {
+      alert('Please enter both email and password.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await authService.login(email, password);
+
+      if (response.success) {
+        router.replace('/(tabs)');
+      } else {
+        alert(response.error || 'Login failed. Please check your credentials.');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      alert('An unexpected error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -80,8 +97,16 @@ export default function LoginScreen() {
             <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-            <Text style={styles.loginButtonText}>Log In</Text>
+          <TouchableOpacity
+            style={[styles.loginButton, loading && { opacity: 0.7 }]}
+            onPress={handleLogin}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.loginButtonText}>Log In</Text>
+            )}
           </TouchableOpacity>
 
           <View style={styles.divider}>
@@ -101,6 +126,27 @@ export default function LoginScreen() {
               <Ionicons name="logo-apple" size={24} color="#000000" />
             </TouchableOpacity>
           </View>
+
+          <TouchableOpacity
+            style={{ alignItems: 'center', marginBottom: 20 }}
+            onPress={async () => {
+              try {
+                alert('Testing connection to: ' + require('@/services/apiConfig').API_CONFIG.BASE_URL);
+                const response = await fetch(require('@/services/apiConfig').API_CONFIG.BASE_URL.replace('/api', '/health') || require('@/services/apiConfig').API_CONFIG.BASE_URL);
+                if (response.ok || response.status === 404) { // 404 means server is reachable but endpoint might not exist
+                  alert('Connection Successful! Server is reachable.');
+                } else {
+                  alert(`Server reachable but returned status: ${response.status}`);
+                }
+              } catch (e: any) {
+                alert('Connection Failed: ' + e.message + '\n\nCheck if your computer IP is correct in apiConfig.ts and firewall is off.');
+              }
+            }}
+          >
+            <Text style={{ color: Colors.light.textSecondary, fontSize: 12, textDecorationLine: 'underline' }}>
+              Test Server Connection
+            </Text>
+          </TouchableOpacity>
 
           <View style={styles.footer}>
             <Text style={styles.footerText}>Don't have an account? </Text>

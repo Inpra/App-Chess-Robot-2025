@@ -1,3 +1,4 @@
+import { Chess } from 'chess.js';
 import NavigationHeader from '@/components/common/NavigationHeader';
 import { Colors } from '@/constants/theme';
 import { getGameStyles } from '@/styles/game.styles';
@@ -8,18 +9,10 @@ import { SafeAreaView, Text, TouchableOpacity, useWindowDimensions, View } from 
 import ChessBoard from '../game/ChessBoard';
 
 import CameraView from '../camera/CameraView';
+import { CAMERA_CONFIG } from '@/services/apiConfig';
 
-// Mock Board State for Puzzle (Example: Mate in 1)
-const puzzleBoard = [
-    null, null, null, null, null, null, null, { type: 'k', color: 'b' },
-    null, null, null, null, null, null, { type: 'p', color: 'b' }, { type: 'p', color: 'b' },
-    null, null, null, null, null, null, null, null,
-    null, null, null, null, null, null, null, null,
-    null, null, null, null, null, null, null, null,
-    null, null, null, null, null, null, null, null,
-    { type: 'q', color: 'w' }, null, null, null, null, null, { type: 'p', color: 'w' }, { type: 'p', color: 'w' },
-    null, null, null, null, null, null, { type: 'k', color: 'w' }, null,
-];
+// Mock Puzzle FEN (Mate in 1)
+const PUZZLE_FEN = '7k/7p/8/8/8/8/Q5PP/6K1 w - - 0 1'; // White to move
 
 export default function PuzzleGameScreen() {
     const dimensions = useWindowDimensions();
@@ -28,7 +21,8 @@ export default function PuzzleGameScreen() {
     const { id } = useLocalSearchParams();
 
     // Game State
-    const [board, setBoard] = useState(puzzleBoard);
+    const [game, setGame] = useState(new Chess(PUZZLE_FEN));
+    const [fen, setFen] = useState(game.fen());
     const [selectedSquare, setSelectedSquare] = useState<{ row: number, col: number } | null>(null);
     const [possibleMoves, setPossibleMoves] = useState<{ row: number, col: number }[]>([]);
     const [message, setMessage] = useState<string | null>(null);
@@ -36,14 +30,19 @@ export default function PuzzleGameScreen() {
     const [showCamera, setShowCamera] = useState(false);
 
     // Logic helpers
+    const getSquareName = (row: number, col: number): string => {
+        const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+        const ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
+        return `${files[col]}${ranks[row]}`;
+    };
+
     const handleSquareClick = (row: number, col: number) => {
-        const index = row * 8 + col;
-        const piece = board[index];
+        const squareName = getSquareName(row, col);
+        const piece = game.get(squareName as any);
 
         // If a square is already selected
         if (selectedSquare) {
-            const selectedIndex = selectedSquare.row * 8 + selectedSquare.col;
-            const selectedPiece = board[selectedIndex];
+            const sourceSquare = getSquareName(selectedSquare.row, selectedSquare.col);
 
             // If clicking the same square, deselect
             if (selectedSquare.row === row && selectedSquare.col === col) {
@@ -52,52 +51,72 @@ export default function PuzzleGameScreen() {
                 return;
             }
 
-            // Check if this is a valid move
-            const isValidMove = possibleMoves.some(move => move.row === row && move.col === col);
+            try {
+                // Try to make move
+                const move = game.move({
+                    from: sourceSquare,
+                    to: squareName,
+                    promotion: 'q' // always promote to queen for simplicity
+                });
 
-            if (isValidMove) {
-                // Make the move
-                const newBoard = [...board];
-                newBoard[index] = selectedPiece; // Place piece at destination
-                newBoard[selectedIndex] = null; // Remove piece from source
-                setBoard(newBoard);
-                setSelectedSquare(null);
-                setPossibleMoves([]);
+                if (move) {
+                    setFen(game.fen());
+                    setSelectedSquare(null);
+                    setPossibleMoves([]);
 
-                // Mock Success Check (if moving Queen to h8)
-                if (selectedPiece?.type === 'q' && row === 0 && col === 7) {
-                    setMessage('Correct! Checkmate.');
+                    // Check if puzzle solved (Mock logic: if checkmate)
+                    if (game.isCheckmate()) {
+                        setMessage('Correct! Checkmate.');
+                    } else {
+                        setMessage('Incorrect move. Try again.');
+                        // Reset board after delay
+                        setTimeout(() => {
+                            game.load(PUZZLE_FEN);
+                            setFen(game.fen());
+                            setMessage(null);
+                        }, 1000);
+                    }
+
                 } else {
-                    setMessage('Incorrect move. Try again.');
-                    // Reset board after delay (mock)
-                    setTimeout(() => {
-                        setBoard(puzzleBoard);
-                        setMessage(null);
-                    }, 1000);
+                    // Invalid move
+                    if (piece && piece.color === game.turn()) {
+                        setSelectedSquare({ row, col });
+                        const moves = game.moves({ square: squareName as any, verbose: true });
+                        setPossibleMoves(moves.map(m => {
+                            const file = m.to.charCodeAt(0) - 'a'.charCodeAt(0);
+                            const rank = 8 - parseInt(m.to[1]);
+                            return { row: rank, col: file };
+                        }));
+                    } else {
+                        setSelectedSquare(null);
+                        setPossibleMoves([]);
+                    }
                 }
-
-            } else if (piece && piece.color === selectedPiece?.color) {
-                // Select a different piece of the same color
-                setSelectedSquare({ row, col });
-                // Mock possible moves for demo
-                setPossibleMoves([
-                    { row: 0, col: 7 }, // Winning move for demo
-                    { row: row - 1, col: col },
-                ]);
-            } else {
-                // Invalid move, deselect
-                setSelectedSquare(null);
-                setPossibleMoves([]);
+            } catch (e) {
+                // Invalid move
+                if (piece && piece.color === game.turn()) {
+                    setSelectedSquare({ row, col });
+                    const moves = game.moves({ square: squareName as any, verbose: true });
+                    setPossibleMoves(moves.map(m => {
+                        const file = m.to.charCodeAt(0) - 'a'.charCodeAt(0);
+                        const rank = 8 - parseInt(m.to[1]);
+                        return { row: rank, col: file };
+                    }));
+                } else {
+                    setSelectedSquare(null);
+                    setPossibleMoves([]);
+                }
             }
         } else {
             // Select piece
-            if (piece && piece.color === 'w') { // Only allow moving white pieces
+            if (piece && piece.color === game.turn()) {
                 setSelectedSquare({ row, col });
-                // Mock possible moves for demo
-                setPossibleMoves([
-                    { row: 0, col: 7 }, // Winning move for demo
-                    { row: row - 1, col: col },
-                ]);
+                const moves = game.moves({ square: squareName as any, verbose: true });
+                setPossibleMoves(moves.map(m => {
+                    const file = m.to.charCodeAt(0) - 'a'.charCodeAt(0);
+                    const rank = 8 - parseInt(m.to[1]);
+                    return { row: rank, col: file };
+                }));
             }
         }
     };
@@ -149,7 +168,7 @@ export default function PuzzleGameScreen() {
 
                     {/* Chess Board Area */}
                     <ChessBoard
-                        board={board}
+                        fen={fen}
                         onSquareClick={handleSquareClick}
                         selectedSquare={selectedSquare}
                         possibleMoves={possibleMoves}
@@ -178,18 +197,13 @@ export default function PuzzleGameScreen() {
                     )}
 
                     {/* Robot Status */}
-                    <View style={styles.statusCard}>
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                            <Text style={styles.statusText}>Robot Status</Text>
-                            <TouchableOpacity onPress={() => setShowCamera(true)}>
-                                <Ionicons name="videocam" size={20} color={Colors.light.primary} />
-                            </TouchableOpacity>
-                        </View>
-                        <View style={styles.statusIndicator}>
-                            <View style={[styles.dot, { backgroundColor: isConnected ? '#10B981' : '#EF4444' }]} />
-                            <Text style={{ color: Colors.light.icon }}>{isConnected ? 'Connected' : 'Disconnected'}</Text>
-                        </View>
-                    </View>
+                    {/* Robot Camera (Embedded) */}
+                    <CameraView
+                        mode="embedded"
+                        isConnected={isConnected}
+                        onExpand={() => setShowCamera(true)}
+                        streamUrl={CAMERA_CONFIG.STREAM_URL}
+                    />
 
                     {/* Game Actions */}
                     <View style={styles.actionsCard}>
@@ -225,9 +239,11 @@ export default function PuzzleGameScreen() {
             </View>
 
             <CameraView
+                mode="modal"
                 visible={showCamera}
                 onClose={() => setShowCamera(false)}
-                streamUrl="http://192.168.1.100:8080/video" // Example stream URL
+                isConnected={isConnected}
+                streamUrl={CAMERA_CONFIG.STREAM_URL}
                 title="Robot Camera"
             />
         </SafeAreaView>
