@@ -3,7 +3,7 @@ import { Colors } from '@/constants/theme';
 import { getMatchHistoryStyles } from '@/styles/match-history.styles';
 import { Ionicons } from '@expo/vector-icons';
 import { Link, Stack, useRouter } from 'expo-router';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
     FlatList,
     SafeAreaView,
@@ -11,118 +11,153 @@ import {
     TouchableOpacity,
     useWindowDimensions,
     View,
+    ActivityIndicator,
 } from 'react-native';
+import gameService from '@/services/gameService';
+import authService from '@/services/authService';
 
-// Mock Data for Match History
-const MATCH_HISTORY = [
-    {
-        id: '1',
-        opponent: 'Robot Arm (Level 1)',
-        result: 'Win',
-        date: '2023-11-23',
-        time: '14:30',
-        duration: '15m 20s',
-        eloChange: '+12',
-        moves: 34,
-        avatar: 'https://i.pravatar.cc/100?img=1',
-    },
-    {
-        id: '2',
-        opponent: 'Grandmaster Bot',
-        result: 'Loss',
-        date: '2023-11-22',
-        time: '09:15',
-        duration: '22m 10s',
-        eloChange: '-8',
-        moves: 45,
-        avatar: 'https://i.pravatar.cc/100?img=2',
-    },
-    {
-        id: '3',
-        opponent: 'Robot Arm (Level 2)',
-        result: 'Draw',
-        date: '2023-11-20',
-        time: '18:45',
-        duration: '45m 00s',
-        eloChange: '+2',
-        moves: 60,
-        avatar: 'https://i.pravatar.cc/100?img=3',
-    },
-    {
-        id: '4',
-        opponent: 'Online Player 123',
-        result: 'Win',
-        date: '2023-11-18',
-        time: '10:00',
-        duration: '12m 05s',
-        eloChange: '+15',
-        moves: 28,
-        avatar: 'https://i.pravatar.cc/100?img=4',
-    },
-    {
-        id: '5',
-        opponent: 'Robot Arm (Level 3)',
-        result: 'Loss',
-        date: '2023-11-15',
-        time: '20:30',
-        duration: '30m 15s',
-        eloChange: '-10',
-        moves: 52,
-        avatar: 'https://i.pravatar.cc/100?img=5',
-    },
-];
+interface GameData {
+    id: string;
+    playerId?: string;
+    playerName?: string;
+    status?: string;
+    result?: string;
+    difficulty?: string;
+    totalMoves?: number;
+    startedAt?: string;
+    endedAt?: string;
+    playerRatingBefore?: number;
+    playerRatingAfter?: number;
+    ratingChange?: number;
+    gameType?: {
+        code: string;
+        name: string;
+    };
+}
 
 export default function MatchHistoryScreen() {
     const router = useRouter();
     const dimensions = useWindowDimensions();
     const styles = useMemo(() => getMatchHistoryStyles(dimensions), [dimensions]);
 
+    const [loading, setLoading] = useState(true);
+    const [games, setGames] = useState<GameData[]>([]);
+    const [playerStats, setPlayerStats] = useState({
+        totalGames: 0,
+        winRate: 0,
+        currentElo: 0,
+        wins: 0,
+        losses: 0,
+        draws: 0,
+    });
+
+    useEffect(() => {
+        loadMatchHistory();
+    }, []);
+
+    const loadMatchHistory = async () => {
+        try {
+            setLoading(true);
+            const currentUser = await authService.getCurrentUser();
+            if (!currentUser?.id) {
+                router.replace('/(auth)/login');
+                return;
+            }
+
+            // Fetch player games
+            const gamesData = await gameService.getPlayerGames(currentUser.id);
+
+            // Filter finished games only
+            const finishedGames = gamesData.filter(
+                (game: GameData) => game.status === 'completed' || game.status === 'finished' || game.status === 'aborted'
+            );
+
+            setGames(finishedGames);
+
+            // Calculate statistics
+            const wins = finishedGames.filter((g: GameData) => g.result?.toLowerCase() === 'win').length;
+            const losses = finishedGames.filter((g: GameData) => g.result?.toLowerCase() === 'lose').length;
+            const draws = finishedGames.filter((g: GameData) => g.result?.toLowerCase() === 'draw').length;
+            const total = finishedGames.length;
+            const winRate = total > 0 ? Math.round((wins / total) * 100) : 0;
+
+            // Get current Elo from most recent game or user profile
+            const latestGame = finishedGames[0];
+            const currentElo = latestGame?.playerRatingAfter ?? (currentUser as any)?.eloRating ?? 1200;
+
+            setPlayerStats({
+                totalGames: total,
+                winRate,
+                currentElo,
+                wins,
+                losses,
+                draws,
+            });
+        } catch (error) {
+            console.error('Failed to load match history:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const getResultColor = (result: string) => {
-        switch (result) {
-            case 'Win': return '#10B981';
-            case 'Loss': return '#EF4444';
-            case 'Draw': return '#F59E0B';
+        const lowerResult = result?.toLowerCase();
+        switch (lowerResult) {
+            case 'win': return '#10B981';
+            case 'lose': return '#EF4444';
+            case 'draw': return '#F59E0B';
             default: return Colors.light.text;
         }
     };
 
-    const renderItem = ({ item }: { item: typeof MATCH_HISTORY[0] }) => (
+    const formatDate = (dateStr?: string) => {
+        if (!dateStr) return 'N/A';
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
+    };
+
+    const getDifficultyDisplay = (difficulty?: string) => {
+        if (!difficulty) return 'AI';
+        return `AI (${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)})`;
+    };
+
+    const renderItem = ({ item }: { item: GameData }) => (
         <Link href={`/match-history/${item.id}`} asChild>
             <TouchableOpacity style={styles.matchCard}>
                 <View style={styles.matchHeader}>
                     <View style={styles.opponentInfo}>
                         <View style={styles.avatarContainer}>
-                            <Ionicons name="person" size={24} color="#9CA3AF" />
+                            <Ionicons name="hardware-chip" size={24} color="#9CA3AF" />
                         </View>
                         <View>
-                            <Text style={styles.opponentName}>{item.opponent}</Text>
-                            <Text style={styles.matchDate}>{item.date} • {item.time}</Text>
+                            <Text style={styles.opponentName}>{getDifficultyDisplay(item.difficulty)}</Text>
+                            <Text style={styles.matchDate}>{formatDate(item.startedAt)}</Text>
                         </View>
                     </View>
-                    <View style={[styles.resultBadge, { backgroundColor: getResultColor(item.result) + '20' }]}>
-                        <Text style={[styles.resultText, { color: getResultColor(item.result) }]}>{item.result}</Text>
+                    <View style={[styles.resultBadge, { backgroundColor: getResultColor(item.result || '') + '20' }]}>
+                        <Text style={[styles.resultText, { color: getResultColor(item.result || '') }]}>
+                            {item.result ? item.result.charAt(0).toUpperCase() + item.result.slice(1) : 'N/A'}
+                        </Text>
                     </View>
                 </View>
 
                 <View style={styles.matchStats}>
                     <View style={styles.statItem}>
-                        <Ionicons name="time-outline" size={18} color="#9CA3AF" />
-                        <Text style={styles.statText}>{item.duration}</Text>
-                    </View>
-                    <View style={styles.statItem}>
                         <Ionicons name="swap-vertical-outline" size={18} color="#9CA3AF" />
-                        <Text style={styles.statText}>{item.moves} Moves</Text>
+                        <Text style={styles.statText}>{item.totalMoves || 0} Moves</Text>
                     </View>
-                    <View style={styles.statItem}>
-                        <Ionicons
-                            name="trending-up-outline"
-                            size={18}
-                            color={item.eloChange.startsWith('+') ? '#10B981' : '#EF4444'}
-                        />
-                        <Text style={[styles.statText, { color: item.eloChange.startsWith('+') ? '#10B981' : '#EF4444' }]}>
-                            {item.eloChange} ELO
-                        </Text>
-                    </View>
+                    {item.ratingChange !== undefined && item.ratingChange !== 0 && (
+                        <View style={styles.statItem}>
+                            <Ionicons
+                                name={item.ratingChange > 0 ? "trending-up-outline" : "trending-down-outline"}
+                                size={18}
+                                color={item.ratingChange > 0 ? '#10B981' : '#EF4444'}
+                            />
+                            <Text style={[styles.statText, { color: item.ratingChange > 0 ? '#10B981' : '#EF4444' }]}>
+                                {item.ratingChange > 0 ? '+' : ''}{item.ratingChange} ELO
+                            </Text>
+                        </View>
+                    )}
                 </View>
             </TouchableOpacity>
         </Link>
@@ -139,7 +174,7 @@ export default function MatchHistoryScreen() {
             />
 
             <FlatList
-                data={MATCH_HISTORY}
+                data={games}
                 renderItem={renderItem}
                 keyExtractor={(item) => item.id}
                 contentContainerStyle={styles.listContent}
@@ -148,22 +183,34 @@ export default function MatchHistoryScreen() {
                     <View style={styles.listHeader}>
                         <View style={styles.statsSummary}>
                             <View style={styles.summaryItem}>
-                                <Text style={styles.summaryValue}>142</Text>
+                                <Text style={styles.summaryValue}>{loading ? '-' : playerStats.totalGames}</Text>
                                 <Text style={styles.summaryLabel}>Total Games</Text>
                             </View>
                             <View style={styles.divider} />
                             <View style={styles.summaryItem}>
-                                <Text style={styles.summaryValue}>58%</Text>
+                                <Text style={styles.summaryValue}>{loading ? '-' : `${playerStats.winRate}%`}</Text>
                                 <Text style={styles.summaryLabel}>Win Rate</Text>
                             </View>
                             <View style={styles.divider} />
                             <View style={styles.summaryItem}>
-                                <Text style={styles.summaryValue}>2450</Text>
+                                <Text style={styles.summaryValue}>{loading ? '-' : playerStats.currentElo}</Text>
                                 <Text style={styles.summaryLabel}>Current ELO</Text>
                             </View>
                         </View>
                         <Text style={styles.sectionTitle}>Recent Matches</Text>
                     </View>
+                }
+                ListEmptyComponent={
+                    loading ? (
+                        <View style={{ padding: 40, alignItems: 'center' }}>
+                            <ActivityIndicator size="large" color={Colors.light.primary} />
+                            <Text style={{ marginTop: 12, color: Colors.light.textSecondary }}>Loading history...</Text>
+                        </View>
+                    ) : (
+                        <View style={{ padding: 40, alignItems: 'center' }}>
+                            <Text style={{ color: Colors.light.textSecondary }}>No matches found</Text>
+                        </View>
+                    )
                 }
             />
         </SafeAreaView>
