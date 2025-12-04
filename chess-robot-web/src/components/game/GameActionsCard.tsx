@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bluetooth, Play, RotateCcw, Pause, Lightbulb, Flag } from 'lucide-react';
+import { Bluetooth, Play, Pause, Lightbulb, Flag } from 'lucide-react';
 
 interface GameActionsCardProps {
     connectionStatus: 'disconnected' | 'connecting' | 'connected' | 'error';
@@ -9,7 +9,6 @@ interface GameActionsCardProps {
     onConnect: () => void;
     onStartGame: () => void;
     onResign: () => void;
-    onUndo?: () => void;
     onPause?: () => void;
     onHint?: () => void;
 }
@@ -22,7 +21,6 @@ export const GameActionsCard: React.FC<GameActionsCardProps> = ({
     onConnect,
     onStartGame,
     onResign,
-    onUndo,
     onPause,
     onHint
 }) => {
@@ -58,11 +56,6 @@ export const GameActionsCard: React.FC<GameActionsCardProps> = ({
             </button>
 
             <div className="vs-bot-action-row">
-                <button className="vs-bot-action-button" style={{ flex: 1 }} onClick={onUndo}>
-                    <RotateCcw size={20} color="var(--color-text)" />
-                    <span className="vs-bot-action-button-text">Undo</span>
-                </button>
-
                 <button className="vs-bot-action-button" style={{ flex: 1 }} onClick={onPause}>
                     <Pause size={20} color="var(--color-text)" />
                     <span className="vs-bot-action-button-text">Pause</span>

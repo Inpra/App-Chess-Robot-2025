@@ -13,7 +13,6 @@ import {
     GameOverModal,
     GameHeader,
     MatchHeader,
-    GameStatusBanner,
     ServerStatusCard,
     GameActionsCard
 } from '../components/game';

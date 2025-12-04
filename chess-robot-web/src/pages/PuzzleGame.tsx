@@ -1,33 +1,282 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ArrowLeft, User, Cpu, RotateCcw, Pause, Lightbulb, Bluetooth } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ChessBoard, initialBoard, fenToBoard } from '../components/chess';
+import { ChessBoard, fenToBoard } from '../components/chess';
 import type { BoardState } from '../components/chess';
 import '../styles/PuzzleGame.css';
 import { CAMERA_CONFIG } from '../services/apiConfig';
 import { CameraView } from '../components/camera';
-
-const PUZZLE_FEN = "7k/6pp/8/8/8/8/Q5PP/6K1 w - - 0 1";
+import puzzleService, { type TrainingPuzzle } from '../services/puzzleService';
+import gameService from '../services/gameService';
+import { toast, ToastContainer } from 'react-toastify';
+import wsService from '../services/websocketService';
+import { Chess } from 'chess.js';
 
 export default function PuzzleGame() {
     const navigate = useNavigate();
     const { id } = useParams();
 
+    const [puzzle, setPuzzle] = useState<TrainingPuzzle | null>(null);
+    const [gameId, setGameId] = useState<string | null>(null);
     const [board, setBoard] = useState<BoardState>([]);
     const [selectedSquare, setSelectedSquare] = useState<{ row: number, col: number } | null>(null);
     const [lastMove, setLastMove] = useState<{ from: number; to: number } | null>(null);
     const [message, setMessage] = useState<string | null>(null);
     const [isConnected, setIsConnected] = useState(false);
+    const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected');
+    const [loading, setLoading] = useState(true);
+    const [boardSetupStatus, setBoardSetupStatus] = useState<'checking' | 'correct' | 'incorrect' | null>(null);
+    
+    // Chess.js instance to track game state
+    const chessGame = useRef<Chess>(new Chess());
+    const lastProcessedFen = useRef<string>('');
+    
+    // Message deduplication
+    const lastMessageHash = useRef<Map<string, string>>(new Map());
 
-    useEffect(() => {
-        try {
-            const newBoard = fenToBoard(PUZZLE_FEN);
-            setBoard(newBoard);
-        } catch (e) {
-            console.error("Failed to parse FEN:", e);
-            setBoard([...initialBoard]);
+    // Toast throttling
+    const lastToastRef = useRef<{
+        type: string;
+        message: string;
+        timestamp: number;
+    } | null>(null);
+
+    // Helper: Show toast with throttling
+    const showToast = (type: 'success' | 'error' | 'warning' | 'info', message: string, force = false) => {
+        const now = Date.now();
+
+        if (!force && lastToastRef.current) {
+            const timeSinceLastToast = now - lastToastRef.current.timestamp;
+            const isSameToast = lastToastRef.current.type === type && lastToastRef.current.message === message;
+
+            if (isSameToast && timeSinceLastToast < 3000) {
+                return;
+            }
         }
+
+        lastToastRef.current = { type, message, timestamp: now };
+        const toastId = `${type}-${message}`;
+        const toastOptions = { toastId: toastId, autoClose: 3000 };
+
+        switch (type) {
+            case 'success':
+                toast.success(message, toastOptions);
+                break;
+            case 'error':
+                toast.error(message, toastOptions);
+                break;
+            case 'warning':
+                toast.warning(message, toastOptions);
+                break;
+            case 'info':
+                toast.info(message, toastOptions);
+                break;
+        }
+    };
+
+    // WebSocket connection setup
+    useEffect(() => {
+        const unsubscribeConnection = wsService.on('connection', (data) => {
+            console.log('[PuzzleGame] Connection status:', data);
+            if (data.status === 'connected') {
+                setIsConnected(true);
+                setConnectionStatus('connected');
+            } else if (data.status === 'disconnected') {
+                setIsConnected(false);
+                setConnectionStatus('disconnected');
+            } else if (data.status === 'failed') {
+                setConnectionStatus('error');
+            }
+        });
+
+        // Auto-connect on mount
+        const autoConnect = async () => {
+            if (!wsService.isConnected()) {
+                try {
+                    setConnectionStatus('connecting');
+                    await wsService.connect();
+                } catch (error) {
+                    console.error('[PuzzleGame] Auto-connect failed:', error);
+                    setConnectionStatus('error');
+                }
+            } else {
+                setIsConnected(true);
+                setConnectionStatus('connected');
+            }
+        };
+
+        autoConnect();
+
+        return () => {
+            unsubscribeConnection();
+        };
     }, []);
+
+    // Message deduplication helper
+    const computeMessageHash = (type: string, data: any): string => {
+        const key = JSON.stringify({
+            type,
+            status: data.status,
+            game_id: data.game_id,
+            fen_str: data.fen_str,
+            move: data.move
+        });
+        return key;
+    };
+
+    // Handle puzzle solution check
+    const handlePuzzleSolution = useCallback((data: any) => {
+        console.log('[PuzzleGame] Puzzle solution:', data);
+        
+        if (data.correct) {
+            setMessage('✓ Correct! Well done!');
+            showToast('success', '✓ Puzzle solved correctly!');
+            
+            setTimeout(() => {
+                navigate('/puzzles');
+            }, 2000);
+        } else {
+            setMessage('✗ Incorrect move. Try again!');
+            showToast('error', '✗ That\'s not the solution');
+            
+            // Reset board after incorrect move
+            setTimeout(() => {
+                if (puzzle) {
+                    const resetBoard = fenToBoard(puzzle.fenStr);
+                    setBoard(resetBoard);
+                    chessGame.current = new Chess(puzzle.fenStr);
+                }
+                setMessage(null);
+                setLastMove(null);
+            }, 1500);
+        }
+    }, [puzzle, navigate]);
+
+    // Handle incoming WebSocket messages
+    useEffect(() => {
+        const unsubscribeMessage = wsService.on('message', (data) => {
+            console.log('[PuzzleGame] Received message:', data);
+
+            // Deduplicate messages
+            if (data.type) {
+                const hash = computeMessageHash(data.type, data);
+                const lastHash = lastMessageHash.current.get(data.type);
+                
+                if (lastHash === hash) {
+                    console.log('[PuzzleGame] Duplicate message ignored:', data.type);
+                    return;
+                }
+                
+                lastMessageHash.current.set(data.type, hash);
+            }
+
+            // Update board if FEN string is provided
+            if (data.fen_str && data.fen_str !== lastProcessedFen.current) {
+                try {
+                    const newBoard = fenToBoard(data.fen_str);
+                    setBoard(newBoard);
+                    chessGame.current = new Chess(data.fen_str);
+                    lastProcessedFen.current = data.fen_str;
+                } catch (error) {
+                    console.error('[PuzzleGame] Failed to parse FEN:', error);
+                }
+            }
+
+            // Handle different message types
+            if (data.type === 'board_status') {
+                if (data.status === 'correct') {
+                    setBoardSetupStatus('correct');
+                    setMessage('✓ Board setup verified! Make your move.');
+                    showToast('success', '✓ Board ready');
+                } else if (data.status === 'incorrect') {
+                    setBoardSetupStatus('incorrect');
+                    setMessage('✗ Board setup incorrect. Please fix the position.');
+                    showToast('error', '✗ Board position incorrect');
+                }
+            } else if (data.type === 'puzzle_solution') {
+                handlePuzzleSolution(data);
+            } else if (data.type === 'ai_move_executed' || data.type === 'move_detected') {
+                if (data.move) {
+                    setMessage(`Move: ${data.move}`);
+                }
+            } else if (data.type === 'robot_response') {
+                if (data.message) {
+                    console.log('[PuzzleGame] Robot:', data.message);
+                }
+            }
+        });
+
+        return () => {
+            unsubscribeMessage();
+        };
+    }, [gameId, puzzle, handlePuzzleSolution]);
+
+    // Load puzzle data and start game
+    useEffect(() => {
+        if (!id) {
+            toast.error('Puzzle ID is required');
+            navigate('/puzzles');
+            return;
+        }
+
+        loadPuzzleAndStartGame();
+    }, [id]);
+
+    const loadPuzzleAndStartGame = async () => {
+        try {
+            setLoading(true);
+
+            // 1. Load puzzle data from API
+            console.log('[PuzzleGame] Loading puzzle:', id);
+            const puzzleData = await puzzleService.getPuzzleById(id!);
+            setPuzzle(puzzleData);
+
+            // 2. Parse FEN and set board
+            const newBoard = fenToBoard(puzzleData.fenStr);
+            setBoard(newBoard);
+            chessGame.current = new Chess(puzzleData.fenStr);
+            lastProcessedFen.current = puzzleData.fenStr;
+
+            // 3. Start game via API (sends command to AI)
+            console.log('[PuzzleGame] Starting puzzle game...');
+            const gameResponse = await gameService.startGame({
+                gameTypeCode: 'training_puzzle',
+                difficulty: puzzleData.difficulty || 'medium',
+                puzzleId: id
+            });
+            
+            setGameId(gameResponse.gameId);
+            console.log('[PuzzleGame] Game started:', gameResponse);
+            
+            setBoardSetupStatus('checking');
+            setMessage('Verifying board setup...');
+            showToast('success', `✓ ${puzzleData.name} loaded!`);
+        } catch (error: any) {
+            console.error('[PuzzleGame] Error loading puzzle:', error);
+            showToast('error', error.message || 'Failed to load puzzle');
+            setTimeout(() => navigate('/puzzles'), 2000);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Handle connect/disconnect
+    const handleConnect = async () => {
+        if (isConnected) {
+            wsService.disconnect();
+            setIsConnected(false);
+            setConnectionStatus('disconnected');
+        } else {
+            try {
+                setConnectionStatus('connecting');
+                await wsService.connect();
+            } catch (error) {
+                console.error('[PuzzleGame] Connection failed:', error);
+                setConnectionStatus('error');
+                showToast('error', '✗ Failed to connect to robot');
+            }
+        }
+    };
 
     const handleSquareClick = (row: number, col: number, index: number) => {
         const piece = board[index];
@@ -65,9 +314,11 @@ export default function PuzzleGame() {
             } else {
                 setMessage('Incorrect move. Try again.');
                 setTimeout(() => {
-                    // Reset board
-                    const resetBoard = fenToBoard(PUZZLE_FEN);
-                    setBoard(resetBoard);
+                    // Reset board to original puzzle position
+                    if (puzzle) {
+                        const resetBoard = fenToBoard(puzzle.fenStr);
+                        setBoard(resetBoard);
+                    }
                     setMessage(null);
                     setLastMove(null);
                 }, 1000);
@@ -81,14 +332,49 @@ export default function PuzzleGame() {
         }
     };
 
+    if (loading) {
+        return (
+            <div className="puzzle-game-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+                <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '18px', color: '#6B7280' }}>Loading puzzle...</div>
+                </div>
+            </div>
+        );
+    }
+
+    if (!puzzle) {
+        return (
+            <div className="puzzle-game-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+                <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '18px', color: '#EF4444' }}>Puzzle not found</div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="puzzle-game-container">
+            {/* Toast Container */}
+            <ToastContainer
+                aria-label="Notifications"
+                position="top-right"
+                autoClose={3000}
+                hideProgressBar={false}
+                newestOnTop={true}
+                closeOnClick
+                rtl={false}
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+                limit={3}
+            />
+
             {/* Header */}
             <div className="puzzle-game-header">
                 <div onClick={() => navigate('/puzzles')} style={{ cursor: 'pointer', padding: '8px', borderRadius: '12px', backgroundColor: '#F3F4F6' }}>
                     <ArrowLeft size={24} color="var(--color-text)" />
                 </div>
-                <h2 style={{ fontSize: '20px', fontWeight: 'bold', margin: 0 }}>Puzzle #{id}</h2>
+                <h2 style={{ fontSize: '20px', fontWeight: 'bold', margin: 0 }}>{puzzle.name}</h2>
                 <div style={{ width: 40 }}></div>
             </div>
 
@@ -154,6 +440,18 @@ export default function PuzzleGame() {
                             }}
                         />
                     </div>
+                    {/* Puzzle Info */}
+                    {puzzle.description && (
+                        <div className="puzzle-feedback-card" style={{
+                            backgroundColor: '#EFF6FF',
+                            color: '#1E40AF',
+                            border: '1px solid #3B82F6',
+                            marginBottom: '16px'
+                        }}>
+                            <strong>Goal:</strong> {puzzle.description}
+                        </div>
+                    )}
+
                     {/* Feedback */}
                     {message && (
                         <div className="puzzle-feedback-card" style={{
@@ -182,7 +480,7 @@ export default function PuzzleGame() {
                     <div className="puzzle-actions-card">
                         <button
                             className="puzzle-action-button puzzle-primary-button"
-                            onClick={() => setIsConnected(!isConnected)}
+                            onClick={handleConnect}
                         >
                             <Bluetooth size={20} color="#FFF" />
                             <span className="puzzle-action-button-text puzzle-primary-button-text">

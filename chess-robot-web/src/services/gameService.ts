@@ -188,6 +188,24 @@
     }
 
     /**
+     * Start a training puzzle game
+     */
+    async startPuzzleGame(puzzleId: string, difficulty: string = 'medium'): Promise<StartGameResponse> {
+      try {
+        const request: StartGameRequest = {
+          gameTypeCode: 'training_puzzle',
+          difficulty: difficulty,
+          puzzleId: puzzleId
+        };
+
+        return await this.startGame(request);
+      } catch (error) {
+        console.error('[GameService] Start puzzle game error:', error);
+        throw error;
+      }
+    }
+
+    /**
      * Verify board setup
      */
     async verifyBoardSetup(request: VerifyBoardSetupRequest): Promise<BoardSetupStatusResponse> {
