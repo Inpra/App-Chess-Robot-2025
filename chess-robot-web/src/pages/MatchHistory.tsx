@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, User, Clock, ArrowUpDown, TrendingUp, TrendingDown, Loader2 } from 'lucide-react';
+import { ArrowLeft, User, ArrowUpDown, TrendingUp, TrendingDown, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import gameService from '../services/gameService';
 import authService from '../services/authService';
@@ -103,21 +103,7 @@ export default function MatchHistory() {
         return date.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
     };
 
-    const formatTime = (dateStr?: string) => {
-        if (!dateStr) return 'N/A';
-        const date = new Date(dateStr);
-        return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-    };
 
-    const calculateDuration = (startedAt?: string, endedAt?: string) => {
-        if (!startedAt || !endedAt) return 'N/A';
-        const start = new Date(startedAt);
-        const end = new Date(endedAt);
-        const diffMs = end.getTime() - start.getTime();
-        const minutes = Math.floor(diffMs / 60000);
-        const seconds = Math.floor((diffMs % 60000) / 1000);
-        return `${minutes}m ${seconds}s`;
-    };
 
     const getDifficultyDisplay = (difficulty?: string) => {
         if (!difficulty) return 'AI';
@@ -182,7 +168,7 @@ export default function MatchHistory() {
                                     <div>
                                         <div className="opponent-name">{getDifficultyDisplay(game.difficulty)}</div>
                                         <div className="match-date">
-                                            {formatDate(game.startedAt)} • {formatTime(game.startedAt)}
+                                            {formatDate(game.startedAt)}
                                         </div>
                                     </div>
                                 </div>
@@ -194,10 +180,6 @@ export default function MatchHistory() {
                             </div>
 
                             <div className="match-stats">
-                                <div className="stat-item">
-                                    <Clock size={18} color="#9CA3AF" />
-                                    <span className="stat-text">{calculateDuration(game.startedAt, game.endedAt)}</span>
-                                </div>
                                 <div className="stat-item">
                                     <ArrowUpDown size={18} color="#9CA3AF" />
                                     <span className="stat-text">{game.totalMoves || 0} Moves</span>

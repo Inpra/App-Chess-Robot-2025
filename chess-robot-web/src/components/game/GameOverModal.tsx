@@ -9,7 +9,7 @@ interface GameOverModalProps {
     onClose: () => void;
 }
 
-export default function GameOverModal({ isOpen, result, reason, message, onClose }: GameOverModalProps) {
+export function GameOverModal({ isOpen, result, reason, message, onClose }: GameOverModalProps) {
     if (!isOpen) return null;
 
     const getResultIcon = () => {

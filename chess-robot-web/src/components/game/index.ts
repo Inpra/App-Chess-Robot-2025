@@ -1,3 +1,9 @@
-export { MoveHistory } from './MoveHistory';
-export type { MoveHistoryProps, Move } from './MoveHistory';
-export { default as GameOverModal } from './GameOverModal';
+export * from './MoveHistory';
+export * from './GameOverModal';
+export * from './GameStatistics';
+export * from './ReplayControls';
+export * from './GameHeader';
+export * from './MatchHeader';
+export * from './GameStatusBanner';
+export * from './ServerStatusCard';
+export * from './GameActionsCard';
