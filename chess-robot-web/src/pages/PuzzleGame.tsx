@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { RotateCcw, Pause, Lightbulb, Bluetooth, Play, ChevronDown, ChevronUp } from 'lucide-react';
+import { Pause, Lightbulb, Bluetooth, Play, ChevronDown, ChevronUp } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Chess } from 'chess.js';
 import { toast, ToastContainer } from 'react-toastify';
@@ -9,7 +9,6 @@ import type { BoardState } from '../components/chess';
 import { CameraView } from '../components/camera';
 import {
     GameHeader,
-    MatchHeader,
     ServerStatusCard,
     MoveHistory,
     GameOverModal
@@ -476,14 +475,13 @@ export default function PuzzleGame() {
             <div className="puzzle-game-content">
                 {/* Board Section */}
                 <div className="puzzle-board-section">
-                    {/* Match Header */}
-                    <MatchHeader
+                    {/* Match Header - Removed for puzzle view */}
+                    {/* <MatchHeader
                         userElo={1200}
                         robotElo={1200}
                         difficultyName={puzzle?.difficulty || 'Medium'}
                         timer="--:--"
-                    />
-
+                    /> */}
 
                     {/* Puzzle Goal - Collapsible */}
                     {puzzle?.description && (
@@ -625,10 +623,11 @@ export default function PuzzleGame() {
                         </button>
 
                         <div className="puzzle-action-row">
-                            <button className="puzzle-action-button" style={{ flex: 1 }}>
+                            {/* Undo button removed */}
+                            {/* <button className="puzzle-action-button" style={{ flex: 1 }}>
                                 <RotateCcw size={20} color="var(--color-text)" />
                                 <span className="puzzle-action-button-text">Undo</span>
-                            </button>
+                            </button> */}
 
                             <button className="puzzle-action-button" style={{ flex: 1 }}>
                                 <Pause size={20} color="var(--color-text)" />
