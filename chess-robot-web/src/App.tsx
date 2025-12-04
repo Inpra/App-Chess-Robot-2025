@@ -37,6 +37,8 @@ import VerifyEmail from './pages/VerifyEmail';
 import ResendVerification from './pages/ResendVerification';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import PaymentSuccess from './pages/PaymentSuccess';
+import PaymentCancel from './pages/PaymentCancel';
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -242,6 +244,8 @@ function App() {
         <Route path="/puzzles" element={<Puzzles />} />
         <Route path="/puzzles/:id" element={<PuzzleGame />} />
         <Route path="/purchase-points" element={<PurchasePoints />} />
+        <Route path="/payment/success" element={<PaymentSuccess />} />
+        <Route path="/payment/cancel" element={<PaymentCancel />} />
         <Route path="/points-history" element={<PointsHistory />} />
         <Route path="/faq" element={<FAQ />} />
         <Route path="/theme-settings" element={<ThemeSettings />} />
