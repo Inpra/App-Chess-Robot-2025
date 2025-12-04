@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Star, Trophy, Diamond, ShieldCheck, ArrowRight, Clock, QrCode, X, Crown, Zap, Gift } from 'lucide-react';
+import { ArrowLeft, Star, Trophy, Diamond, ShieldCheck, ArrowRight, Clock, QrCode, X, Crown, Zap, Gift, Loader2, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { QRCodeSVG } from 'qrcode.react';
 import '../styles/PurchasePoints.css';
 import { getActivePointPackages, formatPrice, type PointPackage } from '../services/pointPackageService';
+import { createPayment, checkPaymentStatus, type PaymentResponse } from '../services/paymentService';
 
 // Package display configuration
 interface PackageDisplay extends PointPackage {
@@ -28,10 +30,23 @@ export default function PurchasePoints() {
     const [error, setError] = useState<string | null>(null);
     const [selectedPackage, setSelectedPackage] = useState<PackageDisplay | null>(null);
     const [modalVisible, setModalVisible] = useState(false);
+    const [paymentData, setPaymentData] = useState<PaymentResponse | null>(null);
+    const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+    const [paymentStatus, setPaymentStatus] = useState<'pending' | 'success' | 'failed'>('pending');
+    const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
         loadPackages();
     }, []);
+
+    useEffect(() => {
+        // Cleanup polling on unmount or modal close
+        return () => {
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+            }
+        };
+    }, [pollingInterval]);
 
     const loadPackages = async () => {
         try {
@@ -63,9 +78,79 @@ export default function PurchasePoints() {
         }
     };
 
-    const handlePurchase = (pkg: PackageDisplay) => {
+    const handlePurchase = async (pkg: PackageDisplay) => {
         setSelectedPackage(pkg);
         setModalVisible(true);
+        setIsProcessingPayment(true);
+        setPaymentData(null);
+        setPaymentStatus('pending');
+        
+        // Clear any existing polling
+        if (pollingInterval) {
+            clearInterval(pollingInterval);
+            setPollingInterval(null);
+        }
+
+        try {
+            // Create payment link
+            console.log('Creating payment for package:', pkg.id, pkg);
+            const payment = await createPayment(pkg.id);
+            console.log('Payment response:', payment);
+            setPaymentData(payment);
+            
+            // Start polling for payment status
+            startPollingPaymentStatus(payment.transactionId || payment.TransactionId);
+        } catch (err: any) {
+            console.error('Error creating payment:', err);
+            alert(err.response?.data?.error || 'Không thể tạo link thanh toán. Vui lòng đăng nhập và thử lại.');
+            setModalVisible(false);
+        } finally {
+            setIsProcessingPayment(false);
+        }
+    };
+
+    const startPollingPaymentStatus = (orderCode: string) => {
+        // Poll every 3 seconds
+        const interval = setInterval(async () => {
+            try {
+                console.log('Polling payment status for:', orderCode);
+                const status = await checkPaymentStatus(orderCode);
+                console.log('Payment status:', status);
+                
+                if (status.status === 'success' || status.Status === 'success') {
+                    setPaymentStatus('success');
+                    // Stop polling
+                    clearInterval(interval);
+                    setPollingInterval(null);
+                    
+                    // Auto close modal after 3 seconds
+                    setTimeout(() => {
+                        setModalVisible(false);
+                        // Optionally reload user points or navigate
+                        window.location.reload();
+                    }, 3000);
+                } else if (status.status === 'failed' || status.Status === 'failed') {
+                    setPaymentStatus('failed');
+                    clearInterval(interval);
+                    setPollingInterval(null);
+                }
+            } catch (error) {
+                console.error('Error polling payment status:', error);
+            }
+        }, 3000);
+        
+        setPollingInterval(interval);
+    };
+
+    const handlePayNow = () => {
+        if (!paymentData) return;
+        
+        // Get orderCode from payment data
+        const orderCode = paymentData.transactionId || paymentData.TransactionId;
+        
+        // Close modal and navigate to success page to check status
+        setModalVisible(false);
+        navigate(`/payment/success?orderCode=${orderCode}`);
     };
 
     const getIcon = (iconName: string, size: number, color: string) => {
@@ -134,7 +219,7 @@ export default function PurchasePoints() {
                     </div>
                 ) : (
                     <div className="cards-container">
-                        {packages.map((pkg) => (
+                        {packages.map((pkg, index) => (
                             <div
                                 key={pkg.id}
                                 className={`package-card ${pkg.popular ? 'popular-card' : ''}`}
@@ -184,35 +269,135 @@ export default function PurchasePoints() {
             </div>
 
             {/* Payment Modal */}
-            {modalVisible && (
+            {modalVisible && selectedPackage && (
                 <div className="modal-overlay" onClick={() => setModalVisible(false)}>
                     <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                         <div className="modal-header">
-                            <h3 className="modal-title">Scan to Pay</h3>
+                            <h3 className="modal-title">Thanh toán</h3>
                             <button className="close-button" onClick={() => setModalVisible(false)}>
                                 <X size={20} color="#6B7280" />
                             </button>
                         </div>
 
                         <div className="qr-container">
-                            <div className="qr-placeholder">
-                                <QrCode size={120} color="#1F2937" />
-                            </div>
-                            <p className="pay-instruction">Open your banking app and scan the QR code to complete payment.</p>
+                            {isProcessingPayment ? (
+                                <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+                                    <Loader2 size={48} color="#3B82F6" className="spinner" style={{ animation: 'spin 1s linear infinite' }} />
+                                    <p style={{ marginTop: '16px', color: '#6B7280' }}>Đang tạo link thanh toán...</p>
+                                </div>
+                            ) : paymentData ? (
+                                <>
+                                    {(paymentData.qrCodeUrl || paymentData.QrCodeUrl) && (
+                                        <div className="qr-image-container" style={{ 
+                                            display: 'flex', 
+                                            justifyContent: 'center', 
+                                            alignItems: 'center',
+                                            padding: '20px',
+                                            backgroundColor: 'white',
+                                            borderRadius: '12px'
+                                        }}>
+                                            <QRCodeSVG 
+                                                value={paymentData.qrCodeUrl || paymentData.QrCodeUrl} 
+                                                size={250}
+                                                level="H"
+                                                includeMargin={true}
+                                            />
+                                        </div>
+                                    )}
+                                    
+                                    <div style={{ marginTop: '20px', textAlign: 'center' }}>
+                                        <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px' }}>
+                                            {selectedPackage.name}
+                                        </h4>
+                                        <p style={{ color: '#6B7280', fontSize: '14px', marginBottom: '4px' }}>
+                                            {new Intl.NumberFormat('vi-VN').format(selectedPackage.points)} điểm
+                                        </p>
+                                    </div>
 
-                            <div className="amount-container">
-                                <span className="amount-label">Total Amount</span>
-                                <span className="amount-value">{formatPrice(selectedPackage?.price || 0)}</span>
-                            </div>
+                                    <div className="amount-container">
+                                        <span className="amount-label">Số tiền thanh toán</span>
+                                        <span className="amount-value">{formatPrice(selectedPackage.price)}</span>
+                                    </div>
+
+                                    <p className="pay-instruction">
+                                        Quét mã QR bằng ứng dụng ngân hàng để thanh toán. Hệ thống sẽ tự động xác nhận và cộng điểm cho bạn.
+                                    </p>
+
+                                    {paymentStatus === 'success' ? (
+                                        <div style={{
+                                            marginTop: '20px',
+                                            padding: '16px',
+                                            backgroundColor: '#D1FAE5',
+                                            borderRadius: '12px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '8px'
+                                        }}>
+                                            <CheckCircle size={24} color="#10B981" />
+                                            <span style={{ color: '#10B981', fontWeight: '600' }}>
+                                                Thanh toán thành công! Điểm đã được cộng.
+                                            </span>
+                                        </div>
+                                    ) : paymentStatus === 'failed' ? (
+                                        <div style={{
+                                            marginTop: '20px',
+                                            padding: '16px',
+                                            backgroundColor: '#FEE2E2',
+                                            borderRadius: '12px',
+                                            textAlign: 'center',
+                                            color: '#EF4444',
+                                            fontWeight: '600'
+                                        }}>
+                                            Thanh toán thất bại hoặc đã bị hủy
+                                        </div>
+                                    ) : (
+                                        <div style={{
+                                            marginTop: '20px',
+                                            padding: '16px',
+                                            backgroundColor: '#F3F4F6',
+                                            borderRadius: '12px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '8px'
+                                        }}>
+                                            <Loader2 size={20} color="#6B7280" style={{ animation: 'spin 1s linear infinite' }} />
+                                            <span style={{ color: '#6B7280', fontSize: '14px' }}>
+                                                Đang chờ thanh toán...
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    <p style={{ 
+                                        marginTop: '16px', 
+                                        fontSize: '12px', 
+                                        color: '#9CA3AF',
+                                        textAlign: 'center'
+                                    }}>
+                                        Mã giao dịch: {paymentData.transactionId || paymentData.TransactionId}
+                                    </p>
+                                </>
+                            ) : (
+                                <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+                                    <p style={{ color: '#EF4444' }}>Không thể tạo link thanh toán</p>
+                                    <button
+                                        onClick={() => setModalVisible(false)}
+                                        style={{
+                                            marginTop: '16px',
+                                            padding: '12px 24px',
+                                            backgroundColor: '#6B7280',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '12px',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        Đóng
+                    </button>
+                </div>
+            )}
                         </div>
-
-                        <button
-                            className="done-button"
-                            style={{ backgroundColor: selectedPackage?.color || 'var(--color-primary)' }}
-                            onClick={() => setModalVisible(false)}
-                        >
-                            I have paid
-                        </button>
                     </div>
                 </div>
             )}
