@@ -56,9 +56,23 @@ export const GameActionsCard: React.FC<GameActionsCardProps> = ({
             </button>
 
             <div className="vs-bot-action-row">
-                <button className="vs-bot-action-button" style={{ flex: 1 }} onClick={onPause}>
-                    <Pause size={20} color="var(--color-text)" />
-                    <span className="vs-bot-action-button-text">Pause</span>
+                <button 
+                    className="vs-bot-action-button" 
+                    style={{ flex: 1 }} 
+                    onClick={onPause}
+                    disabled={gameStatus !== 'playing' && gameStatus !== 'paused'}
+                >
+                    {gameStatus === 'paused' ? (
+                        <>
+                            <Play size={20} color="var(--color-text)" />
+                            <span className="vs-bot-action-button-text">Resume</span>
+                        </>
+                    ) : (
+                        <>
+                            <Pause size={20} color="var(--color-text)" />
+                            <span className="vs-bot-action-button-text">Pause</span>
+                        </>
+                    )}
                 </button>
 
                 <button className="vs-bot-action-button" style={{ flex: 1 }} onClick={onHint}>

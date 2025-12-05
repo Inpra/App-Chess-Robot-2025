@@ -20,6 +20,23 @@
     message: string;
   }
 
+  export interface PauseGameResponse {
+    gameId: string;
+    status: string;
+    message: string;
+    savedStateId: string;
+  }
+
+  export interface ResumeGameResponse {
+    gameId: string;
+    requestId: string;
+    status: string;
+    fenStr: string;
+    lastMoveId?: string;
+    message: string;
+    savedAt: string;
+  }
+
   export interface VerifyBoardSetupRequest {
     gameId: string;
   }
@@ -160,29 +177,6 @@
         }
       } catch (error) {
         console.error('[GameService] Start game error:', error);
-        throw error;
-      }
-    }
-
-    /**
-     * Resume an existing game
-     */
-    async resumeGame(gameId: string): Promise<StartGameResponse> {
-      try {
-        const response = await fetch(`${this.baseUrl}/Games/resume`, {
-          method: 'POST',
-          headers: this.getHeaders(),
-          body: JSON.stringify({ gameId }),
-        });
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.message || 'Failed to resume game');
-        }
-
-        return await response.json();
-      } catch (error) {
-        console.error('[GameService] Resume game error:', error);
         throw error;
       }
     }
@@ -404,6 +398,50 @@
         return await response.json();
       } catch (error) {
         console.error('[GameService] End game error:', error);
+        throw error;
+      }
+    }
+
+    /**
+     * Pause the current game and save state
+     */
+    async pauseGame(gameId: string): Promise<PauseGameResponse> {
+      try {
+        const response = await fetch(`${this.baseUrl}/Games/${gameId}/pause`, {
+          method: 'POST',
+          headers: this.getHeaders(),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.message || 'Failed to pause game');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('[GameService] Pause game error:', error);
+        throw error;
+      }
+    }
+
+    /**
+     * Resume a paused game from saved state
+     */
+    async resumeGame(gameId: string): Promise<ResumeGameResponse> {
+      try {
+        const response = await fetch(`${this.baseUrl}/Games/${gameId}/resume`, {
+          method: 'POST',
+          headers: this.getHeaders(),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.message || 'Failed to resume game');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('[GameService] Resume game error:', error);
         throw error;
       }
     }

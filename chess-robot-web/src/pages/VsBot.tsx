@@ -23,7 +23,7 @@ import '../styles/VsBot.css';
 export default function VsBot() {
     const navigate = useNavigate();
     const location = useLocation();
-    const { elo, difficulty, difficultyName } = (location.state as any) || { elo: 1500, difficulty: 'medium', difficultyName: 'Medium' };
+    const { elo, difficulty, difficultyName, resumeGameId } = (location.state as any) || { elo: 1500, difficulty: 'medium', difficultyName: 'Medium' };
     const [isConnected, setIsConnected] = useState(false);
     const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected');
     const [board, setBoard] = useState<BoardState>([...initialBoard]);
@@ -32,8 +32,8 @@ export default function VsBot() {
     const [checkSquare, setCheckSquare] = useState<{ row: number, col: number } | null>(null);
 
     // Game state
-    const [gameId, setGameId] = useState<string | null>(null);
-    const [gameStatus, setGameStatus] = useState<'idle' | 'starting' | 'playing' | 'paused' | 'ended'>('idle');
+    const [gameId, setGameId] = useState<string | null>(resumeGameId || null);
+    const [gameStatus, setGameStatus] = useState<'idle' | 'starting' | 'playing' | 'paused' | 'ended'>(resumeGameId ? 'paused' : 'idle');
     const [isStartingGame, setIsStartingGame] = useState(false);
 
     // Game message state
@@ -165,6 +165,17 @@ export default function VsBot() {
             wsService.disconnect();
         };
     }, []); // ✓ No dependencies - only setup/cleanup on mount/unmount
+
+    // Auto-resume game if resumeGameId is provided
+    useEffect(() => {
+        if (resumeGameId && gameStatus === 'paused' && isConnected) {
+            console.log('[VsBot] Auto-resuming game:', resumeGameId);
+            // Show message that game will be resumed
+            setGameMessage('Resuming paused game...');
+            // Trigger resume after connection is established
+            handleResumeGame();
+        }
+    }, [resumeGameId, isConnected]); // Only run when connection is ready
 
     // Handle game over (checkmate/stalemate) - defined before useEffect to avoid dependency issues
     const handleGameOver = useCallback(async (data: any) => {
@@ -684,6 +695,94 @@ export default function VsBot() {
         }
     };
 
+    // Handle pause game
+    const handlePauseGame = async () => {
+        if (!gameId || gameStatus !== 'playing') {
+            return;
+        }
+
+        // Show confirmation dialog
+        const confirmed = window.confirm(
+            '⏸️ Pause Game?\n\n' +
+            'Your progress will be saved and you can resume later from Match History.\n' +
+            'Do you want to pause this game?'
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            // Save any pending moves first
+            if (pendingMoves.current.length > 0) {
+                await savePendingMoves();
+            }
+
+            // Call API to pause game (saves state and sends end command to AI)
+            const response = await gameService.pauseGame(gameId);
+            
+            console.log('[VsBot] ✓ Game paused:', response);
+
+            // Update UI
+            setGameStatus('paused');
+            setGameMessage('Game paused - Progress saved');
+            showToast('success', '✓ Game paused! Check Match History to resume');
+
+            // Navigate back to home after short delay
+            setTimeout(() => {
+                navigate('/');
+            }, 1500);
+
+        } catch (error: any) {
+            console.error('[VsBot] ✗ Failed to pause game:', error);
+            showToast('error', '✗ Failed to pause game. Please try again.');
+        }
+    };
+
+    // Handle resume game
+    const handleResumeGame = async () => {
+        if (!gameId || gameStatus !== 'paused') {
+            return;
+        }
+
+        try {
+            // Call API to resume game (sends resume command with saved FEN to AI)
+            const response = await gameService.resumeGame(gameId);
+            
+            console.log('[VsBot] ✓ Game resumed:', response);
+
+            // Load the saved FEN position
+            if (response.fenStr) {
+                const newBoard = fenToBoard(response.fenStr);
+                setBoard(newBoard);
+                chessGame.current.load(response.fenStr);
+                lastProcessedFen.current = response.fenStr;
+                
+                // Rebuild move history from chess.js
+                const history = chessGame.current.history();
+                const moves: Move[] = [];
+                for (let i = 0; i < history.length; i += 2) {
+                    moves.push({
+                        moveNumber: Math.floor(i / 2) + 1,
+                        white: history[i],
+                        black: history[i + 1]
+                    });
+                }
+                setMoveHistory(moves);
+            }
+
+            // Update UI
+            setGameStatus('playing');
+            setBoardSetupStatus('checking');
+            setGameMessage('Game resumed - Set up your board to continue');
+            showToast('success', '✓ Game resumed! Please set up your board');
+
+        } catch (error: any) {
+            console.error('[VsBot] ✗ Failed to resume game:', error);
+            showToast('error', '✗ Failed to resume game. Please try again.');
+        }
+    };
+
     // Handle resign game
     const handleResignGame = async () => {
         if (!gameId || gameStatus !== 'playing') {
@@ -832,6 +931,7 @@ export default function VsBot() {
                         onConnect={handleConnect}
                         onStartGame={handleStartGame}
                         onResign={handleResignGame}
+                        onPause={gameStatus === 'paused' ? handleResumeGame : handlePauseGame}
                     />
 
                     {/* Camera View */}

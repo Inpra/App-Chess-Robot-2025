@@ -53,21 +53,22 @@ export default function MatchHistory() {
             // Fetch player games
             const gamesData = await gameService.getPlayerGames(currentUser.id);
 
-            // Filter finished games only
-            const finishedGames = gamesData.filter(
-                (game: GameData) => game.status === 'finished' || game.status === 'aborted'
+            // Filter finished and paused games (show both)
+            const displayGames = gamesData.filter(
+                (game: GameData) => game.status === 'finished' || game.status === 'aborted' || game.status === 'paused'
             );
 
-            setGames(finishedGames);
+            setGames(displayGames);
 
-            // Calculate statistics
+            // Calculate statistics (only for finished games)
+            const finishedGames = displayGames.filter((g: GameData) => g.status === 'finished');
             const wins = finishedGames.filter((g: GameData) => g.result?.toLowerCase() === 'win').length;
             const losses = finishedGames.filter((g: GameData) => g.result?.toLowerCase() === 'lose').length;
             const draws = finishedGames.filter((g: GameData) => g.result?.toLowerCase() === 'draw').length;
             const total = finishedGames.length;
             const winRate = total > 0 ? Math.round((wins / total) * 100) : 0;
 
-            // Get current Elo from most recent game or user profile
+            // Get current Elo from most recent finished game or user profile
             const latestGame = finishedGames[0];
             // prefer playerRatingAfter from latest game, otherwise try to read from current user if available
             const currentElo = latestGame?.playerRatingAfter ?? (currentUser as any)?.eloRating ?? 0;
@@ -87,13 +88,33 @@ export default function MatchHistory() {
         }
     };
 
-    const getResultColor = (result: string) => {
+    const getResultColor = (result: string, status?: string) => {
+        // If game is paused, show yellow/orange
+        if (status === 'paused') return '#F59E0B';
+        
         const lowerResult = result?.toLowerCase();
         switch (lowerResult) {
             case 'win': return '#10B981';
             case 'lose': return '#EF4444';
             case 'draw': return '#F59E0B';
             default: return 'var(--color-text)';
+        }
+    };
+
+    const handleGameClick = (game: GameData) => {
+        // If game is paused, navigate to VsBot to resume
+        if (game.status === 'paused') {
+            navigate('/game/vs-bot', { 
+                state: { 
+                    resumeGameId: game.id,
+                    difficulty: game.difficulty || 'medium',
+                    difficultyName: game.difficulty ? game.difficulty.charAt(0).toUpperCase() + game.difficulty.slice(1) : 'Medium',
+                    elo: 1500
+                } 
+            });
+        } else {
+            // Otherwise, show match detail
+            navigate(`/match-history/${game.id}`);
         }
     };
 
@@ -159,7 +180,7 @@ export default function MatchHistory() {
                     </div>
                 ) : (
                     games.map((game) => (
-                        <div key={game.id} className="match-card" onClick={() => navigate(`/match-history/${game.id}`)}>
+                        <div key={game.id} className="match-card" onClick={() => handleGameClick(game)}>
                             <div className="match-header">
                                 <div className="opponent-info">
                                     <div className="avatar-container">
@@ -172,9 +193,9 @@ export default function MatchHistory() {
                                         </div>
                                     </div>
                                 </div>
-                                <div className="result-badge" style={{ backgroundColor: getResultColor(game.result || '') + '20' }}>
-                                    <span className="result-text" style={{ color: getResultColor(game.result || '') }}>
-                                        {game.result ? game.result.charAt(0).toUpperCase() + game.result.slice(1) : 'N/A'}
+                                <div className="result-badge" style={{ backgroundColor: getResultColor(game.result || '', game.status) + '20' }}>
+                                    <span className="result-text" style={{ color: getResultColor(game.result || '', game.status) }}>
+                                        {game.status === 'paused' ? '⏸️ Paused' : game.result ? game.result.charAt(0).toUpperCase() + game.result.slice(1) : 'N/A'}
                                     </span>
                                 </div>
                             </div>
