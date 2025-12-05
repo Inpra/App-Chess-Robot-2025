@@ -2,7 +2,7 @@ import NavigationHeader from '@/components/common/NavigationHeader';
 import { Colors } from '@/constants/theme';
 import { getMatchHistoryStyles } from '@/styles/match-history.styles';
 import { Ionicons } from '@expo/vector-icons';
-import { Link, Stack, useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import React, { useMemo, useState, useEffect } from 'react';
 import {
     FlatList,
@@ -41,7 +41,9 @@ export default function MatchHistoryScreen() {
     const styles = useMemo(() => getMatchHistoryStyles(dimensions), [dimensions]);
 
     const [loading, setLoading] = useState(true);
+    const [statsLoading, setStatsLoading] = useState(true);
     const [games, setGames] = useState<GameData[]>([]);
+    const [selectedFilter, setSelectedFilter] = useState<'all' | 'win' | 'lose' | 'draw' | 'paused'>('all');
     const [playerStats, setPlayerStats] = useState({
         totalGames: 0,
         winRate: 0,
@@ -52,10 +54,51 @@ export default function MatchHistoryScreen() {
     });
 
     useEffect(() => {
-        loadMatchHistory();
+        // Load stats only once on mount
+        loadPlayerStats();
     }, []);
 
-    const loadMatchHistory = async () => {
+    useEffect(() => {
+        // Load games whenever filter changes
+        loadFilteredGames(selectedFilter);
+    }, [selectedFilter]);
+
+    const loadPlayerStats = async () => {
+        try {
+            setStatsLoading(true);
+            const currentUser = await authService.getCurrentUser();
+            if (!currentUser?.id) {
+                router.replace('/(auth)/login');
+                return;
+            }
+
+            // Fetch fresh user profile to get stats from database (accurate source of truth)
+            const userProfile = await authService.getProfile();
+            
+            // Use stats from user profile (from database) - most accurate
+            const totalGames = (userProfile as any)?.totalGamesPlayed || 0;
+            const wins = (userProfile as any)?.wins || 0;
+            const losses = (userProfile as any)?.losses || 0;
+            const draws = (userProfile as any)?.draws || 0;
+            const currentElo = (userProfile as any)?.eloRating || 1200;
+            const winRate = totalGames > 0 ? Math.round((wins / totalGames) * 100) : 0;
+
+            setPlayerStats({
+                totalGames,
+                winRate,
+                currentElo,
+                wins,
+                losses,
+                draws,
+            });
+        } catch (error) {
+            console.error('Failed to load player stats:', error);
+        } finally {
+            setStatsLoading(false);
+        }
+    };
+
+    const loadFilteredGames = async (filter: 'all' | 'win' | 'lose' | 'draw' | 'paused') => {
         try {
             setLoading(true);
             const currentUser = await authService.getCurrentUser();
@@ -64,49 +107,71 @@ export default function MatchHistoryScreen() {
                 return;
             }
 
-            // Fetch player games
+            // Build filter parameters for API
+            const filters: { status?: string; result?: string } = {};
+            
+            if (filter === 'all') {
+                // Get all displayable games (finished, aborted, paused)
+                // No API filter, will filter client-side
+            } else if (filter === 'paused') {
+                filters.status = 'paused';
+            } else {
+                // win, lose, draw filters
+                filters.status = 'finished';
+                filters.result = filter;
+            }
+
+            // Fetch player games with filters
             const gamesData = await gameService.getPlayerGames(currentUser.id);
 
-            // Filter finished games only
-            const finishedGames = gamesData.filter(
-                (game: GameData) => game.status === 'completed' || game.status === 'finished' || game.status === 'aborted'
-            );
+            // Additional client-side filter for 'all' case
+            let displayGames = gamesData;
+            if (filter === 'all') {
+                displayGames = gamesData.filter(
+                    (game: GameData) => game.status === 'finished' || game.status === 'aborted' || game.status === 'paused'
+                );
+            }
 
-            setGames(finishedGames);
-
-            // Calculate statistics
-            const wins = finishedGames.filter((g: GameData) => g.result?.toLowerCase() === 'win').length;
-            const losses = finishedGames.filter((g: GameData) => g.result?.toLowerCase() === 'lose').length;
-            const draws = finishedGames.filter((g: GameData) => g.result?.toLowerCase() === 'draw').length;
-            const total = finishedGames.length;
-            const winRate = total > 0 ? Math.round((wins / total) * 100) : 0;
-
-            // Get current Elo from most recent game or user profile
-            const latestGame = finishedGames[0];
-            const currentElo = latestGame?.playerRatingAfter ?? (currentUser as any)?.eloRating ?? 1200;
-
-            setPlayerStats({
-                totalGames: total,
-                winRate,
-                currentElo,
-                wins,
-                losses,
-                draws,
-            });
+            setGames(displayGames);
         } catch (error) {
-            console.error('Failed to load match history:', error);
+            console.error('Failed to load filtered games:', error);
         } finally {
             setLoading(false);
         }
     };
 
-    const getResultColor = (result: string) => {
+    const handleFilterChange = (filter: 'all' | 'win' | 'lose' | 'draw' | 'paused') => {
+        setSelectedFilter(filter);
+    };
+
+    const getResultColor = (result: string, status?: string) => {
+        // If game is paused, show purple
+        if (status === 'paused') return '#8B5CF6';
+        
         const lowerResult = result?.toLowerCase();
         switch (lowerResult) {
             case 'win': return '#10B981';
             case 'lose': return '#EF4444';
             case 'draw': return '#F59E0B';
             default: return Colors.light.text;
+        }
+    };
+
+    const handleGameClick = (game: GameData) => {
+        // If game is paused, navigate to VsBot to resume
+        if (game.status === 'paused') {
+            router.push({
+                pathname: '/game/vs-bot',
+                params: {
+                    resumeGameId: game.id,
+                    difficulty: game.difficulty || 'medium',
+                    difficultyName: game.difficulty ? game.difficulty.charAt(0).toUpperCase() + game.difficulty.slice(1) : 'Medium',
+                    elo: '1500'
+                }
+            });
+        } else {
+            // Otherwise, show match detail
+            router.push(`/match-history/${game.id}`);
         }
     };
 
@@ -122,45 +187,50 @@ export default function MatchHistoryScreen() {
     };
 
     const renderItem = ({ item }: { item: GameData }) => (
-        <Link href={`/match-history/${item.id}`} asChild>
-            <TouchableOpacity style={styles.matchCard}>
-                <View style={styles.matchHeader}>
-                    <View style={styles.opponentInfo}>
-                        <View style={styles.avatarContainer}>
-                            <Ionicons name="hardware-chip" size={24} color="#9CA3AF" />
-                        </View>
-                        <View>
-                            <Text style={styles.opponentName}>{getDifficultyDisplay(item.difficulty)}</Text>
-                            <Text style={styles.matchDate}>{formatDate(item.startedAt)}</Text>
-                        </View>
+        <TouchableOpacity style={styles.matchCard} onPress={() => handleGameClick(item)}>
+            <View style={styles.matchHeader}>
+                <View style={styles.opponentInfo}>
+                    <View style={styles.avatarContainer}>
+                        <Ionicons name="hardware-chip" size={24} color="#9CA3AF" />
                     </View>
-                    <View style={[styles.resultBadge, { backgroundColor: getResultColor(item.result || '') + '20' }]}>
-                        <Text style={[styles.resultText, { color: getResultColor(item.result || '') }]}>
+                    <View>
+                        <Text style={styles.opponentName}>{getDifficultyDisplay(item.difficulty)}</Text>
+                        <Text style={styles.matchDate}>{formatDate(item.startedAt)}</Text>
+                    </View>
+                </View>
+                <View style={[styles.resultBadge, { backgroundColor: getResultColor(item.result || '', item.status) + '20', flexDirection: 'row', alignItems: 'center', gap: 4 }]}>
+                    {item.status === 'paused' ? (
+                        <>
+                            <Ionicons name="pause" size={14} color="#8B5CF6" />
+                            <Text style={[styles.resultText, { color: '#8B5CF6' }]}>Paused</Text>
+                        </>
+                    ) : (
+                        <Text style={[styles.resultText, { color: getResultColor(item.result || '', item.status) }]}>
                             {item.result ? item.result.charAt(0).toUpperCase() + item.result.slice(1) : 'N/A'}
                         </Text>
-                    </View>
-                </View>
-
-                <View style={styles.matchStats}>
-                    <View style={styles.statItem}>
-                        <Ionicons name="swap-vertical-outline" size={18} color="#9CA3AF" />
-                        <Text style={styles.statText}>{item.totalMoves || 0} Moves</Text>
-                    </View>
-                    {item.ratingChange !== undefined && item.ratingChange !== 0 && (
-                        <View style={styles.statItem}>
-                            <Ionicons
-                                name={item.ratingChange > 0 ? "trending-up-outline" : "trending-down-outline"}
-                                size={18}
-                                color={item.ratingChange > 0 ? '#10B981' : '#EF4444'}
-                            />
-                            <Text style={[styles.statText, { color: item.ratingChange > 0 ? '#10B981' : '#EF4444' }]}>
-                                {item.ratingChange > 0 ? '+' : ''}{item.ratingChange} ELO
-                            </Text>
-                        </View>
                     )}
                 </View>
-            </TouchableOpacity>
-        </Link>
+            </View>
+
+            <View style={styles.matchStats}>
+                <View style={styles.statItem}>
+                    <Ionicons name="swap-vertical-outline" size={18} color="#9CA3AF" />
+                    <Text style={styles.statText}>{item.totalMoves || 0} Moves</Text>
+                </View>
+                {item.ratingChange !== undefined && item.ratingChange !== 0 && (
+                    <View style={styles.statItem}>
+                        <Ionicons
+                            name={item.ratingChange > 0 ? "trending-up-outline" : "trending-down-outline"}
+                            size={18}
+                            color={item.ratingChange > 0 ? '#10B981' : '#EF4444'}
+                        />
+                        <Text style={[styles.statText, { color: item.ratingChange > 0 ? '#10B981' : '#EF4444' }]}>
+                            {item.ratingChange > 0 ? '+' : ''}{item.ratingChange} ELO
+                        </Text>
+                    </View>
+                )}
+            </View>
+        </TouchableOpacity>
     );
 
     return (
@@ -183,21 +253,79 @@ export default function MatchHistoryScreen() {
                     <View style={styles.listHeader}>
                         <View style={styles.statsSummary}>
                             <View style={styles.summaryItem}>
-                                <Text style={styles.summaryValue}>{loading ? '-' : playerStats.totalGames}</Text>
+                                <Text style={styles.summaryValue}>{statsLoading ? '-' : playerStats.totalGames}</Text>
                                 <Text style={styles.summaryLabel}>Total Games</Text>
                             </View>
                             <View style={styles.divider} />
                             <View style={styles.summaryItem}>
-                                <Text style={styles.summaryValue}>{loading ? '-' : `${playerStats.winRate}%`}</Text>
+                                <Text style={styles.summaryValue}>{statsLoading ? '-' : `${playerStats.winRate}%`}</Text>
                                 <Text style={styles.summaryLabel}>Win Rate</Text>
                             </View>
                             <View style={styles.divider} />
                             <View style={styles.summaryItem}>
-                                <Text style={styles.summaryValue}>{loading ? '-' : playerStats.currentElo}</Text>
+                                <Text style={styles.summaryValue}>{statsLoading ? '-' : playerStats.currentElo}</Text>
                                 <Text style={styles.summaryLabel}>Current ELO</Text>
                             </View>
                         </View>
                         <Text style={styles.sectionTitle}>Recent Matches</Text>
+                        
+                        {/* Filter Tabs */}
+                        <View style={styles.filterContainer}>
+                            <TouchableOpacity
+                                onPress={() => handleFilterChange('all')}
+                                style={[
+                                    styles.filterButton,
+                                    { backgroundColor: selectedFilter === 'all' ? Colors.light.primary : '#F3F4F6' }
+                                ]}
+                            >
+                                <Ionicons name="list" size={16} color={selectedFilter === 'all' ? 'white' : Colors.light.text} />
+                                <Text style={[styles.filterText, { color: selectedFilter === 'all' ? 'white' : Colors.light.text }]}>All</Text>
+                            </TouchableOpacity>
+                            
+                            <TouchableOpacity
+                                onPress={() => handleFilterChange('win')}
+                                style={[
+                                    styles.filterButton,
+                                    { backgroundColor: selectedFilter === 'win' ? '#10B981' : '#F3F4F6' }
+                                ]}
+                            >
+                                <Ionicons name="trophy" size={16} color={selectedFilter === 'win' ? 'white' : '#10B981'} />
+                                <Text style={[styles.filterText, { color: selectedFilter === 'win' ? 'white' : Colors.light.text }]}>Win</Text>
+                            </TouchableOpacity>
+                            
+                            <TouchableOpacity
+                                onPress={() => handleFilterChange('lose')}
+                                style={[
+                                    styles.filterButton,
+                                    { backgroundColor: selectedFilter === 'lose' ? '#EF4444' : '#F3F4F6' }
+                                ]}
+                            >
+                                <Ionicons name="close" size={16} color={selectedFilter === 'lose' ? 'white' : '#EF4444'} />
+                                <Text style={[styles.filterText, { color: selectedFilter === 'lose' ? 'white' : Colors.light.text }]}>Lose</Text>
+                            </TouchableOpacity>
+                            
+                            <TouchableOpacity
+                                onPress={() => handleFilterChange('draw')}
+                                style={[
+                                    styles.filterButton,
+                                    { backgroundColor: selectedFilter === 'draw' ? '#F59E0B' : '#F3F4F6' }
+                                ]}
+                            >
+                                <Ionicons name="remove" size={16} color={selectedFilter === 'draw' ? 'white' : '#F59E0B'} />
+                                <Text style={[styles.filterText, { color: selectedFilter === 'draw' ? 'white' : Colors.light.text }]}>Draw</Text>
+                            </TouchableOpacity>
+                            
+                            <TouchableOpacity
+                                onPress={() => handleFilterChange('paused')}
+                                style={[
+                                    styles.filterButton,
+                                    { backgroundColor: selectedFilter === 'paused' ? '#8B5CF6' : '#F3F4F6' }
+                                ]}
+                            >
+                                <Ionicons name="pause" size={16} color={selectedFilter === 'paused' ? 'white' : '#8B5CF6'} />
+                                <Text style={[styles.filterText, { color: selectedFilter === 'paused' ? 'white' : Colors.light.text }]}>Paused</Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
                 }
                 ListEmptyComponent={

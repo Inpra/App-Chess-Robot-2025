@@ -18,7 +18,7 @@ export default function VsBotScreen() {
     const dimensions = useWindowDimensions();
     const styles = useMemo(() => getGameStyles(dimensions), [dimensions]);
     const router = useRouter();
-    const { elo, difficulty } = useLocalSearchParams();
+    const { elo, difficulty, resumeGameId, difficultyName } = useLocalSearchParams();
 
     // Connection State
     const [isConnected, setIsConnected] = useState(false);
@@ -26,8 +26,8 @@ export default function VsBotScreen() {
     const [showCamera, setShowCamera] = useState(false);
 
     // Game State
-    const [gameId, setGameId] = useState<string | null>(null);
-    const [gameStatus, setGameStatus] = useState<'idle' | 'starting' | 'playing' | 'paused' | 'ended'>('idle');
+    const [gameId, setGameId] = useState<string | null>((resumeGameId as string) || null);
+    const [gameStatus, setGameStatus] = useState<'idle' | 'starting' | 'playing' | 'paused' | 'ended'>((resumeGameId as string) ? 'paused' : 'idle');
     const [game, setGame] = useState(new Chess());
     const [fen, setFen] = useState(game.fen());
     const [selectedSquare, setSelectedSquare] = useState<{ row: number, col: number } | null>(null);
@@ -94,6 +94,15 @@ export default function VsBotScreen() {
             wsService.disconnect();
         };
     }, []);
+
+    // Auto-resume game if resumeGameId is provided
+    useEffect(() => {
+        if (resumeGameId && gameStatus === 'paused' && isConnected) {
+            console.log('[VsBot] Auto-resuming game:', resumeGameId);
+            setGameMessage('Resuming paused game...');
+            handleResumeGame();
+        }
+    }, [resumeGameId, isConnected]);
 
     // Handle game over
     const handleGameOver = useCallback(async (data: any) => {
@@ -381,6 +390,77 @@ export default function VsBotScreen() {
         );
     };
 
+    const handlePauseGame = async () => {
+        if (!gameId || gameStatus !== 'playing') return;
+
+        Alert.alert(
+            'Pause Game',
+            'Your progress will be saved and you can resume later from Match History.\n\nDo you want to pause this game?',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Pause',
+                    onPress: async () => {
+                        try {
+                            if (pendingMoves.current.length > 0) await savePendingMoves();
+
+                            const response = await gameService.pauseGame(gameId);
+                            console.log('[VsBot] Game paused:', response);
+
+                            setGameStatus('paused');
+                            setGameMessage('Game paused - Progress saved');
+                            Alert.alert('Game Paused', 'Check Match History to resume', [
+                                {
+                                    text: 'OK',
+                                    onPress: () => router.navigate('/(tabs)')
+                                }
+                            ]);
+                        } catch (error) {
+                            console.error('[VsBot] Failed to pause:', error);
+                            Alert.alert('Error', 'Failed to pause game');
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
+    const handleResumeGame = async () => {
+        if (!gameId || gameStatus !== 'paused') return;
+
+        try {
+            const response = await gameService.resumeGame(gameId);
+            console.log('[VsBot] Game resumed:', response);
+
+            if (response.fenStr) {
+                const newGame = new Chess(response.fenStr);
+                setGame(newGame);
+                setFen(response.fenStr);
+                lastProcessedFen.current = response.fenStr;
+
+                // Rebuild move history
+                const history = newGame.history();
+                const moves: Move[] = [];
+                for (let i = 0; i < history.length; i += 2) {
+                    moves.push({
+                        moveNumber: Math.floor(i / 2) + 1,
+                        white: history[i],
+                        black: history[i + 1]
+                    });
+                }
+                setMoveHistory(moves);
+            }
+
+            setGameStatus('playing');
+            setBoardSetupStatus('checking');
+            setGameMessage('Game resumed - Set up your board to continue');
+            Alert.alert('Game Resumed', 'Please set up your board');
+        } catch (error) {
+            console.error('[VsBot] Failed to resume:', error);
+            Alert.alert('Error', 'Failed to resume game');
+        }
+    };
+
     // Handle hint/AI suggestion
     const handleHint = async () => {
         if (!gameId || gameStatus !== 'playing') {
@@ -453,17 +533,13 @@ export default function VsBotScreen() {
     };
 
     const handleSquareClick = (row: number, col: number) => {
-        // Only allow moves if game is playing
-        if (gameStatus !== 'playing' && gameStatus !== 'idle') return; // Allow moving in idle for testing? Maybe not.
-
-        // If game is idle, maybe auto-start? No, explicit start is better.
-        // But for testing without robot, we might want to allow it.
-        // Let's stick to strict mode: must start game first.
-        if (gameStatus !== 'playing') {
-            // Optional: Alert.alert('Game not started', 'Please start a new game first.');
-            // But maybe we want to allow analysis?
-            // For now, let's allow it but not save moves if no gameId
+        // Prevent interaction when game is paused
+        if (gameStatus === 'paused') {
+            return;
         }
+
+        // Only allow moves if game is playing
+        if (gameStatus !== 'playing' && gameStatus !== 'idle') return;
 
         const squareName = getSquareName(row, col);
         const piece = game.get(squareName as any);
@@ -600,6 +676,7 @@ export default function VsBotScreen() {
                         timer={gameStatus === 'playing' ? '10:00' :
                             gameStatus === 'starting' ? 'Starting' :
                                 gameStatus === 'ended' ? 'Ended' : 'Idle'}
+                        styles={styles}
                     />
 
                     {/* Chess Board Area */}
@@ -722,30 +799,44 @@ export default function VsBotScreen() {
                             </Text>
                         </TouchableOpacity>
 
-                        {/* Action Buttons Row: Undo, Pause, Hint */}
+                        {/* Hint Button */}
                         {gameStatus === 'playing' && (
-                            <View style={{ flexDirection: 'row', gap: 12 }}>
-                                <TouchableOpacity style={[styles.actionButton, { flex: 1 }]}>
-                                    <Ionicons name="arrow-undo" size={20} color={Colors.light.text} />
-                                    <Text style={styles.actionButtonText}>Undo</Text>
-                                </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.actionButton, isLoadingHint && { opacity: 0.5 }]}
+                                onPress={handleHint}
+                                disabled={isLoadingHint}
+                            >
+                                <Ionicons name="bulb-outline" size={20} color={Colors.light.text} />
+                                <Text style={styles.actionButtonText}>
+                                    {isLoadingHint ? 'Loading...' : 'Get Hint'}
+                                </Text>
+                            </TouchableOpacity>
+                        )}
 
-                                <TouchableOpacity style={[styles.actionButton, { flex: 1 }]}>
-                                    <Ionicons name="pause" size={20} color={Colors.light.text} />
-                                    <Text style={styles.actionButtonText}>Pause</Text>
-                                </TouchableOpacity>
+                        {/* Pause Game Button */}
+                        {gameStatus === 'playing' && (
+                            <TouchableOpacity
+                                style={[styles.actionButton, { backgroundColor: '#F3F4F6' }]}
+                                onPress={handlePauseGame}
+                            >
+                                <Ionicons name="pause" size={20} color="#8B5CF6" />
+                                <Text style={[styles.actionButtonText, { color: '#8B5CF6' }]}>
+                                    Pause Game
+                                </Text>
+                            </TouchableOpacity>
+                        )}
 
-                                <TouchableOpacity
-                                    style={[styles.actionButton, { flex: 1 }, isLoadingHint && { opacity: 0.5 }]}
-                                    onPress={handleHint}
-                                    disabled={isLoadingHint}
-                                >
-                                    <Ionicons name="bulb-outline" size={20} color={Colors.light.text} />
-                                    <Text style={styles.actionButtonText}>
-                                        {isLoadingHint ? 'Loading...' : 'Hint'}
-                                    </Text>
-                                </TouchableOpacity>
-                            </View>
+                        {/* Resume Game Button */}
+                        {gameStatus === 'paused' && (
+                            <TouchableOpacity
+                                style={[styles.actionButton, { backgroundColor: '#F0FDF4' }]}
+                                onPress={handleResumeGame}
+                            >
+                                <Ionicons name="play" size={20} color="#10B981" />
+                                <Text style={[styles.actionButtonText, { color: '#10B981' }]}>
+                                    Resume Game
+                                </Text>
+                            </TouchableOpacity>
                         )}
 
                         {/* Resign Game Button */}

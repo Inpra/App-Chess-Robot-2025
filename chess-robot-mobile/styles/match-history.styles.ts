@@ -69,7 +69,27 @@ export const getMatchHistoryStyles = ({ width, height }: ScaledSize) => {
             fontSize: isTablet ? 22 : 18,
             fontWeight: '700',
             color: Colors.light.text,
-            marginBottom: 16,
+            marginBottom: 12,
+        },
+        filterContainer: {
+            flexDirection: 'row',
+            gap: 8,
+            marginBottom: 20,
+            flexWrap: 'nowrap',
+        },
+        filterButton: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 6,
+            paddingVertical: 10,
+            paddingHorizontal: 18,
+            borderRadius: 20,
+            minWidth: isTablet ? 100 : 80,
+            justifyContent: 'center',
+        },
+        filterText: {
+            fontSize: 14,
+            fontWeight: '600',
         },
         matchCard: {
             backgroundColor: Colors.light.card,

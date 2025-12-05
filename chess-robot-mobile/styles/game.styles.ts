@@ -65,16 +65,34 @@ export const getGameStyles = ({ width, height }: ScaledSize) => {
             flex: 1,
         },
         playerSideRight: {
-            flexDirection: 'row-reverse',
+            flexDirection: 'row',
             alignItems: 'center',
             gap: 12,
             flex: 1,
+            justifyContent: 'flex-end',
         },
         playerDetails: {
             justifyContent: 'center',
         },
         playerDetailsRight: {
             alignItems: 'flex-end',
+        },
+        avatarContainer: {
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            backgroundColor: '#F3F4F6',
+            justifyContent: 'center',
+            alignItems: 'center',
+        },
+        playerName: {
+            fontSize: 16,
+            fontWeight: '600',
+            color: Colors.light.text,
+        },
+        playerElo: {
+            fontSize: 14,
+            color: Colors.light.icon,
         },
         scoreContainer: {
             alignItems: 'center',
@@ -151,24 +169,7 @@ export const getGameStyles = ({ width, height }: ScaledSize) => {
         piece: {
             // Optional: add shadow or specific styling for pieces
         },
-        // Re-adding these as they might be used by VsBotScreen (avatarContainer, playerName, etc are used in the new layout too)
-        avatarContainer: {
-            width: 40,
-            height: 40,
-            borderRadius: 20,
-            backgroundColor: '#F3F4F6',
-            justifyContent: 'center',
-            alignItems: 'center',
-        },
-        playerName: {
-            fontSize: 16,
-            fontWeight: '600',
-            color: Colors.light.text,
-        },
-        playerElo: {
-            fontSize: 14,
-            color: Colors.light.icon,
-        },
+
         playerInfoContainer: {
             flexDirection: 'row',
             alignItems: 'center',
