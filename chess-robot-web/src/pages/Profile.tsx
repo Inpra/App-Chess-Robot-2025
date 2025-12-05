@@ -3,7 +3,7 @@ import {
     ArrowLeft, Camera, User, Lock, Moon, Bell, Globe,
     HelpCircle, FileText, Shield, LogOut, ChevronRight, History, Coins
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import authService from '../services/authService';
@@ -12,6 +12,7 @@ import '../styles/Profile.css';
 
 export default function Profile() {
     const navigate = useNavigate();
+    const location = useLocation();
     const [isDarkMode, setIsDarkMode] = useState(false);
     const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(true);
     const [user, setUser] = useState<UserResponse | null>(null);
@@ -19,7 +20,7 @@ export default function Profile() {
 
     useEffect(() => {
         fetchUserProfile();
-    }, []);
+    }, [location]); // Re-fetch when navigating back to this page
 
     const fetchUserProfile = async () => {
         setLoading(true);
@@ -150,6 +151,11 @@ export default function Profile() {
                         </div>
                         <div className="user-name">{user?.fullName || user?.username || 'User'}</div>
                         <div className="user-email">{user?.email || 'No email'}</div>
+                        {/* {(user as any)?.phoneNumber && (
+                            <div className="user-phone" style={{ fontSize: '14px', color: '#6B7280', marginTop: '4px' }}>
+                                📱 {(user as any).phoneNumber}
+                            </div>
+                        )} */}
                         <button 
                             className="edit-profile-button"
                             onClick={() => navigate('/personal-information')}

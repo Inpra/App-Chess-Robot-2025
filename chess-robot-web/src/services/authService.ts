@@ -20,6 +20,7 @@ export interface UserResponse {
     email: string;
     username: string;
     fullName?: string;
+    phoneNumber?: string;
     avatarUrl?: string;
     role: string;
     isActive: boolean;

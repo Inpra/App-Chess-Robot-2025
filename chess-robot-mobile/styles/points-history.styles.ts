@@ -110,10 +110,25 @@ export const styles = StyleSheet.create({
         fontSize: 12,
         color: '#9CA3AF',
     },
+    emptyContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 60,
+    },
     emptyText: {
         textAlign: 'center',
         color: '#9CA3AF',
-        marginTop: 40,
+        marginTop: 16,
         fontSize: 16,
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    loadingText: {
+        marginTop: 16,
+        fontSize: 16,
+        color: '#6B7280',
     },
 });
