@@ -160,6 +160,50 @@ class AuthService {
             return null;
         }
     }
+
+    /**
+     * Update user profile
+     */
+    async updateProfile(data: { username?: string; fullName?: string; phoneNumber?: string }): Promise<{ success: boolean; message?: string; error?: string }> {
+        try {
+            await apiClient.put('/Auth/profile', data);
+            
+            // Refresh profile
+            await this.getProfile();
+            
+            return {
+                success: true,
+                message: 'Cập nhật thông tin thành công',
+            };
+        } catch (error: any) {
+            return {
+                success: false,
+                error: error.message || 'Không thể cập nhật thông tin',
+            };
+        }
+    }
+
+    /**
+     * Change password
+     */
+    async changePassword(currentPassword: string, newPassword: string): Promise<{ success: boolean; message?: string; error?: string }> {
+        try {
+            await apiClient.post('/Auth/change-password', {
+                currentPassword,
+                newPassword,
+            });
+            
+            return {
+                success: true,
+                message: 'Đổi mật khẩu thành công',
+            };
+        } catch (error: any) {
+            return {
+                success: false,
+                error: error.message || 'Không thể đổi mật khẩu',
+            };
+        }
+    }
 }
 
 // Export singleton instance

@@ -2,7 +2,7 @@
 // Note: For Android Emulator use 'http://10.0.2.2:7096/api'
 // For Physical Device use your computer's IP address e.g. 'http://192.168.1.x:7096/api'
 export const API_CONFIG = {
-    BASE_URL: 'http://10.17.0.187:7096/api', // Update this with your actual IP
+    BASE_URL: 'https://8bcc0773a623.ngrok-free.app/api', // Update this with your actual IP
     TIMEOUT: 30000,
 };
 
@@ -40,4 +40,10 @@ export const ROBOT_ENDPOINTS = {
     STATUS: '/robots/status',
     CONNECT: '/robots/connect',
     DISCONNECT: '/robots/disconnect',
+};
+
+// AI Suggestion endpoints
+export const AI_SUGGESTION_ENDPOINTS = {
+    GET_SUGGESTION: '/AiSuggestions',
+    GET_COST: '/AiSuggestions/cost',
 };

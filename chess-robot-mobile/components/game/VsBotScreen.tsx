@@ -8,15 +8,11 @@ import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react'
 import { SafeAreaView, ScrollView, Text, TouchableOpacity, useWindowDimensions, View, Alert } from 'react-native';
 import ChessBoard from './ChessBoard';
 import CameraView from '../camera/CameraView';
+import MoveHistory, { type Move } from './MoveHistory';
+import MatchHeader from './MatchHeader';
 import gameService from '@/services/gameService';
 import wsService from '@/services/websocketService';
 import { CAMERA_CONFIG } from '@/services/apiConfig';
-
-interface Move {
-    moveNumber: number;
-    white: string;
-    black?: string;
-}
 
 export default function VsBotScreen() {
     const dimensions = useWindowDimensions();
@@ -40,6 +36,8 @@ export default function VsBotScreen() {
     const [moveHistory, setMoveHistory] = useState<Move[]>([]);
     const [gameMessage, setGameMessage] = useState<string>('Waiting to start game...');
     const [boardSetupStatus, setBoardSetupStatus] = useState<'checking' | 'correct' | 'incorrect' | null>(null);
+    const [hintSquares, setHintSquares] = useState<{ from: number, to: number } | null>(null);
+    const [isLoadingHint, setIsLoadingHint] = useState(false);
 
     // Refs
     const lastProcessedFen = useRef<string>('');
@@ -383,6 +381,77 @@ export default function VsBotScreen() {
         );
     };
 
+    // Handle hint/AI suggestion
+    const handleHint = async () => {
+        if (!gameId || gameStatus !== 'playing') {
+            Alert.alert('Cannot Get Hint', 'You can only get hints during an active game');
+            return;
+        }
+
+        try {
+            // Get current FEN position
+            const currentFen = game.fen();
+
+            // Set loading state
+            setIsLoadingHint(true);
+
+            // Request AI suggestion
+            const suggestion = await gameService.getSuggestion({
+                gameId: gameId,
+                fenPosition: currentFen,
+                depth: 15, // Medium depth for balance between speed and accuracy
+            });
+
+            // Helper: Convert chess square notation to board index
+            const squareToIndex = (square: string): number => {
+                const file = square.charCodeAt(0) - 'a'.charCodeAt(0); // a=0, b=1, ..., h=7
+                const rank = 8 - parseInt(square[1]); // 8=0, 7=1, ..., 1=7
+                return rank * 8 + file;
+            };
+
+            // Parse the suggested move to get from/to squares
+            const tempGame = new Chess(currentFen);
+            const move = tempGame.move(suggestion.suggestedMoveSan);
+
+            if (move) {
+                // Convert chess.js square notation to board indices
+                const fromIndex = squareToIndex(move.from);
+                const toIndex = squareToIndex(move.to);
+
+                // Set hint squares to highlight on board
+                setHintSquares({ from: fromIndex, to: toIndex });
+
+                console.log(`[VsBot] Hint displayed: ${suggestion.suggestedMoveSan} (from: ${move.from}, to: ${move.to})`);
+                console.log(`[VsBot] Points deducted: ${suggestion.pointsDeducted}, Remaining: ${suggestion.remainingPoints}`);
+
+                Alert.alert(
+                    '💡 AI Suggestion',
+                    `Suggested move: ${suggestion.suggestedMoveSan}\n\n` +
+                    `Confidence: ${(suggestion.confidence * 100).toFixed(0)}%\n` +
+                    `Points deducted: ${suggestion.pointsDeducted}\n` +
+                    `Remaining points: ${suggestion.remainingPoints}`,
+                    [{ text: 'OK' }]
+                );
+            } else {
+                Alert.alert('Error', 'Cannot parse suggested move');
+            }
+
+        } catch (error: any) {
+            console.error('[VsBot] Failed to get hint:', error);
+
+            // Show specific error messages
+            if (error.message.includes('đủ điểm') || error.message.includes('Insufficient points')) {
+                Alert.alert('Insufficient Points', error.message);
+            } else if (error.message.includes('đợi') || error.message.includes('rate limit')) {
+                Alert.alert('Rate Limited', error.message);
+            } else {
+                Alert.alert('Error', 'Cannot get hint. Please try again.');
+            }
+        } finally {
+            setIsLoadingHint(false);
+        }
+    };
+
     const handleSquareClick = (row: number, col: number) => {
         // Only allow moves if game is playing
         if (gameStatus !== 'playing' && gameStatus !== 'idle') return; // Allow moving in idle for testing? Maybe not.
@@ -450,6 +519,9 @@ export default function VsBotScreen() {
                         });
                     }
                     setMoveHistory(moves);
+
+                    // Clear hint when move is made
+                    setHintSquares(null);
 
                     // Check for check
                     if (game.inCheck()) {
@@ -521,40 +593,14 @@ export default function VsBotScreen() {
                 {/* Board Section: Players + Board */}
                 <View style={styles.boardSection}>
                     {/* Match Header Card */}
-                    <View style={styles.matchHeader}>
-                        {/* You (Left) */}
-                        <View style={styles.playerSide}>
-                            <View style={styles.avatarContainer}>
-                                <Ionicons name="person" size={20} color="#6B7280" />
-                            </View>
-                            <View style={styles.playerDetails}>
-                                <Text style={styles.playerName}>You</Text>
-                                <Text style={styles.playerElo}>1200</Text>
-                            </View>
-                        </View>
-
-                        {/* Score/Status (Center) */}
-                        <View style={styles.scoreContainer}>
-                            <View style={styles.timerPill}>
-                                <Text style={styles.timerText}>
-                                    {gameStatus === 'playing' ? 'Playing' :
-                                        gameStatus === 'starting' ? 'Starting' :
-                                            gameStatus === 'ended' ? 'Ended' : 'Idle'}
-                                </Text>
-                            </View>
-                        </View>
-
-                        {/* Robot (Right) */}
-                        <View style={styles.playerSideRight}>
-                            <View style={styles.avatarContainer}>
-                                <Ionicons name="hardware-chip" size={16} color="#6B7280" />
-                            </View>
-                            <View style={styles.playerDetailsRight}>
-                                <Text style={styles.playerName}>Robot</Text>
-                                <Text style={styles.playerElo}>{elo || '1500'}</Text>
-                            </View>
-                        </View>
-                    </View>
+                    <MatchHeader
+                        userElo={1200}
+                        robotElo={parseInt(elo as string) || 800}
+                        difficultyName={(difficulty as string) || 'Easy'}
+                        timer={gameStatus === 'playing' ? '10:00' :
+                            gameStatus === 'starting' ? 'Starting' :
+                                gameStatus === 'ended' ? 'Ended' : 'Idle'}
+                    />
 
                     {/* Chess Board Area */}
                     <ChessBoard
@@ -563,6 +609,22 @@ export default function VsBotScreen() {
                         selectedSquare={selectedSquare}
                         possibleMoves={possibleMoves}
                         checkSquare={checkSquare}
+                        highlightedSquares={
+                            hintSquares
+                                ? [
+                                    {
+                                        row: Math.floor(hintSquares.from / 8),
+                                        col: hintSquares.from % 8,
+                                        color: 'rgba(0, 150, 255, 0.4)' // Blue for from square
+                                    },
+                                    {
+                                        row: Math.floor(hintSquares.to / 8),
+                                        col: hintSquares.to % 8,
+                                        color: 'rgba(0, 255, 150, 0.4)' // Green for to square
+                                    }
+                                ]
+                                : []
+                        }
                         styles={styles}
                     />
                 </View>
@@ -673,9 +735,15 @@ export default function VsBotScreen() {
                                     <Text style={styles.actionButtonText}>Pause</Text>
                                 </TouchableOpacity>
 
-                                <TouchableOpacity style={[styles.actionButton, { flex: 1 }]}>
+                                <TouchableOpacity
+                                    style={[styles.actionButton, { flex: 1 }, isLoadingHint && { opacity: 0.5 }]}
+                                    onPress={handleHint}
+                                    disabled={isLoadingHint}
+                                >
                                     <Ionicons name="bulb-outline" size={20} color={Colors.light.text} />
-                                    <Text style={styles.actionButtonText}>Hint</Text>
+                                    <Text style={styles.actionButtonText}>
+                                        {isLoadingHint ? 'Loading...' : 'Hint'}
+                                    </Text>
                                 </TouchableOpacity>
                             </View>
                         )}
@@ -699,28 +767,8 @@ export default function VsBotScreen() {
                         </Text>
                     </View>
 
-                    {/* Move History - Always visible */}
-                    <View style={styles.historyContainer}>
-                        <Text style={styles.historyTitle}>Move History</Text>
-                        <ScrollView
-                            style={styles.historyList}
-                            nestedScrollEnabled={true}
-                        >
-                            {moveHistory.length > 0 ? (
-                                moveHistory.map((move) => (
-                                    <View key={move.moveNumber} style={styles.historyItem}>
-                                        <Text style={styles.historyMove}>{move.moveNumber}.</Text>
-                                        <Text style={styles.historyMove}>{move.white}</Text>
-                                        <Text style={styles.historyMove}>{move.black || ''}</Text>
-                                    </View>
-                                ))
-                            ) : (
-                                <Text style={{ textAlign: 'center', color: '#9CA3AF', marginTop: 20 }}>
-                                    No moves yet
-                                </Text>
-                            )}
-                        </ScrollView>
-                    </View>
+                    {/* Move History - Component */}
+                    <MoveHistory moves={moveHistory} />
                 </ScrollView>
             </View>
 

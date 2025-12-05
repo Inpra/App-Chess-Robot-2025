@@ -230,6 +230,7 @@ class WebSocketService {
 // For Physical Device use your computer's IP address e.g. 'ws://192.168.1.x:8081/'
 const wsService = new WebSocketService({
     url: 'ws://10.17.0.187:8081/', // Update this with your actual IP
+   // url: 'ws://https://f62900204ce8.ngrok-free.app:8081/', // Update this with your actual IP
 });
 
 export default wsService;
