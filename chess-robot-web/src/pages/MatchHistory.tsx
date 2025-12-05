@@ -58,21 +58,19 @@ export default function MatchHistory() {
                 return;
             }
 
-            // Fetch all finished games for statistics
-            const finishedGames = await gameService.getPlayerGames(currentUser.id, { status: 'finished' });
+            // Fetch fresh user profile to get stats from database (accurate source of truth)
+            const userProfile = await authService.getProfile();
             
-            const wins = finishedGames.filter((g: GameData) => g.result?.toLowerCase() === 'win').length;
-            const losses = finishedGames.filter((g: GameData) => g.result?.toLowerCase() === 'lose').length;
-            const draws = finishedGames.filter((g: GameData) => g.result?.toLowerCase() === 'draw').length;
-            const total = finishedGames.length;
-            const winRate = total > 0 ? Math.round((wins / total) * 100) : 0;
-
-            // Get current Elo from most recent finished game or user profile
-            const latestGame = finishedGames[0];
-            const currentElo = latestGame?.playerRatingAfter ?? (currentUser as any)?.eloRating ?? 0;
+            // Use stats from user profile (from database) - most accurate
+            const totalGames = (userProfile as any)?.totalGamesPlayed || 0;
+            const wins = (userProfile as any)?.wins || 0;
+            const losses = (userProfile as any)?.losses || 0;
+            const draws = (userProfile as any)?.draws || 0;
+            const currentElo = (userProfile as any)?.eloRating || 1200;
+            const winRate = totalGames > 0 ? Math.round((wins / totalGames) * 100) : 0;
 
             setPlayerStats({
-                totalGames: total,
+                totalGames,
                 winRate,
                 currentElo,
                 wins,
