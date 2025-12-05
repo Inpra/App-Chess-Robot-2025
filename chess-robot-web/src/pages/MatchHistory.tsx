@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, User, ArrowUpDown, TrendingUp, TrendingDown, Loader2 } from 'lucide-react';
+import { ArrowLeft, User, ArrowUpDown, TrendingUp, TrendingDown, Loader2, Trophy, X, Minus, Pause, LayoutList } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import gameService from '../services/gameService';
 import authService from '../services/authService';
@@ -27,7 +27,9 @@ interface GameData {
 export default function MatchHistory() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
+    const [statsLoading, setStatsLoading] = useState(true);
     const [games, setGames] = useState<GameData[]>([]);
+    const [selectedFilter, setSelectedFilter] = useState<'all' | 'win' | 'lose' | 'draw' | 'paused'>('all');
     const [playerStats, setPlayerStats] = useState({
         totalGames: 0,
         winRate: 0,
@@ -38,30 +40,27 @@ export default function MatchHistory() {
     });
 
     useEffect(() => {
-        loadMatchHistory();
+        // Load stats only once on mount
+        loadPlayerStats();
     }, []);
 
-    const loadMatchHistory = async () => {
+    useEffect(() => {
+        // Load games whenever filter changes
+        loadFilteredGames(selectedFilter);
+    }, [selectedFilter]);
+
+    const loadPlayerStats = async () => {
         try {
-            setLoading(true);
+            setStatsLoading(true);
             const currentUser = authService.getCurrentUser();
             if (!currentUser?.id) {
                 navigate('/login');
                 return;
             }
 
-            // Fetch player games
-            const gamesData = await gameService.getPlayerGames(currentUser.id);
-
-            // Filter finished and paused games (show both)
-            const displayGames = gamesData.filter(
-                (game: GameData) => game.status === 'finished' || game.status === 'aborted' || game.status === 'paused'
-            );
-
-            setGames(displayGames);
-
-            // Calculate statistics (only for finished games)
-            const finishedGames = displayGames.filter((g: GameData) => g.status === 'finished');
+            // Fetch all finished games for statistics
+            const finishedGames = await gameService.getPlayerGames(currentUser.id, { status: 'finished' });
+            
             const wins = finishedGames.filter((g: GameData) => g.result?.toLowerCase() === 'win').length;
             const losses = finishedGames.filter((g: GameData) => g.result?.toLowerCase() === 'lose').length;
             const draws = finishedGames.filter((g: GameData) => g.result?.toLowerCase() === 'draw').length;
@@ -70,7 +69,6 @@ export default function MatchHistory() {
 
             // Get current Elo from most recent finished game or user profile
             const latestGame = finishedGames[0];
-            // prefer playerRatingAfter from latest game, otherwise try to read from current user if available
             const currentElo = latestGame?.playerRatingAfter ?? (currentUser as any)?.eloRating ?? 0;
 
             setPlayerStats({
@@ -82,15 +80,57 @@ export default function MatchHistory() {
                 draws,
             });
         } catch (error) {
-            console.error('Failed to load match history:', error);
+            console.error('Failed to load player stats:', error);
+        } finally {
+            setStatsLoading(false);
+        }
+    };
+
+    const loadFilteredGames = async (filter: 'all' | 'win' | 'lose' | 'draw' | 'paused') => {
+        try {
+            setLoading(true);
+            const currentUser = authService.getCurrentUser();
+            if (!currentUser?.id) {
+                navigate('/login');
+                return;
+            }
+
+            // Build filter parameters for API
+            const filters: { status?: string; result?: string } = {};
+            
+            if (filter === 'all') {
+                // Get all displayable games (finished, aborted, paused)
+                // No API filter, will filter client-side
+            } else if (filter === 'paused') {
+                filters.status = 'paused';
+            } else {
+                // win, lose, draw filters
+                filters.status = 'finished';
+                filters.result = filter;
+            }
+
+            // Fetch player games with filters
+            const gamesData = await gameService.getPlayerGames(currentUser.id, filters);
+
+            // Additional client-side filter for 'all' case
+            let displayGames = gamesData;
+            if (filter === 'all') {
+                displayGames = gamesData.filter(
+                    (game: GameData) => game.status === 'finished' || game.status === 'aborted' || game.status === 'paused'
+                );
+            }
+
+            setGames(displayGames);
+        } catch (error) {
+            console.error('Failed to load filtered games:', error);
         } finally {
             setLoading(false);
         }
     };
 
     const getResultColor = (result: string, status?: string) => {
-        // If game is paused, show yellow/orange
-        if (status === 'paused') return '#F59E0B';
+        // If game is paused, show purple
+        if (status === 'paused') return '#8B5CF6';
         
         const lowerResult = result?.toLowerCase();
         switch (lowerResult) {
@@ -131,6 +171,12 @@ export default function MatchHistory() {
         return `AI (${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)})`;
     };
 
+    const handleFilterChange = (filter: 'all' | 'win' | 'lose' | 'draw' | 'paused') => {
+        setSelectedFilter(filter);
+        // Games will be fetched by useEffect when selectedFilter changes
+        // Stats remain unchanged
+    };
+
     return (
         <div className="match-history-container">
             <div className="match-history-header">
@@ -146,22 +192,146 @@ export default function MatchHistory() {
             <div className="list-content">
                 <div className="stats-summary">
                     <div className="summary-item">
-                        <div className="summary-value">{loading ? '-' : playerStats.totalGames}</div>
+                        <div className="summary-value">{statsLoading ? '-' : playerStats.totalGames}</div>
                         <div className="summary-label">Total Games</div>
                     </div>
                     <div className="divider" />
                     <div className="summary-item">
-                        <div className="summary-value">{loading ? '-' : `${playerStats.winRate}%`}</div>
+                        <div className="summary-value">{statsLoading ? '-' : `${playerStats.winRate}%`}</div>
                         <div className="summary-label">Win Rate</div>
                     </div>
                     <div className="divider" />
                     <div className="summary-item">
-                        <div className="summary-value">{loading ? '-' : playerStats.currentElo}</div>
+                        <div className="summary-value">{statsLoading ? '-' : playerStats.currentElo}</div>
                         <div className="summary-label">Current ELO</div>
                     </div>
                 </div>
 
-                <h3 className="section-title">Recent Matches</h3>
+                <div style={{ 
+                    position: 'sticky', 
+                    top: 0, 
+                    zIndex: 20, 
+                    backgroundColor: 'var(--color-background)',
+                    paddingTop: 10,
+                    paddingBottom: 10,
+                    marginBottom: 10
+                }}>
+                    <h3 className="section-title" style={{ marginBottom: 12 }}>Recent Matches</h3>
+
+                    {/* Filter Tabs */}
+                    <div style={{ 
+                        display: 'flex', 
+                        gap: 8, 
+                        overflowX: 'auto', 
+                        paddingBottom: 4
+                    }}>
+                        <button
+                            onClick={() => handleFilterChange('all')}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 6,
+                                padding: '10px 18px',
+                                borderRadius: 20,
+                                border: 'none',
+                                backgroundColor: selectedFilter === 'all' ? 'var(--color-primary)' : '#F3F4F6',
+                                color: selectedFilter === 'all' ? 'white' : 'var(--color-text)',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                whiteSpace: 'nowrap',
+                                transition: 'all 0.2s',
+                                fontSize: '14px'
+                            }}
+                        >
+                            <LayoutList size={16} color={selectedFilter === 'all' ? 'white' : 'var(--color-text)'} />
+                            All
+                        </button>
+                    <button
+                        onClick={() => handleFilterChange('win')}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            padding: '10px 18px',
+                            borderRadius: 20,
+                            border: 'none',
+                            backgroundColor: selectedFilter === 'win' ? '#10B981' : '#F3F4F6',
+                            color: selectedFilter === 'win' ? 'white' : 'var(--color-text)',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap',
+                            transition: 'all 0.2s',
+                            fontSize: '14px'
+                        }}
+                    >
+                        <Trophy size={16} color={selectedFilter === 'win' ? 'white' : '#10B981'} />
+                        Win
+                    </button>
+                    <button
+                        onClick={() => handleFilterChange('lose')}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            padding: '10px 18px',
+                            borderRadius: 20,
+                            border: 'none',
+                            backgroundColor: selectedFilter === 'lose' ? '#EF4444' : '#F3F4F6',
+                            color: selectedFilter === 'lose' ? 'white' : 'var(--color-text)',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap',
+                            transition: 'all 0.2s',
+                            fontSize: '14px'
+                        }}
+                    >
+                        <X size={16} color={selectedFilter === 'lose' ? 'white' : '#EF4444'} />
+                        Lose
+                    </button>
+                    <button
+                        onClick={() => handleFilterChange('draw')}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            padding: '10px 18px',
+                            borderRadius: 20,
+                            border: 'none',
+                            backgroundColor: selectedFilter === 'draw' ? '#F59E0B' : '#F3F4F6',
+                            color: selectedFilter === 'draw' ? 'white' : 'var(--color-text)',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap',
+                            transition: 'all 0.2s',
+                            fontSize: '14px'
+                        }}
+                    >
+                        <Minus size={16} color={selectedFilter === 'draw' ? 'white' : '#F59E0B'} />
+                        Draw
+                    </button>
+                    <button
+                        onClick={() => handleFilterChange('paused')}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            padding: '10px 18px',
+                            borderRadius: 20,
+                            border: 'none',
+                            backgroundColor: selectedFilter === 'paused' ? '#8B5CF6' : '#F3F4F6',
+                            color: selectedFilter === 'paused' ? 'white' : 'var(--color-text)',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap',
+                            transition: 'all 0.2s',
+                            fontSize: '14px'
+                        }}
+                    >
+                        <Pause size={16} color={selectedFilter === 'paused' ? 'white' : '#8B5CF6'} />
+                        Paused
+                    </button>
+                    </div>
+                </div>
 
                 {loading ? (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 0', color: 'var(--color-icon)' }}>
@@ -193,10 +363,17 @@ export default function MatchHistory() {
                                         </div>
                                     </div>
                                 </div>
-                                <div className="result-badge" style={{ backgroundColor: getResultColor(game.result || '', game.status) + '20' }}>
-                                    <span className="result-text" style={{ color: getResultColor(game.result || '', game.status) }}>
-                                        {game.status === 'paused' ? '⏸️ Paused' : game.result ? game.result.charAt(0).toUpperCase() + game.result.slice(1) : 'N/A'}
-                                    </span>
+                                <div className="result-badge" style={{ backgroundColor: getResultColor(game.result || '', game.status) + '20', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                    {game.status === 'paused' ? (
+                                        <>
+                                            <Pause size={14} color="#8B5CF6" />
+                                            <span className="result-text" style={{ color: '#8B5CF6' }}>Paused</span>
+                                        </>
+                                    ) : (
+                                        <span className="result-text" style={{ color: getResultColor(game.result || '', game.status) }}>
+                                            {game.result ? game.result.charAt(0).toUpperCase() + game.result.slice(1) : 'N/A'}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
 
