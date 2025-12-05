@@ -30,11 +30,13 @@ export default function VsBot() {
     const [selectedSquare, setSelectedSquare] = useState<{ row: number, col: number } | null>(null);
     const [lastMove, setLastMove] = useState<{ from: number; to: number } | null>(null);
     const [checkSquare, setCheckSquare] = useState<{ row: number, col: number } | null>(null);
+    const [hintSquares, setHintSquares] = useState<{ from: number; to: number } | null>(null);
 
     // Game state
     const [gameId, setGameId] = useState<string | null>(resumeGameId || null);
     const [gameStatus, setGameStatus] = useState<'waiting' | 'in_progress' | 'finished' | 'paused' | 'ended' | 'starting' | 'idle'>(resumeGameId ? 'paused' : 'waiting');
     const [isStartingGame, setIsStartingGame] = useState(false);
+    const [isLoadingHint, setIsLoadingHint] = useState(false);
 
     // Game message state
     const [, setGameMessage] = useState<string>('Waiting to start game...');
@@ -286,6 +288,15 @@ export default function VsBot() {
                 try {
                     const newBoard = fenToBoard(data.fen_str);
                     setBoard(newBoard);
+
+                    // Clear hint when board updates (any move made)
+                    setHintSquares(prev => {
+                        if (prev) {
+                            console.log('[VsBot] Clearing hint squares due to FEN update');
+                            return null;
+                        }
+                        return prev;
+                    });
 
                     // Update move history from FEN change
                     updateMoveHistoryFromFen(data.fen_str);
@@ -850,10 +861,8 @@ export default function VsBot() {
             // Get current FEN position
             const currentFen = chessGame.current.fen();
             
-            // Show loading toast
-            const loadingToast = toast.loading('Đang phân tích... ⏳', {
-                position: 'top-center',
-            });
+            // Set loading state
+            setIsLoadingHint(true);
 
             // Request AI suggestion
             const suggestion = await gameService.getSuggestion({
@@ -862,46 +871,46 @@ export default function VsBot() {
                 depth: 15, // Medium depth for balance between speed and accuracy
             });
 
-            // Dismiss loading toast
-            toast.dismiss(loadingToast);
+            // Helper: Convert chess square notation to board index
+            const squareToIndex = (square: string): number => {
+                const file = square.charCodeAt(0) - 'a'.charCodeAt(0); // a=0, b=1, ..., h=7
+                const rank = 8 - parseInt(square[1]); // 8=0, 7=1, ..., 1=7
+                return rank * 8 + file;
+            };
 
-            // Format the suggestion message
-            let message = `🤖 Gợi ý AI\n\n`;
-            message += `Nước đi: ${suggestion.suggestedMoveSan}\n`;
+            // Parse the suggested move to get from/to squares
+            const move = chessGame.current.move(suggestion.suggestedMoveSan);
             
-            if (suggestion.evaluation !== null && suggestion.evaluation !== undefined) {
-                const evalText = suggestion.evaluation > 0 
-                    ? `+${(suggestion.evaluation / 100).toFixed(2)}` 
-                    : `${(suggestion.evaluation / 100).toFixed(2)}`;
-                message += `Đánh giá: ${evalText}\n`;
+            if (move) {
+                // Convert chess.js square notation (e.g., 'e2', 'e4') to board indices
+                const fromIndex = squareToIndex(move.from);
+                const toIndex = squareToIndex(move.to);
+                
+                // Undo the move (we only wanted to parse it)
+                chessGame.current.undo();
+                
+                // Set hint squares to highlight on board
+                setHintSquares({ from: fromIndex, to: toIndex });
+                
+                console.log(`[VsBot] Hint displayed: ${suggestion.suggestedMoveSan} (from: ${move.from}, to: ${move.to})`);
+                console.log(`[VsBot] Points deducted: ${suggestion.pointsDeducted}, Remaining: ${suggestion.remainingPoints}`);
+            } else {
+                showToast('error', 'Không thể phân tích nước đi gợi ý');
             }
-            
-            message += `Độ chính xác: ${(suggestion.confidence * 100).toFixed(1)}%\n\n`;
-            
-            if (suggestion.bestLine && suggestion.bestLine.length > 0) {
-                message += `Chuỗi nước đi tốt nhất:\n${suggestion.bestLine.slice(0, 5).join(' → ')}\n\n`;
-            }
-            
-            message += `💰 Điểm đã dùng: ${suggestion.pointsDeducted}\n`;
-            message += `💳 Điểm còn lại: ${suggestion.remainingPoints}`;
-
-            // Show the suggestion in an alert
-            alert(message);
-
-            // Also show a toast notification
-            showToast('success', `✨ Gợi ý: ${suggestion.suggestedMoveSan} | Còn ${suggestion.remainingPoints} điểm`, true);
 
         } catch (error: any) {
             console.error('[VsBot] Failed to get hint:', error);
             
             // Show specific error messages
             if (error.message.includes('đủ điểm') || error.message.includes('Insufficient points')) {
-                showToast('error', '❌ ' + error.message, true);
+                showToast('error', error.message, true);
             } else if (error.message.includes('đợi') || error.message.includes('rate limit')) {
-                showToast('warning', '⏰ ' + error.message, true);
+                showToast('warning', error.message, true);
             } else {
-                showToast('error', '❌ Không thể lấy gợi ý. Vui lòng thử lại.', true);
+                showToast('error', 'Không thể lấy gợi ý. Vui lòng thử lại.', true);
             }
+        } finally {
+            setIsLoadingHint(false);
         }
     };
 
@@ -969,6 +978,7 @@ export default function VsBot() {
                             selectedSquare={selectedSquare}
                             lastMove={lastMove}
                             checkSquare={checkSquare}
+                            hintSquares={hintSquares}
                             interactive={true}
                             onSquareClick={handleSquareClick}
                             size="full"
@@ -994,6 +1004,7 @@ export default function VsBot() {
                         isConnected={isConnected}
                         isStartingGame={isStartingGame}
                         gameStatus={gameStatus}
+                        isLoadingHint={isLoadingHint}
                         onConnect={handleConnect}
                         onStartGame={handleStartGame}
                         onResign={handleResignGame}

@@ -91,6 +91,8 @@ export interface ChessBoardProps {
     lastMove?: { from: number; to: number } | null;
     /** Square to highlight for check (row, col) */
     checkSquare?: { row: number; col: number } | null;
+    /** Hint squares to highlight (from, to indices) */
+    hintSquares?: { from: number; to: number } | null;
     /** Whether the board is interactive (clickable) */
     interactive?: boolean;
     /** Callback when a square is clicked */
@@ -110,6 +112,7 @@ export const ChessBoard = ({
     validMoves = [],
     lastMove = null,
     checkSquare = null,
+    hintSquares = null,
     interactive = true,
     onSquareClick,
     size = 'full',
@@ -160,13 +163,21 @@ export const ChessBoard = ({
                 const isLastMoveFrom = lastMove?.from === index;
                 const isLastMoveTo = lastMove?.to === index;
                 const isInCheck = checkSquare?.row === displayRow && checkSquare?.col === displayCol;
+                const isHintFrom = hintSquares?.from === index;
+                const isHintTo = hintSquares?.to === index;
 
                 rows.push(
                     <div
                         key={`${rowIndex}-${colIndex}`}
-                        className={getSquareClasses(index, isSelected, isValidMove, isLastMoveFrom, isLastMoveTo, isInCheck)}
+                        className={`${getSquareClasses(index, isSelected, isValidMove, isLastMoveFrom, isLastMoveTo, isInCheck)} ${isHintFrom ? 'hint-from' : ''} ${isHintTo ? 'hint-to' : ''}`}
                         onClick={() => handleSquareClick(rowIndex, colIndex)}
                     >
+                        {/* Hint indicator */}
+                        {(isHintFrom || isHintTo) && (
+                            <div className="hint-indicator">
+                            </div>
+                        )}
+
                         {/* Valid move indicator */}
                         {isValidMove && !piece && (
                             <div className="valid-move-dot" />

@@ -6,6 +6,7 @@ interface GameActionsCardProps {
     isConnected: boolean;
     isStartingGame: boolean;
     gameStatus: 'waiting' | 'in_progress' | 'finished' | 'paused' | 'ended' | 'starting' | 'idle';
+    isLoadingHint?: boolean;
     onConnect: () => void;
     onStartGame: () => void;
     onResign: () => void;
@@ -18,6 +19,7 @@ export const GameActionsCard: React.FC<GameActionsCardProps> = ({
     isConnected,
     isStartingGame,
     gameStatus,
+    isLoadingHint = false,
     onConnect,
     onStartGame,
     onResign,
@@ -79,10 +81,12 @@ export const GameActionsCard: React.FC<GameActionsCardProps> = ({
                     className="vs-bot-action-button" 
                     style={{ flex: 1 }} 
                     onClick={onHint}
-                    disabled={gameStatus !== 'in_progress'}
+                    disabled={gameStatus !== 'in_progress' || isLoadingHint}
                 >
                     <Lightbulb size={20} color="var(--color-text)" />
-                    <span className="vs-bot-action-button-text">Hint</span>
+                    <span className="vs-bot-action-button-text">
+                        {isLoadingHint ? 'Analyzing...' : 'Hint'}
+                    </span>
                 </button>
             </div>
 
