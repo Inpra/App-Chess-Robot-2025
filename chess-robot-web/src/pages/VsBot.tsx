@@ -33,11 +33,11 @@ export default function VsBot() {
 
     // Game state
     const [gameId, setGameId] = useState<string | null>(resumeGameId || null);
-    const [gameStatus, setGameStatus] = useState<'idle' | 'starting' | 'playing' | 'paused' | 'ended'>(resumeGameId ? 'paused' : 'idle');
+    const [gameStatus, setGameStatus] = useState<'waiting' | 'in_progress' | 'finished' | 'paused' | 'ended' | 'starting' | 'idle'>(resumeGameId ? 'paused' : 'waiting');
     const [isStartingGame, setIsStartingGame] = useState(false);
 
     // Game message state
-    const [gameMessage, setGameMessage] = useState<string>('Waiting to start game...');
+    const [, setGameMessage] = useState<string>('Waiting to start game...');
     const [boardSetupStatus, setBoardSetupStatus] = useState<'checking' | 'correct' | 'incorrect' | null>(null);
 
     // Move history state
@@ -681,7 +681,7 @@ export default function VsBot() {
 
             console.log('[VsBot] Game started:', response);
             setGameId(response.gameId);
-            setGameStatus('playing');
+            setGameStatus('in_progress');
             setBoardSetupStatus('checking');
             setGameMessage('Verifying board setup...');
             showToast('success', '✓ Game started! Please set up your board');
@@ -697,7 +697,7 @@ export default function VsBot() {
 
     // Handle pause game
     const handlePauseGame = async () => {
-        if (!gameId || gameStatus !== 'playing') {
+        if (!gameId || gameStatus !== 'in_progress') {
             return;
         }
 
@@ -772,7 +772,7 @@ export default function VsBot() {
             }
 
             // Update UI
-            setGameStatus('playing');
+            setGameStatus('in_progress');
             setBoardSetupStatus('checking');
             setGameMessage('Game resumed - Set up your board to continue');
             showToast('success', '✓ Game resumed! Please set up your board');
@@ -785,7 +785,7 @@ export default function VsBot() {
 
     // Handle resign game
     const handleResignGame = async () => {
-        if (!gameId || gameStatus !== 'playing') {
+        if (!gameId || gameStatus !== 'in_progress') {
             return;
         }
 
@@ -822,7 +822,7 @@ export default function VsBot() {
             console.log('[VsBot] ✓ Game resigned - Database updated and AI notified');
 
             // Update UI
-            setGameStatus('ended');
+            setGameStatus('finished');
             setGameMessage('You resigned - Game Over');
 
             // Show modal for resignation
@@ -836,6 +836,72 @@ export default function VsBot() {
         } catch (error: any) {
             console.error('[VsBot] ✗ Failed to resign game:', error);
             showToast('error', '✗ Failed to resign game. Please try again.');
+        }
+    };
+
+    // Handle hint/AI suggestion
+    const handleHint = async () => {
+        if (!gameId || gameStatus !== 'in_progress') {
+            showToast('warning', 'Bạn chỉ có thể xem gợi ý khi đang chơi');
+            return;
+        }
+
+        try {
+            // Get current FEN position
+            const currentFen = chessGame.current.fen();
+            
+            // Show loading toast
+            const loadingToast = toast.loading('Đang phân tích... ⏳', {
+                position: 'top-center',
+            });
+
+            // Request AI suggestion
+            const suggestion = await gameService.getSuggestion({
+                gameId: gameId,
+                fenPosition: currentFen,
+                depth: 15, // Medium depth for balance between speed and accuracy
+            });
+
+            // Dismiss loading toast
+            toast.dismiss(loadingToast);
+
+            // Format the suggestion message
+            let message = `🤖 Gợi ý AI\n\n`;
+            message += `Nước đi: ${suggestion.suggestedMoveSan}\n`;
+            
+            if (suggestion.evaluation !== null && suggestion.evaluation !== undefined) {
+                const evalText = suggestion.evaluation > 0 
+                    ? `+${(suggestion.evaluation / 100).toFixed(2)}` 
+                    : `${(suggestion.evaluation / 100).toFixed(2)}`;
+                message += `Đánh giá: ${evalText}\n`;
+            }
+            
+            message += `Độ chính xác: ${(suggestion.confidence * 100).toFixed(1)}%\n\n`;
+            
+            if (suggestion.bestLine && suggestion.bestLine.length > 0) {
+                message += `Chuỗi nước đi tốt nhất:\n${suggestion.bestLine.slice(0, 5).join(' → ')}\n\n`;
+            }
+            
+            message += `💰 Điểm đã dùng: ${suggestion.pointsDeducted}\n`;
+            message += `💳 Điểm còn lại: ${suggestion.remainingPoints}`;
+
+            // Show the suggestion in an alert
+            alert(message);
+
+            // Also show a toast notification
+            showToast('success', `✨ Gợi ý: ${suggestion.suggestedMoveSan} | Còn ${suggestion.remainingPoints} điểm`, true);
+
+        } catch (error: any) {
+            console.error('[VsBot] Failed to get hint:', error);
+            
+            // Show specific error messages
+            if (error.message.includes('đủ điểm') || error.message.includes('Insufficient points')) {
+                showToast('error', '❌ ' + error.message, true);
+            } else if (error.message.includes('đợi') || error.message.includes('rate limit')) {
+                showToast('warning', '⏰ ' + error.message, true);
+            } else {
+                showToast('error', '❌ Không thể lấy gợi ý. Vui lòng thử lại.', true);
+            }
         }
     };
 
@@ -932,6 +998,7 @@ export default function VsBot() {
                         onStartGame={handleStartGame}
                         onResign={handleResignGame}
                         onPause={gameStatus === 'paused' ? handleResumeGame : handlePauseGame}
+                        onHint={handleHint}
                     />
 
                     {/* Camera View */}

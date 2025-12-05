@@ -1,109 +1,165 @@
-import { useState } from 'react';
-import { ArrowLeft, ChevronUp } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ArrowLeft, ChevronUp, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import rankingService, { type RankingUser } from '../services/rankingService';
 import '../styles/Ranking.css';
-
-const globalRankings = [
-    { id: '1', name: 'Grandmaster 1', elo: 2800, avatar: 'https://i.pravatar.cc/100?img=1' },
-    { id: '2', name: 'Grandmaster 2', elo: 2750, avatar: 'https://i.pravatar.cc/100?img=2' },
-    { id: '3', name: 'Grandmaster 3', elo: 2700, avatar: 'https://i.pravatar.cc/100?img=3' },
-    { id: '4', name: 'Player 4', elo: 2650, avatar: 'https://i.pravatar.cc/100?img=4' },
-    { id: '5', name: 'Player 5', elo: 2600, avatar: 'https://i.pravatar.cc/100?img=5' },
-    { id: '6', name: 'Player 6', elo: 2550, avatar: 'https://i.pravatar.cc/100?img=6' },
-    { id: '7', name: 'Player 7', elo: 2500, avatar: 'https://i.pravatar.cc/100?img=7' },
-    { id: '8', name: 'Player 8', elo: 2450, avatar: 'https://i.pravatar.cc/100?img=8' },
-    { id: '9', name: 'Player 9', elo: 2400, avatar: 'https://i.pravatar.cc/100?img=9' },
-    { id: '10', name: 'Player 10', elo: 2350, avatar: 'https://i.pravatar.cc/100?img=10' },
-];
-
-const friendsRankings = [
-    { id: '2', name: 'Grandmaster 2', elo: 2750, avatar: 'https://i.pravatar.cc/100?img=2' },
-    { id: '12', name: 'My Friend 1', elo: 1600, avatar: 'https://i.pravatar.cc/100?img=12' },
-    { id: 'me', name: 'You', elo: 1200, avatar: 'https://i.pravatar.cc/100?img=12' },
-    { id: '13', name: 'My Friend 2', elo: 1100, avatar: 'https://i.pravatar.cc/100?img=13' },
-];
 
 export default function Ranking() {
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState<'global' | 'friends'>('global');
+    const [rankings, setRankings] = useState<RankingUser[]>([]);
+    const [userRanking, setUserRanking] = useState<RankingUser | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    const data = activeTab === 'global' ? globalRankings : friendsRankings;
-    const topThree = data.slice(0, 3);
-    const restOfList = data.slice(3);
+    useEffect(() => {
+        fetchRankings();
+    }, []);
 
-    const renderPodiumItem = (item: any, rank: number) => {
-        const isFirst = rank === 1;
+    const fetchRankings = async () => {
+        setLoading(true);
+        setError(null);
+        
+        try {
+            // Fetch all rankings
+            const allRankings = await rankingService.getGlobalRanking(100);
+            setRankings(allRankings);
+
+            // Fetch current user's ranking
+            try {
+                const myRanking = await rankingService.getMyRanking();
+                setUserRanking(myRanking.userRanking);
+            } catch (err) {
+                console.log('User not logged in or no ranking data');
+            }
+        } catch (err: any) {
+            console.error('Error fetching rankings:', err);
+            const errorMessage = err.message || 'Không thể tải bảng xếp hạng';
+            setError(errorMessage);
+            toast.error(errorMessage);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const topThree = rankings.slice(0, 3);
+    const restOfList = rankings.slice(3);
+
+    const getAvatarUrl = (url?: string) => {
+        if (url) return url;
+        return `https://ui-avatars.com/api/?name=${encodeURIComponent('User')}&background=667eea&color=fff&size=100`;
+    };
+
+    const renderPodiumItem = (item: RankingUser, displayRank: number) => {
+        const isFirst = displayRank === 1;
         const size = isFirst ? 100 : 80;
-        const crownColor = isFirst ? '#FFD700' : rank === 2 ? '#C0C0C0' : '#CD7F32';
+        const crownColor = isFirst ? '#FFD700' : displayRank === 2 ? '#C0C0C0' : '#CD7F32';
 
         return (
-            <div className={`podium-item ${isFirst ? 'first' : ''}`}>
+            <div className={`podium-item ${isFirst ? 'first' : ''}`} key={item.userId}>
                 <div className="avatar-wrapper">
-                    <img src={item.avatar} alt={item.name} className="podium-avatar" style={{ width: size, height: size }} />
+                    <img 
+                        src={getAvatarUrl(item.avatarUrl)} 
+                        alt={item.fullName || item.username} 
+                        className="podium-avatar" 
+                        style={{ width: size, height: size }} 
+                    />
                     <div className="rank-badge" style={{ backgroundColor: crownColor }}>
-                        {rank}
+                        {displayRank}
                     </div>
                 </div>
-                <div className="podium-name">{item.name}</div>
-                <div className="podium-elo">{item.elo}</div>
+                <div className="podium-name">{item.fullName || item.username}</div>
+                <div className="podium-elo">{item.eloRating}</div>
             </div>
         );
     };
 
     return (
         <div className="ranking-container">
+            <ToastContainer position="top-right" autoClose={3000} />
+            
             <div className="ranking-header">
                 <div onClick={() => navigate('/')} style={{ cursor: 'pointer', padding: '8px' }}>
                     <ArrowLeft size={24} color="var(--color-text)" />
                 </div>
-                <h2 className="header-title" style={{ fontSize: '18px' }}>Leaderboard</h2>
+                <h2 className="header-title" style={{ fontSize: '18px' }}>Bảng Xếp Hạng</h2>
                 <div style={{ width: 40 }}></div>
             </div>
 
-            <div className="tabs-container">
-                <div
-                    className={`tab ${activeTab === 'global' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('global')}
-                >
-                    <span className="tab-text">Global</span>
+            {loading ? (
+                <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'center', 
+                    alignItems: 'center', 
+                    minHeight: '400px',
+                    color: '#6B7280'
+                }}>
+                    <Loader2 size={40} className="spin" />
                 </div>
-                <div
-                    className={`tab ${activeTab === 'friends' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('friends')}
-                >
-                    <span className="tab-text">Friends</span>
+            ) : error ? (
+                <div style={{ 
+                    padding: '40px 20px', 
+                    textAlign: 'center', 
+                    color: '#EF4444' 
+                }}>
+                    {error}
                 </div>
-            </div>
-
-            <div className="ranking-list-content">
-                <div className="podium-container">
-                    {topThree.length > 1 && renderPodiumItem(topThree[1], 2)}
-                    {topThree.length > 0 && renderPodiumItem(topThree[0], 1)}
-                    {topThree.length > 2 && renderPodiumItem(topThree[2], 3)}
+            ) : rankings.length === 0 ? (
+                <div style={{ 
+                    padding: '40px 20px', 
+                    textAlign: 'center', 
+                    color: '#6B7280' 
+                }}>
+                    Chưa có dữ liệu xếp hạng
                 </div>
-
-                {restOfList.map((item, index) => (
-                    <div key={item.id} className="list-item">
-                        <div className="list-rank">{index + 4}</div>
-                        <img src={item.avatar} alt={item.name} className="list-avatar" />
-                        <div className="list-info">
-                            <div className="list-name">{item.name}</div>
-                            <div className="list-elo">{item.elo} ELO</div>
-                        </div>
+            ) : (
+                <div className="ranking-list-content">
+                    <div className="podium-container">
+                        {topThree.length > 1 && renderPodiumItem(topThree[1], 2)}
+                        {topThree.length > 0 && renderPodiumItem(topThree[0], 1)}
+                        {topThree.length > 2 && renderPodiumItem(topThree[2], 3)}
                     </div>
-                ))}
-            </div>
 
-            <div className="user-rank-footer">
-                <div className="list-rank">156</div>
-                <img src="https://i.pravatar.cc/100?img=12" alt="You" className="list-avatar" />
-                <div className="list-info">
-                    <div className="list-name">You</div>
-                    <div className="list-elo">1200 ELO</div>
+                    {restOfList.map((item) => (
+                        <div key={item.userId} className="list-item">
+                            <div className="list-rank">{item.rank}</div>
+                            <img 
+                                src={getAvatarUrl(item.avatarUrl)} 
+                                alt={item.fullName || item.username} 
+                                className="list-avatar" 
+                            />
+                            <div className="list-info">
+                                <div className="list-name">{item.fullName || item.username}</div>
+                                <div className="list-elo">{item.eloRating} ELO</div>
+                            </div>
+                        </div>
+                    ))}
                 </div>
-                <ChevronUp size={20} color="#10B981" />
-                <span style={{ color: '#10B981', fontWeight: '600', marginLeft: '4px' }}>12</span>
-            </div>
+            )}
+
+            {userRanking && (
+                <div className="user-rank-footer">
+                    <div className="list-rank">{userRanking.rank}</div>
+                    <img 
+                        src={getAvatarUrl(userRanking.avatarUrl)} 
+                        alt={userRanking.fullName || userRanking.username} 
+                        className="list-avatar" 
+                    />
+                    <div className="list-info">
+                        <div className="list-name">{userRanking.fullName || userRanking.username}</div>
+                        <div className="list-elo">{userRanking.eloRating} ELO</div>
+                    </div>
+                    {userRanking.winRate > 0 && (
+                        <>
+                            <ChevronUp size={20} color="#10B981" />
+                            <span style={{ color: '#10B981', fontWeight: '600', marginLeft: '4px' }}>
+                                {userRanking.winRate.toFixed(1)}%
+                            </span>
+                        </>
+                    )}
+                </div>
+            )}
         </div>
     );
 }

@@ -43,3 +43,9 @@ export const ROBOT_ENDPOINTS = {
     CONNECT: '/robots/connect',
     DISCONNECT: '/robots/disconnect',
 };
+
+// AI Suggestion endpoints
+export const AI_SUGGESTION_ENDPOINTS = {
+    GET_SUGGESTION: '/AiSuggestions/get-suggestion',
+    GET_COST: '/AiSuggestions/cost',
+};

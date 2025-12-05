@@ -1,7 +1,9 @@
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import authService from './services/authService';
+import type { UserResponse } from './services/authService';
 import {
   Home,
   Gamepad2,
@@ -15,7 +17,10 @@ import {
   Search,
   Bell,
   Zap,
-  Cpu
+  Cpu,
+  Coins,
+  History,
+  Plus
 } from 'lucide-react';
 import './styles/Dashboard.css';
 import MatchHistory from './pages/MatchHistory';
@@ -39,10 +44,40 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import PaymentSuccess from './pages/PaymentSuccess';
 import PaymentCancel from './pages/PaymentCancel';
+import PersonalInformation from './pages/PersonalInformation';
+import SecurityPassword from './pages/SecurityPassword';
 
 function Dashboard() {
   const navigate = useNavigate();
   const [showDifficultyModal, setShowDifficultyModal] = useState(false);
+  const [user, setUser] = useState<UserResponse | null>(null);
+  const [pointsBalance, setPointsBalance] = useState(0);
+
+  useEffect(() => {
+    // Get user from localStorage or API
+    const localUser = authService.getCurrentUser();
+    if (localUser) {
+      setUser(localUser);
+    }
+    
+    // Fetch fresh data from API
+    authService.getProfile().then(profile => {
+      if (profile) {
+        setUser(profile);
+        setPointsBalance((profile as any).pointsBalance || 0);
+      }
+    });
+  }, []);
+
+  const getInitials = (name?: string) => {
+    if (!name) return 'U';
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  };
 
   return (
     <div className="dashboard-container">
@@ -85,11 +120,30 @@ function Dashboard() {
         <div style={{ flex: 1 }}></div>
 
         <div className="sidebar-icon" onClick={() => navigate('/profile')}>
-          <img
-            src="https://i.pravatar.cc/100?img=12"
-            alt="Profile"
-            style={{ width: 32, height: 32, borderRadius: 16 }}
-          />
+          {user?.avatarUrl ? (
+            <img
+              src={user.avatarUrl}
+              alt="Profile"
+              style={{ width: 32, height: 32, borderRadius: 16 }}
+            />
+          ) : (
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 16,
+                backgroundColor: '#667eea',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'white',
+                fontWeight: 'bold',
+                fontSize: '14px'
+              }}
+            >
+              {getInitials(user?.fullName || user?.username)}
+            </div>
+          )}
         </div>
       </div>
 
@@ -99,7 +153,9 @@ function Dashboard() {
         <div className="header">
           <div className="header-title">
             <h1>Dashboard</h1>
-            <div className="header-subtitle">Welcome back, John! You have 2 pending matches.</div>
+            <div className="header-subtitle">
+              Welcome back, {user?.fullName || user?.username || 'Player'}!
+            </div>
           </div>
 
           <div className="header-actions">
@@ -154,20 +210,79 @@ function Dashboard() {
             </div>
           </div>
 
+          {/* My Points Card */}
+          <div className="card" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 className="card-title" style={{ marginBottom: 0, color: 'white' }}>My Points</h3>
+              <Coins size={32} color="#FFD700" />
+            </div>
+            <div style={{ color: 'white', fontSize: '36px', fontWeight: 'bold', marginBottom: 24 }}>
+              {pointsBalance.toLocaleString()}
+            </div>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={() => navigate('/purchase-points')}
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  padding: '12px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  backdropFilter: 'blur(10px)'
+                }}
+              >
+                <Plus size={20} />
+                <span>Buy Points</span>
+              </button>
+              <button
+                onClick={() => navigate('/points-history')}
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  padding: '12px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  backdropFilter: 'blur(10px)'
+                }}
+              >
+                <History size={20} />
+                <span>History</span>
+              </button>
+            </div>
+          </div>
+
           {/* Your Stats */}
           <div className="card">
             <h3 className="card-title">Your Stats</h3>
             <div className="stats-row">
               <div className="stat-item">
-                <div className="stat-value">2450</div>
+                <div className="stat-value">{(user as any)?.eloRating || 1200}</div>
                 <div className="stat-label">ELO</div>
               </div>
               <div className="stat-item">
-                <div className="stat-value">142</div>
+                <div className="stat-value">{(user as any)?.wins || 0}</div>
                 <div className="stat-label">Wins</div>
               </div>
               <div className="stat-item">
-                <div className="stat-value">58%</div>
+                <div className="stat-value">
+                  {(user as any)?.totalGamesPlayed > 0 
+                    ? Math.round(((user as any)?.wins || 0) / (user as any)?.totalGamesPlayed * 100) 
+                    : 0}%
+                </div>
                 <div className="stat-label">Win Rate</div>
               </div>
             </div>
@@ -247,6 +362,8 @@ function App() {
         <Route path="/payment/success" element={<PaymentSuccess />} />
         <Route path="/payment/cancel" element={<PaymentCancel />} />
         <Route path="/points-history" element={<PointsHistory />} />
+        <Route path="/personal-information" element={<PersonalInformation />} />
+        <Route path="/security-password" element={<SecurityPassword />} />
         <Route path="/faq" element={<FAQ />} />
         <Route path="/theme-settings" element={<ThemeSettings />} />
         <Route path="/tutorial" element={<Tutorial />} />
