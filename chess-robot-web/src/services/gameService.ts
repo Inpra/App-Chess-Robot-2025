@@ -3,7 +3,7 @@
    * Handles all game-related API calls
    */
 
-  import { API_CONFIG, GAME_ENDPOINTS } from './apiConfig';
+  import { API_CONFIG, GAME_ENDPOINTS, AI_SUGGESTION_ENDPOINTS } from './apiConfig';
 
   export interface StartGameRequest {
     gameTypeCode: string;
@@ -111,6 +111,30 @@
     };
     moves: GameMoveResponse[];
     statistics?: GameStatistics;
+  }
+
+  export interface GetSuggestionRequest {
+    gameId: string;
+    fenPosition: string;
+    depth?: number;
+  }
+
+  export interface SuggestionResponse {
+    suggestionId: string;
+    suggestedMove: string;
+    suggestedMoveSan: string;
+    evaluation?: number;
+    confidence: number;
+    bestLine: string[];
+    pointsDeducted: number;
+    remainingPoints: number;
+    createdAt: string;
+  }
+
+  export interface SuggestionCostResponse {
+    cost: number;
+    description: string;
+    rateLimitSeconds: number;
   }
 
   class GameService {
@@ -486,6 +510,62 @@
         return await response.json();
       } catch (error) {
         console.error('[GameService] Get player games error:', error);
+        throw error;
+      }
+    }
+
+    /**
+     * Get AI chess move suggestion
+     * Costs 5 points per suggestion
+     * Rate limited: 1 request per 3 seconds
+     */
+    async getSuggestion(request: GetSuggestionRequest): Promise<SuggestionResponse> {
+      try {
+        const response = await fetch(`${this.baseUrl}${AI_SUGGESTION_ENDPOINTS.GET_SUGGESTION}`, {
+          method: 'POST',
+          headers: this.getHeaders(),
+          body: JSON.stringify(request),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          
+          // Handle specific error codes
+          if (error.errorCode === 'INSUFFICIENT_POINTS') {
+            throw new Error('Không đủ điểm để nhận gợi ý. Vui lòng mua thêm điểm.');
+          }
+          
+          if (error.errorCode === 'RATE_LIMITED') {
+            throw new Error('Vui lòng đợi 3 giây trước khi yêu cầu gợi ý tiếp theo.');
+          }
+
+          throw new Error(error.message || 'Failed to get AI suggestion');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('[GameService] Get suggestion error:', error);
+        throw error;
+      }
+    }
+
+    /**
+     * Get the cost in points for AI suggestions
+     */
+    async getSuggestionCost(): Promise<SuggestionCostResponse> {
+      try {
+        const response = await fetch(`${this.baseUrl}${AI_SUGGESTION_ENDPOINTS.GET_COST}`, {
+          method: 'GET',
+          headers: this.getHeaders(false), // No auth required
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to get suggestion cost');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('[GameService] Get suggestion cost error:', error);
         throw error;
       }
     }

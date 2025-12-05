@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Star, Trophy, Diamond, ShieldCheck, ArrowRight, Clock, QrCode, X, Crown, Zap, Gift, Loader2, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Star, Trophy, Diamond, ShieldCheck, ArrowRight, Clock, X, Crown, Zap, Gift, Loader2, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import '../styles/PurchasePoints.css';
@@ -33,7 +33,7 @@ export default function PurchasePoints() {
     const [paymentData, setPaymentData] = useState<PaymentResponse | null>(null);
     const [isProcessingPayment, setIsProcessingPayment] = useState(false);
     const [paymentStatus, setPaymentStatus] = useState<'pending' | 'success' | 'failed'>('pending');
-    const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
+    const [pollingInterval, setPollingInterval] = useState<number | null>(null);
 
     useEffect(() => {
         loadPackages();
@@ -99,7 +99,10 @@ export default function PurchasePoints() {
             setPaymentData(payment);
             
             // Start polling for payment status
-            startPollingPaymentStatus(payment.transactionId || payment.TransactionId);
+            const transactionId = payment.transactionId || payment.TransactionId;
+            if (transactionId) {
+                startPollingPaymentStatus(transactionId);
+            }
         } catch (err: any) {
             console.error('Error creating payment:', err);
             alert(err.response?.data?.error || 'Không thể tạo link thanh toán. Vui lòng đăng nhập và thử lại.');
@@ -140,17 +143,6 @@ export default function PurchasePoints() {
         }, 3000);
         
         setPollingInterval(interval);
-    };
-
-    const handlePayNow = () => {
-        if (!paymentData) return;
-        
-        // Get orderCode from payment data
-        const orderCode = paymentData.transactionId || paymentData.TransactionId;
-        
-        // Close modal and navigate to success page to check status
-        setModalVisible(false);
-        navigate(`/payment/success?orderCode=${orderCode}`);
     };
 
     const getIcon = (iconName: string, size: number, color: string) => {
@@ -219,7 +211,7 @@ export default function PurchasePoints() {
                     </div>
                 ) : (
                     <div className="cards-container">
-                        {packages.map((pkg, index) => (
+                        {packages.map((pkg) => (
                             <div
                                 key={pkg.id}
                                 className={`package-card ${pkg.popular ? 'popular-card' : ''}`}
@@ -297,7 +289,7 @@ export default function PurchasePoints() {
                                             borderRadius: '12px'
                                         }}>
                                             <QRCodeSVG 
-                                                value={paymentData.qrCodeUrl || paymentData.QrCodeUrl} 
+                                                value={paymentData.qrCodeUrl || paymentData.QrCodeUrl || ''} 
                                                 size={250}
                                                 level="H"
                                                 includeMargin={true}

@@ -34,7 +34,7 @@ export default function PuzzleGame() {
     const [isConnected, setIsConnected] = useState(false);
     const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected');
     const [loading, setLoading] = useState(true);
-    const [boardSetupStatus, setBoardSetupStatus] = useState<'checking' | 'correct' | 'incorrect' | null>(null);
+    const [, setBoardSetupStatus] = useState<'checking' | 'correct' | 'incorrect' | null>(null);
 
     // Game state
     const [gameStatus, setGameStatus] = useState<'idle' | 'starting' | 'playing' | 'paused' | 'ended'>('idle');

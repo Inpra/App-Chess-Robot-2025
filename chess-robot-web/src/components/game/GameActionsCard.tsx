@@ -5,7 +5,7 @@ interface GameActionsCardProps {
     connectionStatus: 'disconnected' | 'connecting' | 'connected' | 'error';
     isConnected: boolean;
     isStartingGame: boolean;
-    gameStatus: 'idle' | 'starting' | 'playing' | 'paused' | 'ended';
+    gameStatus: 'waiting' | 'in_progress' | 'finished' | 'paused' | 'ended' | 'starting' | 'idle';
     onConnect: () => void;
     onStartGame: () => void;
     onResign: () => void;
@@ -42,16 +42,16 @@ export const GameActionsCard: React.FC<GameActionsCardProps> = ({
             <button
                 className="vs-bot-action-button"
                 onClick={onStartGame}
-                disabled={!isConnected || isStartingGame || gameStatus === 'playing'}
+                disabled={!isConnected || isStartingGame || gameStatus === 'in_progress'}
                 style={{
-                    backgroundColor: gameStatus === 'playing' ? '#10B981' : '#3B82F6',
+                    backgroundColor: gameStatus === 'in_progress' ? '#10B981' : '#3B82F6',
                     color: 'white'
                 }}
             >
                 <Play size={20} color="#FFF" />
                 <span className="vs-bot-action-button-text" style={{ color: 'white' }}>
                     {isStartingGame ? 'Starting...' :
-                        gameStatus === 'playing' ? 'Game Active' : 'Start Game'}
+                        gameStatus === 'in_progress' ? 'Game Active' : 'Start Game'}
                 </span>
             </button>
 
@@ -60,7 +60,7 @@ export const GameActionsCard: React.FC<GameActionsCardProps> = ({
                     className="vs-bot-action-button" 
                     style={{ flex: 1 }} 
                     onClick={onPause}
-                    disabled={gameStatus !== 'playing' && gameStatus !== 'paused'}
+                    disabled={gameStatus !== 'in_progress' && gameStatus !== 'paused'}
                 >
                     {gameStatus === 'paused' ? (
                         <>
@@ -75,7 +75,12 @@ export const GameActionsCard: React.FC<GameActionsCardProps> = ({
                     )}
                 </button>
 
-                <button className="vs-bot-action-button" style={{ flex: 1 }} onClick={onHint}>
+                <button 
+                    className="vs-bot-action-button" 
+                    style={{ flex: 1 }} 
+                    onClick={onHint}
+                    disabled={gameStatus !== 'in_progress'}
+                >
                     <Lightbulb size={20} color="var(--color-text)" />
                     <span className="vs-bot-action-button-text">Hint</span>
                 </button>
@@ -85,7 +90,7 @@ export const GameActionsCard: React.FC<GameActionsCardProps> = ({
                 className="vs-bot-action-button"
                 style={{ backgroundColor: '#FEF2F2' }}
                 onClick={onResign}
-                disabled={gameStatus !== 'playing'}
+                disabled={gameStatus !== 'in_progress'}
             >
                 <Flag size={20} color="#EF4444" />
                 <span className="vs-bot-action-button-text" style={{ color: '#EF4444' }}>Resign Game</span>
