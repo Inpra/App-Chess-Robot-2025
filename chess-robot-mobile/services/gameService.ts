@@ -239,19 +239,27 @@ class GameService {
      * Pause the current game and save state
      */
     async pauseGame(gameId: string): Promise<PauseGameResponse> {
+        console.log('[GameService] pauseGame called', { gameId });
         try {
             const headers = await this.getHeaders();
+            console.log('[GameService] Making POST request to:', `${this.baseUrl}/Games/${gameId}/pause`);
+            
             const response = await fetch(`${this.baseUrl}/Games/${gameId}/pause`, {
                 method: 'POST',
                 headers,
             });
 
+            console.log('[GameService] Response status:', response.status);
+            
             if (!response.ok) {
                 const error = await response.json();
+                console.error('[GameService] API error response:', error);
                 throw new Error(error.message || 'Failed to pause game');
             }
 
-            return await response.json();
+            const data = await response.json();
+            console.log('[GameService] pauseGame success:', data);
+            return data;
         } catch (error) {
             console.error('[GameService] Pause game error:', error);
             throw error;
@@ -417,8 +425,11 @@ class GameService {
         totalMoves?: number,
         fenCurrent?: string
     ): Promise<any> {
+        console.log('[GameService] updateGameResult called', { gameId, result, status, totalMoves });
         try {
             const headers = await this.getHeaders();
+            console.log('[GameService] Making PUT request to:', `${this.baseUrl}/Games/${gameId}/result`);
+            
             const response = await fetch(`${this.baseUrl}/Games/${gameId}/result`, {
                 method: 'PUT',
                 headers,
@@ -431,12 +442,17 @@ class GameService {
                 }),
             });
 
+            console.log('[GameService] Response status:', response.status);
+            
             if (!response.ok) {
                 const error = await response.json();
+                console.error('[GameService] API error response:', error);
                 throw new Error(error.message || 'Failed to update game result');
             }
 
-            return await response.json();
+            const data = await response.json();
+            console.log('[GameService] updateGameResult success:', data);
+            return data;
         } catch (error) {
             console.error('[GameService] Update game result error:', error);
             throw error;

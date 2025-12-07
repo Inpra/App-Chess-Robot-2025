@@ -170,14 +170,53 @@ export default function VsBot() {
 
     // Auto-resume game if resumeGameId is provided
     useEffect(() => {
-        if (resumeGameId && gameStatus === 'paused' && isConnected) {
-            console.log('[VsBot] Auto-resuming game:', resumeGameId);
-            // Show message that game will be resumed
-            setGameMessage('Resuming paused game...');
-            // Trigger resume after connection is established
-            handleResumeGame();
-        }
-    }, [resumeGameId, isConnected]); // Only run when connection is ready
+        const autoResume = async () => {
+            if (resumeGameId && gameStatus === 'paused' && isConnected && gameId) {
+                console.log('[VsBot] Auto-resuming game:', resumeGameId);
+                // Show message that game will be resumed
+                setGameMessage('Resuming paused game...');
+                
+                try {
+                    // Call API to resume game
+                    const response = await gameService.resumeGame(gameId);
+                    
+                    console.log('[VsBot] ✓ Game resumed:', response);
+
+                    // Load the saved FEN position
+                    if (response.fenStr) {
+                        const newBoard = fenToBoard(response.fenStr);
+                        setBoard(newBoard);
+                        chessGame.current.load(response.fenStr);
+                        lastProcessedFen.current = response.fenStr;
+                        
+                        // Rebuild move history from chess.js
+                        const history = chessGame.current.history();
+                        const moves: Move[] = [];
+                        for (let i = 0; i < history.length; i += 2) {
+                            moves.push({
+                                moveNumber: Math.floor(i / 2) + 1,
+                                white: history[i],
+                                black: history[i + 1]
+                            });
+                        }
+                        setMoveHistory(moves);
+                    }
+
+                    // Update UI
+                    setGameStatus('in_progress');
+                    setBoardSetupStatus('checking');
+                    setGameMessage('Game resumed - Set up your board to continue');
+                    showToast('success', '✓ Game resumed! Please set up your board');
+
+                } catch (error: any) {
+                    console.error('[VsBot] ✗ Failed to resume game:', error);
+                    showToast('error', '✗ Failed to resume game. Please try again.');
+                }
+            }
+        };
+
+        autoResume();
+    }, [resumeGameId, isConnected, gameStatus, gameId]); // Include all dependencies
 
     // Handle game over (checkmate/stalemate) - defined before useEffect to avoid dependency issues
     const handleGameOver = useCallback(async (data: any) => {

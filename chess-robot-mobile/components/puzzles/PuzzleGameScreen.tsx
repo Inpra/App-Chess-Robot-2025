@@ -285,7 +285,6 @@ export default function PuzzleGameScreen() {
                         >
                             <Ionicons name="refresh" size={20} color="#FFF" />
                             <Text style={[styles.actionButtonText, styles.primaryButtonText]}>
-                                Reset Puzzle
                             </Text>
                         </TouchableOpacity>
 

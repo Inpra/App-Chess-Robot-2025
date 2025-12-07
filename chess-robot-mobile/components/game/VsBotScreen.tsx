@@ -187,6 +187,8 @@ export default function VsBotScreen() {
                     setGame(newGame);
                     setFen(data.fen_str);
                     updateMoveHistoryFromFen(data.fen_str);
+                    // Clear hint highlights when board updates
+                    setHintSquares(null);
                 } catch (error) {
                     console.error('[VsBot] Failed to parse FEN:', error);
                 }
@@ -364,11 +366,16 @@ export default function VsBotScreen() {
                     style: 'destructive',
                     onPress: async () => {
                         try {
-                            if (pendingMoves.current.length > 0) await savePendingMoves();
+                            // Save any pending moves first
+                            if (pendingMoves.current.length > 0) {
+                                await savePendingMoves();
+                            }
 
+                            // Get current game state
                             const totalMoves = game.history().length;
                             const currentFen = game.fen();
 
+                            // Update game result in database (this also sends end command to AI)
                             await gameService.updateGameResult(
                                 gameId,
                                 'lose',
@@ -377,12 +384,15 @@ export default function VsBotScreen() {
                                 currentFen
                             );
 
+                            console.log('[VsBot] ✓ Game resigned - Database updated and AI notified');
+
+                            // Update UI
                             setGameStatus('ended');
                             setGameMessage('You resigned - Game Over');
                             Alert.alert('Game Over', 'You resigned the game');
-                        } catch (error) {
-                            console.error('[VsBot] Failed to resign:', error);
-                            Alert.alert('Error', 'Failed to resign game');
+                        } catch (error: any) {
+                            console.error('[VsBot] ✗ Failed to resign game:', error);
+                            Alert.alert('Error', error.message || 'Failed to resign game. Please try again.');
                         }
                     }
                 }
@@ -402,22 +412,29 @@ export default function VsBotScreen() {
                     text: 'Pause',
                     onPress: async () => {
                         try {
-                            if (pendingMoves.current.length > 0) await savePendingMoves();
+                            // Save any pending moves first
+                            if (pendingMoves.current.length > 0) {
+                                await savePendingMoves();
+                            }
 
+                            // Call API to pause game (saves state and sends end command to AI)
                             const response = await gameService.pauseGame(gameId);
-                            console.log('[VsBot] Game paused:', response);
+                            
+                            console.log('[VsBot] ✓ Game paused:', response);
 
+                            // Update UI
                             setGameStatus('paused');
                             setGameMessage('Game paused - Progress saved');
-                            Alert.alert('Game Paused', 'Check Match History to resume', [
+                            
+                            Alert.alert('Game Paused', '✓ Game paused! Check Match History to resume', [
                                 {
                                     text: 'OK',
                                     onPress: () => router.navigate('/(tabs)')
                                 }
                             ]);
-                        } catch (error) {
-                            console.error('[VsBot] Failed to pause:', error);
-                            Alert.alert('Error', 'Failed to pause game');
+                        } catch (error: any) {
+                            console.error('[VsBot] ✗ Failed to pause game:', error);
+                            Alert.alert('Error', error.message || 'Failed to pause game. Please try again.');
                         }
                     }
                 }
@@ -429,16 +446,19 @@ export default function VsBotScreen() {
         if (!gameId || gameStatus !== 'paused') return;
 
         try {
+            // Call API to resume game (sends resume command with saved FEN to AI)
             const response = await gameService.resumeGame(gameId);
-            console.log('[VsBot] Game resumed:', response);
+            
+            console.log('[VsBot] ✓ Game resumed:', response);
 
+            // Load the saved FEN position
             if (response.fenStr) {
                 const newGame = new Chess(response.fenStr);
                 setGame(newGame);
                 setFen(response.fenStr);
                 lastProcessedFen.current = response.fenStr;
 
-                // Rebuild move history
+                // Rebuild move history from chess.js
                 const history = newGame.history();
                 const moves: Move[] = [];
                 for (let i = 0; i < history.length; i += 2) {
@@ -451,13 +471,14 @@ export default function VsBotScreen() {
                 setMoveHistory(moves);
             }
 
+            // Update UI
             setGameStatus('playing');
             setBoardSetupStatus('checking');
             setGameMessage('Game resumed - Set up your board to continue');
-            Alert.alert('Game Resumed', 'Please set up your board');
-        } catch (error) {
-            console.error('[VsBot] Failed to resume:', error);
-            Alert.alert('Error', 'Failed to resume game');
+            Alert.alert('Game Resumed', '✓ Game resumed! Please set up your board');
+        } catch (error: any) {
+            console.error('[VsBot] ✗ Failed to resume game:', error);
+            Alert.alert('Error', error.message || 'Failed to resume game. Please try again.');
         }
     };
 

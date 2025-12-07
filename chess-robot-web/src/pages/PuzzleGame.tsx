@@ -39,7 +39,7 @@ export default function PuzzleGame() {
     const [, setBoardSetupStatus] = useState<'checking' | 'correct' | 'incorrect' | null>(null);
 
     // Game state
-    const [gameStatus, setGameStatus] = useState<'idle' | 'starting' | 'playing' | 'paused' | 'ended'>('idle');
+    const [gameStatus, setGameStatus] = useState<'waiting' | 'in_progress' | 'finished' | 'paused' | 'ended' | 'starting' | 'idle'>('waiting');
     const [isStartingGame, setIsStartingGame] = useState(false);
     const [isLoadingHint, setIsLoadingHint] = useState(false);
 
@@ -555,7 +555,7 @@ export default function PuzzleGame() {
             });
 
             setGameId(gameResponse.gameId);
-            setGameStatus('playing');
+            setGameStatus('in_progress');
             setBoardSetupStatus('checking');
             setMessage('Verifying board setup...');
             showToast('success', '✓ Game started! Please set up your board');
@@ -590,7 +590,7 @@ export default function PuzzleGame() {
 
     // Handle pause game
     const handlePauseGame = async () => {
-        if (!gameId || gameStatus !== 'playing') {
+        if (!gameId || gameStatus !== 'in_progress') {
             return;
         }
 
@@ -665,7 +665,7 @@ export default function PuzzleGame() {
             }
 
             // Update UI
-            setGameStatus('playing');
+            setGameStatus('in_progress');
             setBoardSetupStatus('checking');
             setMessage('Puzzle resumed - Set up your board to continue');
             showToast('success', '✓ Puzzle resumed!');
@@ -678,7 +678,7 @@ export default function PuzzleGame() {
 
     // Handle resign/skip puzzle
     const handleResignPuzzle = async () => {
-        if (!gameId || gameStatus !== 'playing') {
+        if (!gameId || gameStatus !== 'in_progress') {
             return;
         }
 
@@ -734,7 +734,7 @@ export default function PuzzleGame() {
 
     // Handle hint/AI suggestion
     const handleHint = async () => {
-        if (!gameId || gameStatus !== 'playing') {
+        if (!gameId || gameStatus !== 'in_progress') {
             showToast('warning', 'You can only get hints while playing');
             return;
         }
@@ -1020,7 +1020,7 @@ export default function PuzzleGame() {
                         connectionStatus={connectionStatus}
                         isConnected={isConnected}
                         isStartingGame={isStartingGame}
-                        gameStatus={gameStatus === 'playing' ? 'in_progress' : gameStatus === 'idle' ? 'waiting' : gameStatus as any}
+                        gameStatus={gameStatus}
                         isLoadingHint={isLoadingHint}
                         onConnect={handleConnect}
                         onStartGame={handleStartGame}
