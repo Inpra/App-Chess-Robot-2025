@@ -249,12 +249,11 @@ export default function PuzzleGame() {
             }
 
             // Update board if FEN string is provided
-            if (data.fen_str && data.fen_str !== lastProcessedFen.current) {
+            if (data.fen_str) {
+                console.log('[PuzzleGame] Updating board with FEN:', data.fen_str);
                 try {
                     const newBoard = fenToBoard(data.fen_str);
                     setBoard(newBoard);
-                    chessGame.current = new Chess(data.fen_str);
-                    lastProcessedFen.current = data.fen_str;
 
                     // Clear hint when board updates (any move made)
                     setHintSquares(prev => {
@@ -265,7 +264,7 @@ export default function PuzzleGame() {
                         return prev;
                     });
 
-                    // Update move history from FEN change
+                    // Update move history from FEN change (this will update chessGame and lastProcessedFen)
                     updateMoveHistoryFromFen(data.fen_str);
                 } catch (error) {
                     console.error('[PuzzleGame] Failed to parse FEN:', error);

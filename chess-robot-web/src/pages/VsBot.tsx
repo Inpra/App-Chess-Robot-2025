@@ -748,8 +748,11 @@ export default function VsBot() {
     // Handle pause game
     const handlePauseGame = async () => {
         if (!gameId || gameStatus !== 'in_progress') {
+            console.warn('[VsBot] Cannot pause - gameId:', gameId, 'status:', gameStatus);
             return;
         }
+
+        console.log('[VsBot] Pausing game:', gameId, 'current status:', gameStatus);
 
         // Show confirmation dialog
         const confirmed = window.confirm(
@@ -759,19 +762,22 @@ export default function VsBot() {
         );
 
         if (!confirmed) {
+            console.log('[VsBot] Pause cancelled by user');
             return;
         }
 
         try {
             // Save any pending moves first
             if (pendingMoves.current.length > 0) {
+                console.log('[VsBot] Saving pending moves before pause:', pendingMoves.current.length);
                 await savePendingMoves();
             }
 
             // Call API to pause game (saves state and sends end command to AI)
+            console.log('[VsBot] Calling pauseGame API for gameId:', gameId);
             const response = await gameService.pauseGame(gameId);
             
-            console.log('[VsBot] ✓ Game paused:', response);
+            console.log('[VsBot] ✓ Game paused successfully:', response);
 
             // Update UI
             setGameStatus('paused');

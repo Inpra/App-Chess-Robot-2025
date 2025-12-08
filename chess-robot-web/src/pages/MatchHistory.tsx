@@ -361,17 +361,35 @@ export default function MatchHistory() {
                                         </div>
                                     </div>
                                 </div>
-                                <div className="result-badge" style={{ backgroundColor: getResultColor(game.result || '', game.status) + '20', display: 'flex', alignItems: 'center', gap: 4 }}>
-                                    {game.status === 'paused' ? (
-                                        <>
-                                            <Pause size={14} color="#8B5CF6" />
-                                            <span className="result-text" style={{ color: '#8B5CF6' }}>Paused</span>
-                                        </>
-                                    ) : (
-                                        <span className="result-text" style={{ color: getResultColor(game.result || '', game.status) }}>
-                                            {game.result ? game.result.charAt(0).toUpperCase() + game.result.slice(1) : 'N/A'}
-                                        </span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    {/* Game Type Badge */}
+                                    {game.gameType && (
+                                        <div style={{
+                                            padding: '6px 12px',
+                                            borderRadius: 16,
+                                            backgroundColor: game.gameType.code === 'training_puzzle' ? '#EDE9FE' : '#DBEAFE',
+                                            border: `1px solid ${game.gameType.code === 'training_puzzle' ? '#A78BFA' : '#93C5FD'}`,
+                                            fontSize: '12px',
+                                            fontWeight: 600,
+                                            color: game.gameType.code === 'training_puzzle' ? '#7C3AED' : '#2563EB',
+                                            whiteSpace: 'nowrap'
+                                        }}>
+                                            {game.gameType.name}
+                                        </div>
                                     )}
+                                    {/* Result Badge */}
+                                    <div className="result-badge" style={{ backgroundColor: getResultColor(game.result || '', game.status) + '20', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                        {game.status === 'paused' ? (
+                                            <>
+                                                <Pause size={14} color="#8B5CF6" />
+                                                <span className="result-text" style={{ color: '#8B5CF6' }}>Paused</span>
+                                            </>
+                                        ) : (
+                                            <span className="result-text" style={{ color: getResultColor(game.result || '', game.status) }}>
+                                                {game.result ? game.result.charAt(0).toUpperCase() + game.result.slice(1) : 'N/A'}
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
