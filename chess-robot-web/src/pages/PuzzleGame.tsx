@@ -28,8 +28,8 @@ export default function PuzzleGame() {
     const [puzzle, setPuzzle] = useState<TrainingPuzzle | null>(null);
     const [gameId, setGameId] = useState<string | null>(null);
     const [board, setBoard] = useState<BoardState>([]);
-    const [selectedSquare, setSelectedSquare] = useState<{ row: number, col: number } | null>(null);
-    const [lastMove, setLastMove] = useState<{ from: number; to: number } | null>(null);
+    const [selectedSquare] = useState<{ row: number, col: number } | null>(null); // Read-only: no manual interaction
+    const [lastMove] = useState<{ from: number; to: number } | null>(null); // Read-only: updated from WebSocket
     const [checkSquare, setCheckSquare] = useState<{ row: number, col: number } | null>(null);
     const [hintSquares, setHintSquares] = useState<{ from: number; to: number } | null>(null);
     const [message, setMessage] = useState<string | null>(null);
@@ -225,7 +225,6 @@ export default function PuzzleGame() {
                     updateCheckSquare();
                 }
                 setMessage(null);
-                setLastMove(null);
             }, 1500);
         }
     }, [puzzle, navigate]);
@@ -795,62 +794,8 @@ export default function PuzzleGame() {
         }
     };
 
-    const handleSquareClick = (row: number, col: number, index: number) => {
-        const piece = board[index];
-
-        if (selectedSquare) {
-            // If clicking the same square, deselect
-            if (selectedSquare.row === row && selectedSquare.col === col) {
-                setSelectedSquare(null);
-                return;
-            }
-
-            const selectedIndex = selectedSquare.row * 8 + selectedSquare.col;
-            const selectedPiece = board[selectedIndex];
-
-            // If clicking another piece of same color, select it instead
-            if (piece && selectedPiece && piece.color === selectedPiece.color) {
-                setSelectedSquare({ row, col });
-                return;
-            }
-
-            // Move logic
-            const newBoard = [...board];
-            newBoard[index] = selectedPiece;
-            newBoard[selectedIndex] = null;
-            setBoard(newBoard);
-            setLastMove({ from: selectedIndex, to: index });
-            setSelectedSquare(null);
-
-            // Check solution (Queen to h8 -> index 7)
-            // We know the starting position, so we can check specific indices.
-            // Queen starts at 48. Target is 7.
-
-            if (selectedIndex === 48 && index === 7) {
-                setMessage('Correct! Checkmate.');
-            } else {
-                setMessage('Incorrect move. Try again.');
-                setTimeout(() => {
-                    // Reset board to original puzzle position
-                    if (puzzle) {
-                        const resetBoard = fenToBoard(puzzle.fenStr);
-                        setBoard(resetBoard);
-                    }
-                    setMessage(null);
-                    setLastMove(null);
-                }, 1000);
-            }
-
-        } else if (piece) {
-            // Select piece (only white for this puzzle)
-            if (piece.color === 'w') {
-                setSelectedSquare({ row, col });
-            }
-        }
-    };
-
-    // Remove early return for loading
-    // if (loading) { ... }
+    // Note: Board interaction is disabled - users move pieces on physical board
+    // The web interface only displays the current state
 
     if (!puzzle && !loading) {
         return (
@@ -998,8 +943,7 @@ export default function PuzzleGame() {
                             lastMove={lastMove}
                             checkSquare={checkSquare}
                             hintSquares={hintSquares}
-                            interactive={true}
-                            onSquareClick={handleSquareClick}
+                            interactive={false}
                             size="full"
                         />
                     </div>

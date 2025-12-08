@@ -27,8 +27,8 @@ export default function VsBot() {
     const [isConnected, setIsConnected] = useState(false);
     const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected');
     const [board, setBoard] = useState<BoardState>([...initialBoard]);
-    const [selectedSquare, setSelectedSquare] = useState<{ row: number, col: number } | null>(null);
-    const [lastMove, setLastMove] = useState<{ from: number; to: number } | null>(null);
+    const [selectedSquare] = useState<{ row: number, col: number } | null>(null); // Read-only: no manual interaction
+    const [lastMove] = useState<{ from: number; to: number } | null>(null); // Read-only: updated from WebSocket
     const [checkSquare, setCheckSquare] = useState<{ row: number, col: number } | null>(null);
     const [hintSquares, setHintSquares] = useState<{ from: number; to: number } | null>(null);
 
@@ -959,32 +959,8 @@ export default function VsBot() {
         }
     };
 
-    // Handle square click
-    const handleSquareClick = (row: number, col: number, index: number) => {
-        const piece = board[index];
-
-        if (selectedSquare) {
-            // Move piece (simplified - no validation)
-            const selectedIndex = selectedSquare.row * 8 + selectedSquare.col;
-            const selectedPiece = board[selectedIndex];
-
-            if (selectedSquare.row === row && selectedSquare.col === col) {
-                // Deselect
-                setSelectedSquare(null);
-            } else {
-                // Make move
-                const newBoard = [...board];
-                newBoard[index] = selectedPiece;
-                newBoard[selectedIndex] = null;
-                setBoard(newBoard);
-                setLastMove({ from: selectedIndex, to: index });
-                setSelectedSquare(null);
-            }
-        } else if (piece) {
-            // Select piece
-            setSelectedSquare({ row, col });
-        }
-    };
+    // Note: Board interaction is disabled - users move pieces on physical board
+    // The web interface only displays the current state
 
     return (
         <div className="vs-bot-container">
@@ -1024,8 +1000,7 @@ export default function VsBot() {
                             lastMove={lastMove}
                             checkSquare={checkSquare}
                             hintSquares={hintSquares}
-                            interactive={true}
-                            onSquareClick={handleSquareClick}
+                            interactive={false}
                             size="full"
                         />
                     </div>
