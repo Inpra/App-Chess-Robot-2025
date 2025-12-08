@@ -851,14 +851,6 @@ export default function PuzzleGame() {
             <div className="puzzle-game-content">
                 {/* Board Section */}
                 <div className="puzzle-board-section">
-                    {/* Match Header - Removed for puzzle view */}
-                    {/* <MatchHeader
-                        userElo={1200}
-                        robotElo={1200}
-                        difficultyName={puzzle?.difficulty || 'Medium'}
-                        timer="--:--"
-                    /> */}
-
                     {/* Puzzle Goal - Collapsible */}
                     {puzzle?.description && (
                         <div style={{

@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-route
 import { useState, useEffect } from 'react';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import bannerRobot from './assets/FPT.VN_BIG.D-b2da87b8.png';
 import authService from './services/authService';
 import type { UserResponse } from './services/authService';
 import rankingService, { type RankingUser } from './services/rankingService';
@@ -259,7 +260,7 @@ function Dashboard() {
               {user ? 'Play Now' : 'Register Now'}
             </button>
           </div>
-          <Trophy size={140} color="#FFD700" style={{ opacity: 0.9 }} />
+          <img src={bannerRobot} alt="Chess Robot" style={{ height: '220px', objectFit: 'contain' }} />
         </div>
 
         {/* Dashboard Grid */}

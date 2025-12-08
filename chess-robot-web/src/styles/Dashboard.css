@@ -38,7 +38,7 @@
 }
 
 .sidebar-icon.active {
-    background-color: rgba(37, 99, 235, 0.15);
+    background-color: rgba(241, 111, 35, 0.15);
     /* primary + opacity */
     color: var(--color-primary);
 }

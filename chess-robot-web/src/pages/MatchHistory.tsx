@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+    import { useState, useEffect } from 'react';
 import { ArrowLeft, User, ArrowUpDown, TrendingUp, TrendingDown, Loader2, Trophy, X, Minus, Pause, LayoutList } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import gameService from '../services/gameService';
@@ -132,9 +132,9 @@ export default function MatchHistory() {
         
         const lowerResult = result?.toLowerCase();
         switch (lowerResult) {
-            case 'win': return '#10B981';
+            case 'win': return '#23b249';
             case 'lose': return '#EF4444';
-            case 'draw': return '#F59E0B';
+            case 'draw': return '#1567b1';
             default: return 'var(--color-text)';
         }
     };
@@ -253,7 +253,7 @@ export default function MatchHistory() {
                             padding: '10px 18px',
                             borderRadius: 20,
                             border: 'none',
-                            backgroundColor: selectedFilter === 'win' ? '#10B981' : '#F3F4F6',
+                            backgroundColor: selectedFilter === 'win' ? '#23b249' : '#F3F4F6',
                             color: selectedFilter === 'win' ? 'white' : 'var(--color-text)',
                             fontWeight: 600,
                             cursor: 'pointer',
@@ -262,7 +262,7 @@ export default function MatchHistory() {
                             fontSize: '14px'
                         }}
                     >
-                        <Trophy size={16} color={selectedFilter === 'win' ? 'white' : '#10B981'} />
+                        <Trophy size={16} color={selectedFilter === 'win' ? 'white' : '#23b249'} />
                         Win
                     </button>
                     <button
@@ -295,7 +295,7 @@ export default function MatchHistory() {
                             padding: '10px 18px',
                             borderRadius: 20,
                             border: 'none',
-                            backgroundColor: selectedFilter === 'draw' ? '#F59E0B' : '#F3F4F6',
+                            backgroundColor: selectedFilter === 'draw' ? '#1567b1' : '#F3F4F6',
                             color: selectedFilter === 'draw' ? 'white' : 'var(--color-text)',
                             fontWeight: 600,
                             cursor: 'pointer',
@@ -304,7 +304,7 @@ export default function MatchHistory() {
                             fontSize: '14px'
                         }}
                     >
-                        <Minus size={16} color={selectedFilter === 'draw' ? 'white' : '#F59E0B'} />
+                        <Minus size={16} color={selectedFilter === 'draw' ? 'white' : '#1567b1'} />
                         Draw
                     </button>
                     <button
@@ -367,11 +367,11 @@ export default function MatchHistory() {
                                         <div style={{
                                             padding: '6px 12px',
                                             borderRadius: 16,
-                                            backgroundColor: game.gameType.code === 'training_puzzle' ? '#EDE9FE' : '#DBEAFE',
-                                            border: `1px solid ${game.gameType.code === 'training_puzzle' ? '#A78BFA' : '#93C5FD'}`,
+                                            backgroundColor: game.gameType.code === 'training_puzzle' ? '#EDE9FE' : '#e8f0fe',
+                                            border: `1px solid ${game.gameType.code === 'training_puzzle' ? '#A78BFA' : '#1567b1'}`,
                                             fontSize: '12px',
                                             fontWeight: 600,
-                                            color: game.gameType.code === 'training_puzzle' ? '#7C3AED' : '#2563EB',
+                                            color: game.gameType.code === 'training_puzzle' ? '#7C3AED' : '#1567b1',
                                             whiteSpace: 'nowrap'
                                         }}>
                                             {game.gameType.name}
@@ -401,11 +401,11 @@ export default function MatchHistory() {
                                 {game.ratingChange !== undefined && game.ratingChange !== 0 && (
                                     <div className="stat-item">
                                         {game.ratingChange > 0 ? (
-                                            <TrendingUp size={18} color="#10B981" />
+                                            <TrendingUp size={18} color="#23b249" />
                                         ) : (
                                             <TrendingDown size={18} color="#EF4444" />
                                         )}
-                                        <span className="stat-text" style={{ color: game.ratingChange > 0 ? '#10B981' : '#EF4444' }}>
+                                        <span className="stat-text" style={{ color: game.ratingChange > 0 ? '#23b249' : '#EF4444' }}>
                                             {game.ratingChange > 0 ? '+' : ''}{game.ratingChange} ELO
                                         </span>
                                     </div>
