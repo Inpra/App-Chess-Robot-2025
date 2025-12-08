@@ -65,6 +65,9 @@ export default function PuzzleGame() {
     // Chess.js instance to track game state
     const chessGame = useRef<Chess>(new Chess());
     const lastProcessedFen = useRef<string>('');
+    
+    // Move counter for puzzles (history() doesn't work with mid-game FEN)
+    const moveCounter = useRef<number>(0);
 
     // Message deduplication
     const lastMessageHash = useRef<Map<string, string>>(new Map());
@@ -399,9 +402,11 @@ export default function PuzzleGame() {
                     if (madeMove && gameId) {
                         console.log('[PuzzleGame] Move detected from FEN:', madeMove.san);
 
-                        // Queue move for batch save
-                        const totalMoves = chessGame.current.history().length;
-                        const moveNumber = Math.ceil(totalMoves / 2);
+                        // Increment move counter
+                        moveCounter.current += 1;
+                        const moveNumber = Math.ceil(moveCounter.current / 2);
+
+                        console.log(`[PuzzleGame] Saving move #${moveCounter.current} (turn ${moveNumber})`);
 
                         queueMoveForSave({
                             gameId: gameId,
@@ -502,6 +507,7 @@ export default function PuzzleGame() {
             setBoard(newBoard);
             chessGame.current = new Chess(puzzleData.fenStr);
             lastProcessedFen.current = puzzleData.fenStr;
+            moveCounter.current = 0; // Reset move counter for new puzzle
 
             setMessage('Please arrange the board as shown on screen to start.');
             showToast('info', 'ℹ️ Please setup the board to match the puzzle position');
@@ -542,6 +548,7 @@ export default function PuzzleGame() {
             setCheckSquare(null);
             chessGame.current = new Chess(puzzle.fenStr);
             lastProcessedFen.current = puzzle.fenStr;
+            moveCounter.current = 0; // Reset move counter when starting
             setCheckSquare(null);
 
             // Call API to start game
@@ -697,9 +704,11 @@ export default function PuzzleGame() {
                 await savePendingMoves();
             }
 
-            // Get current move count
-            const totalMoves = chessGame.current.history().length;
+            // Get current move count from counter (not history, which doesn't work with mid-game FEN)
+            const totalMoves = moveCounter.current;
             const currentFen = chessGame.current.fen();
+
+            console.log(`[PuzzleGame] Skipping puzzle - Total moves: ${totalMoves}`);
 
             // Update game result as incomplete
             await gameService.updateGameResult(
