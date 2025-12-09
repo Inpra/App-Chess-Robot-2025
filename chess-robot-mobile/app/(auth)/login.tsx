@@ -52,6 +52,15 @@ export default function LoginScreen() {
       style={styles.container}
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Back Button */}
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => router.replace('/(tabs)')}
+        >
+          <Ionicons name="arrow-back" size={24} color={Colors.light.text} />
+          <Text style={styles.backButtonText}>Back to Dashboard</Text>
+        </TouchableOpacity>
+
         <View style={styles.header}>
           <View style={styles.logoContainer}>
             <Ionicons name="game-controller" size={60} color={Colors.light.primary} />
@@ -171,6 +180,18 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
     padding: 24,
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
+    paddingVertical: 8,
+  },
+  backButtonText: {
+    fontSize: 16,
+    color: Colors.light.text,
+    fontWeight: '500',
   },
   header: {
     alignItems: 'center',

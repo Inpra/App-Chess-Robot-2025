@@ -163,7 +163,7 @@ export default function MatchDetailScreen() {
         if (!replayData?.result) return '#6B7280';
         switch (replayData.result.toLowerCase()) {
             case 'win':
-                return '#10B981';
+                return '#23b249';
             case 'lose':
                 return '#EF4444';
             case 'draw':
@@ -220,7 +220,7 @@ export default function MatchDetailScreen() {
                             <Text style={styles.playerElo}>
                                 {loading ? '-' : (replayData?.playerRatingBefore || 0)}
                                 {!loading && replayData?.ratingChange !== undefined && replayData.ratingChange !== 0 && (
-                                    <Text style={{ color: replayData.ratingChange > 0 ? '#10B981' : '#EF4444', fontSize: 12 }}>
+                                    <Text style={{ color: replayData.ratingChange > 0 ? '#23b249' : '#EF4444', fontSize: 12 }}>
                                         {' '}({replayData.ratingChange > 0 ? '+' : ''}{replayData.ratingChange})
                                     </Text>
                                 )}

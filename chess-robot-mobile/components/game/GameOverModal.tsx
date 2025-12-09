@@ -39,11 +39,11 @@ export function GameOverModal({ isOpen, result, reason, message, onClose }: Game
     const getResultColor = () => {
         switch (result) {
             case 'win':
-                return '#10B981';
+                return '#23b249';
             case 'lose':
                 return '#EF4444';
             case 'draw':
-                return '#F59E0B';
+                return '#1567b1';
         }
     };
 

@@ -89,8 +89,9 @@ export default function ProfileScreen() {
                 {
                     text: t('logout'),
                     style: 'destructive',
-                    onPress: async () => {
-                        await authService.logout();
+                    onPress: () => {
+                        // Navigate immediately without waiting for API
+                        authService.logout();
                         router.replace('/(auth)/login');
                     }
                 }

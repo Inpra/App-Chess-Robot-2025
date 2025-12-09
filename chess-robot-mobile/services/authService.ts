@@ -103,17 +103,17 @@ class AuthService {
 
     /**
      * Logout user
+     * Clears local storage immediately and calls API in background
+     * This ensures instant logout UX without waiting for API response
      */
     async logout(): Promise<void> {
-        try {
-            await apiClient.post(AUTH_ENDPOINTS.LOGOUT);
-        } catch (error) {
-            console.error('Logout error:', error);
-        } finally {
-            // Clear storage
-            await AsyncStorage.removeItem('auth_token');
-            await AsyncStorage.removeItem('user');
-        }
+        // Clear storage immediately (non-blocking)
+        AsyncStorage.removeItem('auth_token');
+        AsyncStorage.removeItem('user');
+
+        // Call logout API in background (fire and forget)
+        apiClient.post(AUTH_ENDPOINTS.LOGOUT)
+            .catch(error => console.error('Logout API error (ignored):', error));
     }
 
     /**

@@ -45,8 +45,12 @@ export default function RegisterScreen() {
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <TouchableOpacity 
+            onPress={() => router.replace('/(tabs)')} 
+            style={styles.backButton}
+          >
             <Ionicons name="arrow-back" size={24} color={Colors.light.text} />
+            <Text style={styles.backButtonText}>Back to Dashboard</Text>
           </TouchableOpacity>
           <Text style={styles.title}>Create Account</Text>
           <Text style={styles.subtitle}>Join the community of chess masters</Text>
@@ -147,7 +151,16 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     marginBottom: 20,
+    paddingVertical: 8,
+  },
+  backButtonText: {
+    fontSize: 16,
+    color: Colors.light.text,
+    fontWeight: '500',
   },
   title: {
     fontSize: 28,

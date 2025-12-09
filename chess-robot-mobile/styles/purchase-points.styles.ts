@@ -250,7 +250,7 @@ export const styles = StyleSheet.create({
     },
     statusText: {
         fontSize: 13,
-        color: '#F59E0B',
+        color: '#f16f23',
         fontWeight: '600',
     },
     transactionInfo: {
@@ -370,7 +370,7 @@ export const styles = StyleSheet.create({
     successText: {
         marginTop: 16,
         fontSize: 16,
-        color: '#10B981',
+        color: '#23b249',
         fontWeight: '600',
         textAlign: 'center',
     },

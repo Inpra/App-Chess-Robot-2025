@@ -683,9 +683,9 @@ export default function VsBotScreen() {
             console.error('[VsBot] Failed to get hint:', error);
 
             // Show specific error messages
-            if (error.message.includes('đủ điểm') || error.message.includes('Insufficient points')) {
+            if (error.message.includes('Not enough points') || error.message.includes('Insufficient points')) {
                 Alert.alert('Insufficient Points', error.message);
-            } else if (error.message.includes('đợi') || error.message.includes('rate limit')) {
+            } else if (error.message.includes('wait') || error.message.includes('rate limit')) {
                 Alert.alert('Rate Limited', error.message);
             } else {
                 Alert.alert('Error', 'Cannot get hint. Please try again.');
@@ -759,8 +759,8 @@ export default function VsBotScreen() {
                             <View style={[
                                 styles.statusDot,
                                 {
-                                    backgroundColor: connectionStatus === 'connected' ? '#10B981' :
-                                        connectionStatus === 'connecting' ? '#F59E0B' :
+                                    backgroundColor: connectionStatus === 'connected' ? '#23b249' :
+                                        connectionStatus === 'connecting' ? '#f16f23' :
                                             connectionStatus === 'error' ? '#EF4444' : '#6B7280'
                                 }
                             ]} />
@@ -872,8 +872,8 @@ export default function VsBotScreen() {
                                 style={[styles.actionButton, { backgroundColor: '#F0FDF4' }]}
                                 onPress={handleResumeGame}
                             >
-                                <Ionicons name="play" size={20} color="#10B981" />
-                                <Text style={[styles.actionButtonText, { color: '#10B981' }]}>
+                                <Ionicons name="play" size={20} color="#23b249" />
+                                <Text style={[styles.actionButtonText, { color: '#23b249' }]}>
                                     Resume Game
                                 </Text>
                             </TouchableOpacity>

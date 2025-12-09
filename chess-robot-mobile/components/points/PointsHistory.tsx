@@ -69,11 +69,11 @@ export default function PointsHistory() {
     const getTransactionTypeIcon = (type: string) => {
         switch (type) {
             case 'deposit':
-                return { name: 'add-circle' as const, color: '#10B981', bg: '#D1FAE5' };
+                return { name: 'add-circle' as const, color: '#23b249', bg: '#D1FAE5' };
             case 'service_usage':
-                return { name: 'game-controller' as const, color: '#3B82F6', bg: '#DBEAFE' };
+                return { name: 'game-controller' as const, color: '#f16f23', bg: '#FED7AA' };
             case 'ai_suggestion':
-                return { name: 'bulb' as const, color: '#F59E0B', bg: '#FEF3C7' };
+                return { name: 'bulb' as const, color: '#1567b1', bg: '#DBEAFE' };
             case 'adjustment':
                 return { name: 'settings' as const, color: '#8B5CF6', bg: '#EDE9FE' };
             default:
@@ -105,7 +105,7 @@ export default function PointsHistory() {
                         <Ionicons
                             name={isSuccess ? 'checkmark-circle' : 'alert-circle'}
                             size={24}
-                            color={isSuccess ? '#10B981' : '#EF4444'}
+                            color={isSuccess ? '#23b249' : '#EF4444'}
                         />
                     </View>
                     <View>
@@ -117,7 +117,7 @@ export default function PointsHistory() {
                 </View>
                 <View style={styles.cardRight}>
                     <Text style={styles.amountText}>{formatPrice(item.amount)}</Text>
-                    <Text style={[styles.statusText, { color: isSuccess ? '#10B981' : '#EF4444' }]}>
+                    <Text style={[styles.statusText, { color: isSuccess ? '#23b249' : '#EF4444' }]}>
                         {isSuccess ? 'Thành công' : 'Thất bại'}
                     </Text>
                 </View>
@@ -143,7 +143,7 @@ export default function PointsHistory() {
                     </View>
                 </View>
                 <View style={styles.cardRight}>
-                    <Text style={[styles.amountText, { color: isPositive ? '#10B981' : '#EF4444' }]}>
+                    <Text style={[styles.amountText, { color: isPositive ? '#23b249' : '#EF4444' }]}>
                         {isPositive ? '+' : ''}{item.amount}
                     </Text>
                     <Text style={styles.pointsLabel}>Điểm</Text>

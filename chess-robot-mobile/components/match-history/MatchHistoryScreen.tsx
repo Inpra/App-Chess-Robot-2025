@@ -150,9 +150,9 @@ export default function MatchHistoryScreen() {
         
         const lowerResult = result?.toLowerCase();
         switch (lowerResult) {
-            case 'win': return '#10B981';
+            case 'win': return '#23b249';
             case 'lose': return '#EF4444';
-            case 'draw': return '#F59E0B';
+            case 'draw': return '#1567b1';
             default: return Colors.light.text;
         }
     };
@@ -222,9 +222,9 @@ export default function MatchHistoryScreen() {
                         <Ionicons
                             name={item.ratingChange > 0 ? "trending-up-outline" : "trending-down-outline"}
                             size={18}
-                            color={item.ratingChange > 0 ? '#10B981' : '#EF4444'}
+                            color={item.ratingChange > 0 ? '#23b249' : '#EF4444'}
                         />
-                        <Text style={[styles.statText, { color: item.ratingChange > 0 ? '#10B981' : '#EF4444' }]}>
+                        <Text style={[styles.statText, { color: item.ratingChange > 0 ? '#23b249' : '#EF4444' }]}>
                             {item.ratingChange > 0 ? '+' : ''}{item.ratingChange} ELO
                         </Text>
                     </View>
@@ -286,10 +286,10 @@ export default function MatchHistoryScreen() {
                                 onPress={() => handleFilterChange('win')}
                                 style={[
                                     styles.filterButton,
-                                    { backgroundColor: selectedFilter === 'win' ? '#10B981' : '#F3F4F6' }
+                                    { backgroundColor: selectedFilter === 'win' ? '#23b249' : '#F3F4F6' }
                                 ]}
                             >
-                                <Ionicons name="trophy" size={16} color={selectedFilter === 'win' ? 'white' : '#10B981'} />
+                                <Ionicons name="trophy" size={16} color={selectedFilter === 'win' ? 'white' : '#23b249'} />
                                 <Text style={[styles.filterText, { color: selectedFilter === 'win' ? 'white' : Colors.light.text }]}>Win</Text>
                             </TouchableOpacity>
                             
@@ -308,10 +308,10 @@ export default function MatchHistoryScreen() {
                                 onPress={() => handleFilterChange('draw')}
                                 style={[
                                     styles.filterButton,
-                                    { backgroundColor: selectedFilter === 'draw' ? '#F59E0B' : '#F3F4F6' }
+                                    { backgroundColor: selectedFilter === 'draw' ? '#1567b1' : '#F3F4F6' }
                                 ]}
                             >
-                                <Ionicons name="remove" size={16} color={selectedFilter === 'draw' ? 'white' : '#F59E0B'} />
+                                <Ionicons name="remove" size={16} color={selectedFilter === 'draw' ? 'white' : '#1567b1'} />
                                 <Text style={[styles.filterText, { color: selectedFilter === 'draw' ? 'white' : Colors.light.text }]}>Draw</Text>
                             </TouchableOpacity>
                             

@@ -23,7 +23,7 @@ const difficulties = [
         title: 'Easy',
         subtitle: 'Beginner Friendly',
         elo: 800,
-        color: '#10B981', // Green
+        color: '#23b249', // Green
         icon: 'leaf' as const,
         description: 'Perfect for learning the basics. The AI will make occasional mistakes.',
     },
@@ -32,7 +32,7 @@ const difficulties = [
         title: 'Medium',
         subtitle: 'Casual Player',
         elo: 1500,
-        color: '#F59E0B', // Amber/Orange
+        color: '#f16f23', // Orange
         icon: 'flame' as const,
         description: 'A balanced challenge. Good for practicing tactics and strategy.',
     },

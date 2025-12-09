@@ -11,6 +11,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import authService, { UserResponse } from '@/services/authService';
 import rankingService, { RankingUser } from '@/services/rankingService';
 
+const bannerImage = require('@/assets/images/FPT.VN_BIG.D-b2da87b8.png');
+
 export default function DashboardScreen() {
   const dimensions = useWindowDimensions();
   const styles = useMemo(() => getDashboardStyles(dimensions), [dimensions]);
@@ -277,7 +279,7 @@ export default function DashboardScreen() {
                 </Link>
               )}
             </View>
-            <Ionicons name="trophy" size={100} color="#FFD700" style={styles.bannerImage} />
+            <Image source={bannerImage} style={styles.bannerImage} resizeMode="contain" />
           </View>
 
           {/* Dashboard Grid */}
@@ -310,13 +312,13 @@ export default function DashboardScreen() {
                 </Link>
                 <Link href="/match-history" asChild>
                   <TouchableOpacity style={styles.quickPlayItem}>
-                    <Ionicons name="time" size={32} color="#10B981" />
+                    <Ionicons name="time" size={32} color="#1567b1" />
                     <Text style={styles.quickPlayText}>History</Text>
                   </TouchableOpacity>
                 </Link>
                 <Link href={"/tutorial" as any} asChild>
                   <TouchableOpacity style={styles.quickPlayItem}>
-                    <Ionicons name="school" size={32} color="#F59E0B" />
+                    <Ionicons name="school" size={32} color="#f16f23" />
                     <Text style={styles.quickPlayText}>Training</Text>
                   </TouchableOpacity>
                 </Link>
@@ -337,13 +339,13 @@ export default function DashboardScreen() {
                     <Text style={styles.statLabel}>ELO Rating</Text>
                   </View>
                   <View style={styles.statItem}>
-                    <Text style={[styles.statValue, { color: '#10B981' }]}>
+                    <Text style={[styles.statValue, { color: '#23b249' }]}>
                       {user?.wins || 0}
                     </Text>
                     <Text style={styles.statLabel}>Wins</Text>
                   </View>
                   <View style={styles.statItem}>
-                    <Text style={[styles.statValue, { color: '#F59E0B' }]}>
+                    <Text style={[styles.statValue, { color: '#f16f23' }]}>
                       {user?.totalGamesPlayed > 0 
                         ? `${Math.round((user?.wins || 0) / user?.totalGamesPlayed * 100)}%`
                         : '0%'}
@@ -380,7 +382,7 @@ export default function DashboardScreen() {
                     backgroundColor: 'rgba(16, 185, 129, 0.1)', 
                     borderRadius: 12 
                   }}>
-                    <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#10B981', marginBottom: 4 }}>
+                    <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#23b249', marginBottom: 4 }}>
                       {user?.wins || 0}
                     </Text>
                     <Text style={{ fontSize: 11, color: '#6B7280', fontWeight: '500' }}>Wins</Text>
@@ -406,7 +408,7 @@ export default function DashboardScreen() {
                     backgroundColor: 'rgba(245, 158, 11, 0.1)', 
                     borderRadius: 12 
                   }}>
-                    <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#F59E0B', marginBottom: 4 }}>
+                    <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#1567b1', marginBottom: 4 }}>
                       {user?.draws || 0}
                     </Text>
                     <Text style={{ fontSize: 11, color: '#6B7280', fontWeight: '500' }}>Draws</Text>
@@ -441,9 +443,9 @@ export default function DashboardScreen() {
                       
                       return (
                         <>
-                          {wins > 0 && <View style={{ flex: (wins / total), backgroundColor: '#10B981' }}></View>}
+                          {wins > 0 && <View style={{ flex: (wins / total), backgroundColor: '#23b249' }}></View>}
                           {losses > 0 && <View style={{ flex: (losses / total), backgroundColor: '#EF4444' }}></View>}
-                          {draws > 0 && <View style={{ flex: (draws / total), backgroundColor: '#F59E0B' }}></View>}
+                          {draws > 0 && <View style={{ flex: (draws / total), backgroundColor: '#1567b1' }}></View>}
                         </>
                       );
                     })()}
@@ -454,7 +456,7 @@ export default function DashboardScreen() {
                     marginTop: 8
                   }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                      <View style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: '#10B981' }}></View>
+                      <View style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: '#23b249' }}></View>
                       <Text style={{ fontSize: 11, color: '#6B7280' }}>Wins</Text>
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -462,7 +464,7 @@ export default function DashboardScreen() {
                       <Text style={{ fontSize: 11, color: '#6B7280' }}>Losses</Text>
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                      <View style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: '#F59E0B' }}></View>
+                      <View style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: '#1567b1' }}></View>
                       <Text style={{ fontSize: 11, color: '#6B7280' }}>Draws</Text>
                     </View>
                   </View>

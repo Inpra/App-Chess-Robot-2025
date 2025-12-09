@@ -27,10 +27,10 @@ interface PackageDisplay extends PointPackage {
 }
 
 const PACKAGE_STYLES = [
-    { color: '#10B981', accent: '#D1FAE5', icon: 'star-outline' },
-    { color: '#3B82F6', accent: '#DBEAFE', icon: 'trophy-outline' },
-    { color: '#8B5CF6', accent: '#EDE9FE', icon: 'diamond-outline' },
-    { color: '#F59E0B', accent: '#FEF3C7', icon: 'rocket-outline' },
+    { color: '#23b249', accent: '#D1FAE5', icon: 'star-outline' },
+    { color: '#f16f23', accent: '#FED7AA', icon: 'trophy-outline' },
+    { color: '#1567b1', accent: '#DBEAFE', icon: 'diamond-outline' },
+    { color: '#8B5CF6', accent: '#EDE9FE', icon: 'rocket-outline' },
     { color: '#EF4444', accent: '#FEE2E2', icon: 'flash-outline' },
     { color: '#EC4899', accent: '#FCE7F3', icon: 'gift-outline' },
 ];
@@ -288,7 +288,7 @@ export default function PurchasePoints() {
                                 </View>
                             ) : paymentStatus === 'success' ? (
                                 <View style={styles.successContainer}>
-                                    <Ionicons name="checkmark-circle" size={80} color="#10B981" />
+                                    <Ionicons name="checkmark-circle" size={80} color="#23b249" />
                                     <Text style={styles.successText}>
                                         Điểm đã được cộng vào tài khoản của bạn!
                                     </Text>
@@ -323,7 +323,7 @@ export default function PurchasePoints() {
 
                                     {/* Payment Status */}
                                     <View style={styles.statusBadge}>
-                                        <ActivityIndicator size="small" color="#F59E0B" style={{ marginRight: 8 }} />
+                                        <ActivityIndicator size="small" color="#f16f23" style={{ marginRight: 8 }} />
                                         <Text style={styles.statusText}>Đang chờ thanh toán...</Text>
                                     </View>
 
@@ -357,7 +357,7 @@ export default function PurchasePoints() {
                         {(paymentStatus === 'failed' || paymentStatus === 'success') && (
                             <TouchableOpacity
                                 style={[styles.doneButton, { 
-                                    backgroundColor: paymentStatus === 'success' ? '#10B981' : '#EF4444'
+                                    backgroundColor: paymentStatus === 'success' ? '#23b249' : '#EF4444'
                                 }]}
                                 onPress={handleCloseModal}
                             >
