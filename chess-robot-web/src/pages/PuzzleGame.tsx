@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Pause, Lightbulb, Bluetooth, Play, ChevronDown, ChevronUp } from 'lucide-react';
+import { Lightbulb, ChevronDown, ChevronUp } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Chess } from 'chess.js';
 import { toast, ToastContainer } from 'react-toastify';
@@ -11,7 +11,8 @@ import {
     GameHeader,
     ServerStatusCard,
     MoveHistory,
-    GameOverModal
+    GameOverModal,
+    GameActionsCard
 } from '../components/game';
 import type { Move } from '../components/game';
 import puzzleService, { type TrainingPuzzle } from '../services/puzzleService';
@@ -27,18 +28,20 @@ export default function PuzzleGame() {
     const [puzzle, setPuzzle] = useState<TrainingPuzzle | null>(null);
     const [gameId, setGameId] = useState<string | null>(null);
     const [board, setBoard] = useState<BoardState>([]);
-    const [selectedSquare, setSelectedSquare] = useState<{ row: number, col: number } | null>(null);
-    const [lastMove, setLastMove] = useState<{ from: number; to: number } | null>(null);
+    const [selectedSquare] = useState<{ row: number, col: number } | null>(null); // Read-only: no manual interaction
+    const [lastMove] = useState<{ from: number; to: number } | null>(null); // Read-only: updated from WebSocket
     const [checkSquare, setCheckSquare] = useState<{ row: number, col: number } | null>(null);
+    const [hintSquares, setHintSquares] = useState<{ from: number; to: number } | null>(null);
     const [message, setMessage] = useState<string | null>(null);
     const [isConnected, setIsConnected] = useState(false);
     const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected');
     const [loading, setLoading] = useState(true);
-    const [boardSetupStatus, setBoardSetupStatus] = useState<'checking' | 'correct' | 'incorrect' | null>(null);
+    const [, setBoardSetupStatus] = useState<'checking' | 'correct' | 'incorrect' | null>(null);
 
     // Game state
-    const [gameStatus, setGameStatus] = useState<'idle' | 'starting' | 'playing' | 'paused' | 'ended'>('idle');
+    const [gameStatus, setGameStatus] = useState<'waiting' | 'in_progress' | 'finished' | 'paused' | 'ended' | 'starting' | 'idle'>('waiting');
     const [isStartingGame, setIsStartingGame] = useState(false);
+    const [isLoadingHint, setIsLoadingHint] = useState(false);
 
     // UI state
     const [isGoalExpanded, setIsGoalExpanded] = useState(true);
@@ -62,9 +65,27 @@ export default function PuzzleGame() {
     // Chess.js instance to track game state
     const chessGame = useRef<Chess>(new Chess());
     const lastProcessedFen = useRef<string>('');
+    
+    // Move counter for puzzles (history() doesn't work with mid-game FEN)
+    const moveCounter = useRef<number>(0);
 
     // Message deduplication
     const lastMessageHash = useRef<Map<string, string>>(new Map());
+
+    // Pending moves queue for batch save
+    const pendingMoves = useRef<Array<{
+        gameId: string;
+        moveNumber: number;
+        playerColor: string;
+        fromSquare: string;
+        toSquare: string;
+        fromPiece?: string;
+        toPiece?: string;
+        notation: string;
+        resultsInCheck: boolean;
+        fenStr: string;
+    }>>([]);
+    const saveTimerRef = useRef<number | null>(null);
 
     // Toast throttling
     const lastToastRef = useRef<{
@@ -207,7 +228,6 @@ export default function PuzzleGame() {
                     updateCheckSquare();
                 }
                 setMessage(null);
-                setLastMove(null);
             }, 1500);
         }
     }, [puzzle, navigate]);
@@ -231,12 +251,23 @@ export default function PuzzleGame() {
             }
 
             // Update board if FEN string is provided
-            if (data.fen_str && data.fen_str !== lastProcessedFen.current) {
+            if (data.fen_str) {
+                console.log('[PuzzleGame] Updating board with FEN:', data.fen_str);
                 try {
                     const newBoard = fenToBoard(data.fen_str);
                     setBoard(newBoard);
-                    chessGame.current = new Chess(data.fen_str);
-                    lastProcessedFen.current = data.fen_str;
+
+                    // Clear hint when board updates (any move made)
+                    setHintSquares(prev => {
+                        if (prev) {
+                            console.log('[PuzzleGame] Clearing hint squares due to FEN update');
+                            return null;
+                        }
+                        return prev;
+                    });
+
+                    // Update move history from FEN change (this will update chessGame and lastProcessedFen)
+                    updateMoveHistoryFromFen(data.fen_str);
                 } catch (error) {
                     console.error('[PuzzleGame] Failed to parse FEN:', error);
                 }
@@ -282,6 +313,186 @@ export default function PuzzleGame() {
         loadPuzzleData();
     }, [id]);
 
+    // Cleanup pending moves on unmount
+    useEffect(() => {
+        return () => {
+            // Save pending moves before unmount
+            if (pendingMoves.current.length > 0) {
+                savePendingMoves();
+            }
+
+            // Clear timer
+            if (saveTimerRef.current) {
+                clearTimeout(saveTimerRef.current);
+            }
+        };
+    }, []);
+
+    // Batch save pending moves
+    const savePendingMoves = async () => {
+        if (pendingMoves.current.length === 0) return;
+
+        const movesToSave = [...pendingMoves.current];
+        pendingMoves.current = []; // Clear queue
+
+        try {
+            if (movesToSave.length === 1) {
+                await gameService.saveMove(movesToSave[0]);
+                console.log('[PuzzleGame] ✓ Move saved to database');
+            } else {
+                await gameService.saveMovesBatch(movesToSave[0].gameId, movesToSave);
+                console.log(`[PuzzleGame] ✓ Batch saved ${movesToSave.length} moves to database`);
+            }
+        } catch (error) {
+            console.error('[PuzzleGame] ✗ Failed to save moves:', error);
+            // Put failed moves back in queue
+            pendingMoves.current.unshift(...movesToSave);
+        }
+    };
+
+    // Queue move for batch save
+    const queueMoveForSave = useCallback((moveData: any) => {
+        pendingMoves.current.push(moveData);
+
+        // Clear existing timer
+        if (saveTimerRef.current) {
+            clearTimeout(saveTimerRef.current);
+        }
+
+        // Save after 3 seconds of inactivity OR when 5 moves accumulated
+        if (pendingMoves.current.length >= 5) {
+            savePendingMoves();
+        } else {
+            saveTimerRef.current = window.setTimeout(() => {
+                savePendingMoves();
+            }, 3000);
+        }
+    }, []);
+
+    // Update move history from FEN changes
+    const updateMoveHistoryFromFen = (newFen: string) => {
+        // Skip if this FEN was already processed
+        if (newFen === lastProcessedFen.current) {
+            return;
+        }
+
+        try {
+            // Get the position part of FEN (before turn indicator)
+            const newPosition = newFen.split(' ')[0];
+            const currentPosition = chessGame.current.fen().split(' ')[0];
+
+            // If positions are the same, no move was made
+            if (newPosition === currentPosition) {
+                return;
+            }
+
+            // Try to find the move by checking all legal moves
+            const possibleMoves = chessGame.current.moves({ verbose: true });
+            let moveFound = false;
+
+            for (const move of possibleMoves) {
+                // Create temporary game to test move
+                const testGame = new Chess(chessGame.current.fen());
+                testGame.move(move.san);
+
+                // Check if this move results in the new position
+                if (testGame.fen().split(' ')[0] === newPosition) {
+                    const madeMove = chessGame.current.move(move.san);
+
+                    if (madeMove && gameId) {
+                        console.log('[PuzzleGame] Move detected from FEN:', madeMove.san);
+
+                        // Increment move counter
+                        moveCounter.current += 1;
+                        const moveNumber = Math.ceil(moveCounter.current / 2);
+
+                        console.log(`[PuzzleGame] Saving move #${moveCounter.current} (turn ${moveNumber})`);
+
+                        queueMoveForSave({
+                            gameId: gameId,
+                            moveNumber: moveNumber,
+                            playerColor: madeMove.color === 'w' ? 'white' : 'black',
+                            fromSquare: madeMove.from,
+                            toSquare: madeMove.to,
+                            fromPiece: `${madeMove.color === 'w' ? 'white' : 'black'}_${madeMove.piece}`,
+                            toPiece: madeMove.captured ?
+                                `${madeMove.color === 'w' ? 'black' : 'white'}_${madeMove.captured}` :
+                                undefined,
+                            notation: madeMove.san,
+                            resultsInCheck: chessGame.current.inCheck(),
+                            fenStr: newFen
+                        });
+
+                        // Update move history UI
+                        setMoveHistory(() => {
+                            const history = chessGame.current.history();
+                            const moves: Move[] = [];
+
+                            for (let i = 0; i < history.length; i += 2) {
+                                moves.push({
+                                    moveNumber: Math.floor(i / 2) + 1,
+                                    white: history[i],
+                                    black: history[i + 1]
+                                });
+                            }
+
+                            return moves;
+                        });
+
+                        moveFound = true;
+                    } else if (madeMove) {
+                        console.log('[PuzzleGame] Move detected from FEN:', madeMove.san);
+
+                        setMoveHistory(() => {
+                            const history = chessGame.current.history();
+                            const moves: Move[] = [];
+
+                            for (let i = 0; i < history.length; i += 2) {
+                                moves.push({
+                                    moveNumber: Math.floor(i / 2) + 1,
+                                    white: history[i],
+                                    black: history[i + 1]
+                                });
+                            }
+
+                            return moves;
+                        });
+
+                        moveFound = true;
+                    }
+                    break;
+                }
+            }
+
+            if (!moveFound) {
+                // If we couldn't find the move, reset the game with new FEN
+                console.log('[PuzzleGame] Could not determine move, resetting game state');
+                chessGame.current.load(newFen);
+
+                // Rebuild move history from chess.js
+                const history = chessGame.current.history();
+                const moves: Move[] = [];
+
+                for (let i = 0; i < history.length; i += 2) {
+                    moves.push({
+                        moveNumber: Math.floor(i / 2) + 1,
+                        white: history[i],
+                        black: history[i + 1]
+                    });
+                }
+
+                setMoveHistory(moves);
+            }
+
+            lastProcessedFen.current = newFen;
+
+            // Update check status
+            updateCheckSquare();
+        } catch (error) {
+            console.error('[PuzzleGame] Error updating move history:', error);
+        }
+    };
+
     // Load puzzle data only (no API call to start game)
     const loadPuzzleData = async () => {
         try {
@@ -296,6 +507,7 @@ export default function PuzzleGame() {
             setBoard(newBoard);
             chessGame.current = new Chess(puzzleData.fenStr);
             lastProcessedFen.current = puzzleData.fenStr;
+            moveCounter.current = 0; // Reset move counter for new puzzle
 
             setMessage('Please arrange the board as shown on screen to start.');
             showToast('info', 'ℹ️ Please setup the board to match the puzzle position');
@@ -325,10 +537,18 @@ export default function PuzzleGame() {
             setIsStartingGame(true);
             setGameStatus('starting');
 
+            // Save any pending moves before starting new game
+            if (pendingMoves.current.length > 0) {
+                await savePendingMoves();
+            }
+
             // Reset game state
             setMoveHistory([]);
+            pendingMoves.current = [];
+            setCheckSquare(null);
             chessGame.current = new Chess(puzzle.fenStr);
             lastProcessedFen.current = puzzle.fenStr;
+            moveCounter.current = 0; // Reset move counter when starting
             setCheckSquare(null);
 
             // Call API to start game
@@ -340,7 +560,7 @@ export default function PuzzleGame() {
             });
 
             setGameId(gameResponse.gameId);
-            setGameStatus('playing');
+            setGameStatus('in_progress');
             setBoardSetupStatus('checking');
             setMessage('Verifying board setup...');
             showToast('success', '✓ Game started! Please set up your board');
@@ -373,62 +593,218 @@ export default function PuzzleGame() {
         }
     };
 
-    const handleSquareClick = (row: number, col: number, index: number) => {
-        const piece = board[index];
+    // Handle pause game
+    const handlePauseGame = async () => {
+        if (!gameId || gameStatus !== 'in_progress') {
+            return;
+        }
 
-        if (selectedSquare) {
-            // If clicking the same square, deselect
-            if (selectedSquare.row === row && selectedSquare.col === col) {
-                setSelectedSquare(null);
-                return;
+        // Show confirmation dialog
+        const confirmed = window.confirm(
+            '⏸️ Pause Puzzle?\n\n' +
+            'Your progress will be saved and you can resume later.\n' +
+            'Do you want to pause this puzzle?'
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            // Save any pending moves first
+            if (pendingMoves.current.length > 0) {
+                await savePendingMoves();
             }
 
-            const selectedIndex = selectedSquare.row * 8 + selectedSquare.col;
-            const selectedPiece = board[selectedIndex];
+            // Call API to pause game
+            const response = await gameService.pauseGame(gameId);
+            
+            console.log('[PuzzleGame] ✓ Puzzle paused:', response);
 
-            // If clicking another piece of same color, select it instead
-            if (piece && selectedPiece && piece.color === selectedPiece.color) {
-                setSelectedSquare({ row, col });
-                return;
-            }
+            // Update UI
+            setGameStatus('paused');
+            setMessage('Puzzle paused - Progress saved');
+            showToast('success', '✓ Puzzle paused!');
 
-            // Move logic
-            const newBoard = [...board];
-            newBoard[index] = selectedPiece;
-            newBoard[selectedIndex] = null;
-            setBoard(newBoard);
-            setLastMove({ from: selectedIndex, to: index });
-            setSelectedSquare(null);
+            // Navigate back to puzzles after short delay
+            setTimeout(() => {
+                navigate('/puzzles');
+            }, 1500);
 
-            // Check solution (Queen to h8 -> index 7)
-            // We know the starting position, so we can check specific indices.
-            // Queen starts at 48. Target is 7.
-
-            if (selectedIndex === 48 && index === 7) {
-                setMessage('Correct! Checkmate.');
-            } else {
-                setMessage('Incorrect move. Try again.');
-                setTimeout(() => {
-                    // Reset board to original puzzle position
-                    if (puzzle) {
-                        const resetBoard = fenToBoard(puzzle.fenStr);
-                        setBoard(resetBoard);
-                    }
-                    setMessage(null);
-                    setLastMove(null);
-                }, 1000);
-            }
-
-        } else if (piece) {
-            // Select piece (only white for this puzzle)
-            if (piece.color === 'w') {
-                setSelectedSquare({ row, col });
-            }
+        } catch (error: any) {
+            console.error('[PuzzleGame] ✗ Failed to pause puzzle:', error);
+            showToast('error', '✗ Failed to pause puzzle. Please try again.');
         }
     };
 
-    // Remove early return for loading
-    // if (loading) { ... }
+    // Handle resume game
+    const handleResumeGame = async () => {
+        if (!gameId || gameStatus !== 'paused') {
+            return;
+        }
+
+        try {
+            // Call API to resume game
+            const response = await gameService.resumeGame(gameId);
+            
+            console.log('[PuzzleGame] ✓ Puzzle resumed:', response);
+
+            // Load the saved FEN position
+            if (response.fenStr) {
+                const newBoard = fenToBoard(response.fenStr);
+                setBoard(newBoard);
+                chessGame.current.load(response.fenStr);
+                lastProcessedFen.current = response.fenStr;
+                
+                // Rebuild move history from chess.js
+                const history = chessGame.current.history();
+                const moves: Move[] = [];
+                for (let i = 0; i < history.length; i += 2) {
+                    moves.push({
+                        moveNumber: Math.floor(i / 2) + 1,
+                        white: history[i],
+                        black: history[i + 1]
+                    });
+                }
+                setMoveHistory(moves);
+            }
+
+            // Update UI
+            setGameStatus('in_progress');
+            setBoardSetupStatus('checking');
+            setMessage('Puzzle resumed - Set up your board to continue');
+            showToast('success', '✓ Puzzle resumed!');
+
+        } catch (error: any) {
+            console.error('[PuzzleGame] ✗ Failed to resume puzzle:', error);
+            showToast('error', '✗ Failed to resume puzzle. Please try again.');
+        }
+    };
+
+    // Handle resign/skip puzzle
+    const handleResignPuzzle = async () => {
+        if (!gameId || gameStatus !== 'in_progress') {
+            return;
+        }
+
+        // Show confirmation dialog
+        const confirmed = window.confirm(
+            '⚠️ Skip this puzzle?\n\n' +
+            'This will count as incomplete and you can try it again later.\n' +
+            'Do you want to skip this puzzle?'
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            // Save any pending moves first
+            if (pendingMoves.current.length > 0) {
+                await savePendingMoves();
+            }
+
+            // Get current move count from counter (not history, which doesn't work with mid-game FEN)
+            const totalMoves = moveCounter.current;
+            const currentFen = chessGame.current.fen();
+
+            console.log(`[PuzzleGame] Skipping puzzle - Total moves: ${totalMoves}`);
+
+            // Update game result as incomplete
+            await gameService.updateGameResult(
+                gameId,
+                'lose',
+                'completed',
+                Math.ceil(totalMoves / 2),
+                currentFen
+            );
+
+            console.log('[PuzzleGame] ✓ Puzzle skipped');
+
+            // Update UI
+            setGameStatus('ended');
+            setMessage('Puzzle skipped');
+
+            // Show modal
+            setGameOverModal({
+                isOpen: true,
+                result: 'lose',
+                reason: 'Skipped',
+                message: 'You skipped this puzzle'
+            });
+
+        } catch (error: any) {
+            console.error('[PuzzleGame] ✗ Failed to skip puzzle:', error);
+            showToast('error', '✗ Failed to skip puzzle. Please try again.');
+        }
+    };
+
+    // Handle hint/AI suggestion
+    const handleHint = async () => {
+        if (!gameId || gameStatus !== 'in_progress') {
+            showToast('warning', 'You can only get hints while playing');
+            return;
+        }
+
+        try {
+            // Get current FEN position
+            const currentFen = chessGame.current.fen();
+            
+            // Set loading state
+            setIsLoadingHint(true);
+
+            // Request AI suggestion
+            const suggestion = await gameService.getSuggestion({
+                gameId: gameId,
+                fenPosition: currentFen,
+                depth: 15,
+            });
+
+            // Helper: Convert chess square notation to board index
+            const squareToIndex = (square: string): number => {
+                const file = square.charCodeAt(0) - 'a'.charCodeAt(0); // a=0, b=1, ..., h=7
+                const rank = 8 - parseInt(square[1]); // 8=0, 7=1, ..., 1=7
+                return rank * 8 + file;
+            };
+
+            // Parse the suggested move to get from/to squares
+            const move = chessGame.current.move(suggestion.suggestedMoveSan);
+            
+            if (move) {
+                // Convert chess.js square notation to board indices
+                const fromIndex = squareToIndex(move.from);
+                const toIndex = squareToIndex(move.to);
+                
+                // Undo the move (we only wanted to parse it)
+                chessGame.current.undo();
+                
+                // Set hint squares to highlight on board
+                setHintSquares({ from: fromIndex, to: toIndex });
+                
+                console.log(`[PuzzleGame] Hint displayed: ${suggestion.suggestedMoveSan} (from: ${move.from}, to: ${move.to})`);
+                console.log(`[PuzzleGame] Points deducted: ${suggestion.pointsDeducted}, Remaining: ${suggestion.remainingPoints}`);
+            } else {
+                showToast('error', 'Could not parse suggested move');
+            }
+
+        } catch (error: any) {
+            console.error('[PuzzleGame] Failed to get hint:', error);
+            
+            // Show specific error messages
+            if (error.message.includes('đủ điểm') || error.message.includes('Insufficient points')) {
+                showToast('error', error.message, true);
+            } else if (error.message.includes('đợi') || error.message.includes('rate limit')) {
+                showToast('warning', error.message, true);
+            } else {
+                showToast('error', 'Could not get hint. Please try again.', true);
+            }
+        } finally {
+            setIsLoadingHint(false);
+        }
+    };
+
+    // Note: Board interaction is disabled - users move pieces on physical board
+    // The web interface only displays the current state
 
     if (!puzzle && !loading) {
         return (
@@ -475,14 +851,6 @@ export default function PuzzleGame() {
             <div className="puzzle-game-content">
                 {/* Board Section */}
                 <div className="puzzle-board-section">
-                    {/* Match Header - Removed for puzzle view */}
-                    {/* <MatchHeader
-                        userElo={1200}
-                        robotElo={1200}
-                        difficultyName={puzzle?.difficulty || 'Medium'}
-                        timer="--:--"
-                    /> */}
-
                     {/* Puzzle Goal - Collapsible */}
                     {puzzle?.description && (
                         <div style={{
@@ -575,8 +943,8 @@ export default function PuzzleGame() {
                             selectedSquare={selectedSquare}
                             lastMove={lastMove}
                             checkSquare={checkSquare}
-                            interactive={true}
-                            onSquareClick={handleSquareClick}
+                            hintSquares={hintSquares}
+                            interactive={false}
                             size="full"
                         />
                     </div>
@@ -592,54 +960,18 @@ export default function PuzzleGame() {
                     <ServerStatusCard connectionStatus={connectionStatus} />
 
                     {/* Actions */}
-                    <div className="puzzle-actions-card">
-                        <button
-                            className="puzzle-action-button puzzle-primary-button"
-                            onClick={handleConnect}
-                            disabled={connectionStatus === 'connecting'}
-                        >
-                            <Bluetooth size={20} color="#FFF" />
-                            <span className="puzzle-action-button-text puzzle-primary-button-text">
-                                {connectionStatus === 'connecting' ? 'Connecting...' :
-                                    isConnected ? 'Disconnect Robot' : 'Connect Robot'}
-                            </span>
-                        </button>
-
-                        {/* Start Game Button */}
-                        <button
-                            className="puzzle-action-button"
-                            onClick={handleStartGame}
-                            disabled={!isConnected || isStartingGame || gameStatus === 'playing'}
-                            style={{
-                                backgroundColor: gameStatus === 'playing' ? '#10B981' : '#3B82F6',
-                                color: 'white'
-                            }}
-                        >
-                            <Play size={20} color="#FFF" />
-                            <span className="puzzle-action-button-text" style={{ color: 'white' }}>
-                                {isStartingGame ? 'Starting...' :
-                                    gameStatus === 'playing' ? 'Game Active' : 'Start Game'}
-                            </span>
-                        </button>
-
-                        <div className="puzzle-action-row">
-                            {/* Undo button removed */}
-                            {/* <button className="puzzle-action-button" style={{ flex: 1 }}>
-                                <RotateCcw size={20} color="var(--color-text)" />
-                                <span className="puzzle-action-button-text">Undo</span>
-                            </button> */}
-
-                            <button className="puzzle-action-button" style={{ flex: 1 }}>
-                                <Pause size={20} color="var(--color-text)" />
-                                <span className="puzzle-action-button-text">Pause</span>
-                            </button>
-
-                            <button className="puzzle-action-button" style={{ flex: 1 }}>
-                                <Lightbulb size={20} color="var(--color-text)" />
-                                <span className="puzzle-action-button-text">Hint</span>
-                            </button>
-                        </div>
-                    </div>
+                    <GameActionsCard
+                        connectionStatus={connectionStatus}
+                        isConnected={isConnected}
+                        isStartingGame={isStartingGame}
+                        gameStatus={gameStatus}
+                        isLoadingHint={isLoadingHint}
+                        onConnect={handleConnect}
+                        onStartGame={handleStartGame}
+                        onResign={handleResignPuzzle}
+                        onPause={gameStatus === 'paused' ? handleResumeGame : handlePauseGame}
+                        onHint={handleHint}
+                    />
 
                     {/* Feedback Message */}
                     {message && (

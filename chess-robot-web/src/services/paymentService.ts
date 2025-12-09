@@ -25,6 +25,33 @@ export interface PaymentStatus {
     CompletedAt?: string | null;
 }
 
+export interface PaymentHistory {
+    id: string;
+    userId?: string;
+    transactionId?: string;
+    orderCode?: string;
+    amount: number;
+    status?: string;
+    createdAt?: string;
+    packageId?: number;
+    package?: {
+        id: number;
+        name: string;
+        points: number;
+        price: number;
+    };
+}
+
+export interface PointTransaction {
+    id: string;
+    userId: string;
+    amount: number;
+    transactionType: string; // 'deposit', 'service_usage', 'adjustment', 'ai_suggestion'
+    description?: string;
+    relatedPaymentId?: string;
+    createdAt: string;
+}
+
 /**
  * Create payment link for point package
  */
@@ -61,6 +88,32 @@ export const checkPaymentStatus = async (transactionId: string): Promise<Payment
         return response;
     } catch (error) {
         console.error('Error checking payment status:', error);
+        throw error;
+    }
+};
+
+/**
+ * Get current user's payment history
+ */
+export const getMyPaymentHistory = async (): Promise<PaymentHistory[]> => {
+    try {
+        const response = await apiClient.get<PaymentHistory[]>('/Payments/my-history');
+        return response;
+    } catch (error) {
+        console.error('Error getting payment history:', error);
+        throw error;
+    }
+};
+
+/**
+ * Get current user's point transactions
+ */
+export const getMyTransactions = async (): Promise<PointTransaction[]> => {
+    try {
+        const response = await apiClient.get<PointTransaction[]>('/PointTransactions/my-transactions');
+        return response;
+    } catch (error) {
+        console.error('Error getting point transactions:', error);
         throw error;
     }
 };

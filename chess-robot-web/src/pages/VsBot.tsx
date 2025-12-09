@@ -23,21 +23,23 @@ import '../styles/VsBot.css';
 export default function VsBot() {
     const navigate = useNavigate();
     const location = useLocation();
-    const { elo, difficulty, difficultyName } = (location.state as any) || { elo: 1500, difficulty: 'medium', difficultyName: 'Medium' };
+    const { elo, difficulty, difficultyName, resumeGameId } = (location.state as any) || { elo: 1500, difficulty: 'medium', difficultyName: 'Medium' };
     const [isConnected, setIsConnected] = useState(false);
     const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected');
     const [board, setBoard] = useState<BoardState>([...initialBoard]);
-    const [selectedSquare, setSelectedSquare] = useState<{ row: number, col: number } | null>(null);
-    const [lastMove, setLastMove] = useState<{ from: number; to: number } | null>(null);
+    const [selectedSquare] = useState<{ row: number, col: number } | null>(null); // Read-only: no manual interaction
+    const [lastMove] = useState<{ from: number; to: number } | null>(null); // Read-only: updated from WebSocket
     const [checkSquare, setCheckSquare] = useState<{ row: number, col: number } | null>(null);
+    const [hintSquares, setHintSquares] = useState<{ from: number; to: number } | null>(null);
 
     // Game state
-    const [gameId, setGameId] = useState<string | null>(null);
-    const [gameStatus, setGameStatus] = useState<'idle' | 'starting' | 'playing' | 'paused' | 'ended'>('idle');
+    const [gameId, setGameId] = useState<string | null>(resumeGameId || null);
+    const [gameStatus, setGameStatus] = useState<'waiting' | 'in_progress' | 'finished' | 'paused' | 'ended' | 'starting' | 'idle'>(resumeGameId ? 'paused' : 'waiting');
     const [isStartingGame, setIsStartingGame] = useState(false);
+    const [isLoadingHint, setIsLoadingHint] = useState(false);
 
     // Game message state
-    const [gameMessage, setGameMessage] = useState<string>('Waiting to start game...');
+    const [, setGameMessage] = useState<string>('Waiting to start game...');
     const [boardSetupStatus, setBoardSetupStatus] = useState<'checking' | 'correct' | 'incorrect' | null>(null);
 
     // Move history state
@@ -166,6 +168,56 @@ export default function VsBot() {
         };
     }, []); // ✓ No dependencies - only setup/cleanup on mount/unmount
 
+    // Auto-resume game if resumeGameId is provided
+    useEffect(() => {
+        const autoResume = async () => {
+            if (resumeGameId && gameStatus === 'paused' && isConnected && gameId) {
+                console.log('[VsBot] Auto-resuming game:', resumeGameId);
+                // Show message that game will be resumed
+                setGameMessage('Resuming paused game...');
+                
+                try {
+                    // Call API to resume game
+                    const response = await gameService.resumeGame(gameId);
+                    
+                    console.log('[VsBot] ✓ Game resumed:', response);
+
+                    // Load the saved FEN position
+                    if (response.fenStr) {
+                        const newBoard = fenToBoard(response.fenStr);
+                        setBoard(newBoard);
+                        chessGame.current.load(response.fenStr);
+                        lastProcessedFen.current = response.fenStr;
+                        
+                        // Rebuild move history from chess.js
+                        const history = chessGame.current.history();
+                        const moves: Move[] = [];
+                        for (let i = 0; i < history.length; i += 2) {
+                            moves.push({
+                                moveNumber: Math.floor(i / 2) + 1,
+                                white: history[i],
+                                black: history[i + 1]
+                            });
+                        }
+                        setMoveHistory(moves);
+                    }
+
+                    // Update UI
+                    setGameStatus('in_progress');
+                    setBoardSetupStatus('checking');
+                    setGameMessage('Game resumed - Set up your board to continue');
+                    showToast('success', '✓ Game resumed! Please set up your board');
+
+                } catch (error: any) {
+                    console.error('[VsBot] ✗ Failed to resume game:', error);
+                    showToast('error', '✗ Failed to resume game. Please try again.');
+                }
+            }
+        };
+
+        autoResume();
+    }, [resumeGameId, isConnected, gameStatus, gameId]); // Include all dependencies
+
     // Handle game over (checkmate/stalemate) - defined before useEffect to avoid dependency issues
     const handleGameOver = useCallback(async (data: any) => {
         console.log('[handleGameOver] ========== CALLED ==========');
@@ -275,6 +327,15 @@ export default function VsBot() {
                 try {
                     const newBoard = fenToBoard(data.fen_str);
                     setBoard(newBoard);
+
+                    // Clear hint when board updates (any move made)
+                    setHintSquares(prev => {
+                        if (prev) {
+                            console.log('[VsBot] Clearing hint squares due to FEN update');
+                            return null;
+                        }
+                        return prev;
+                    });
 
                     // Update move history from FEN change
                     updateMoveHistoryFromFen(data.fen_str);
@@ -670,7 +731,7 @@ export default function VsBot() {
 
             console.log('[VsBot] Game started:', response);
             setGameId(response.gameId);
-            setGameStatus('playing');
+            setGameStatus('in_progress');
             setBoardSetupStatus('checking');
             setGameMessage('Verifying board setup...');
             showToast('success', '✓ Game started! Please set up your board');
@@ -684,9 +745,103 @@ export default function VsBot() {
         }
     };
 
+    // Handle pause game
+    const handlePauseGame = async () => {
+        if (!gameId || gameStatus !== 'in_progress') {
+            console.warn('[VsBot] Cannot pause - gameId:', gameId, 'status:', gameStatus);
+            return;
+        }
+
+        console.log('[VsBot] Pausing game:', gameId, 'current status:', gameStatus);
+
+        // Show confirmation dialog
+        const confirmed = window.confirm(
+            '⏸️ Pause Game?\n\n' +
+            'Your progress will be saved and you can resume later from Match History.\n' +
+            'Do you want to pause this game?'
+        );
+
+        if (!confirmed) {
+            console.log('[VsBot] Pause cancelled by user');
+            return;
+        }
+
+        try {
+            // Save any pending moves first
+            if (pendingMoves.current.length > 0) {
+                console.log('[VsBot] Saving pending moves before pause:', pendingMoves.current.length);
+                await savePendingMoves();
+            }
+
+            // Call API to pause game (saves state and sends end command to AI)
+            console.log('[VsBot] Calling pauseGame API for gameId:', gameId);
+            const response = await gameService.pauseGame(gameId);
+            
+            console.log('[VsBot] ✓ Game paused successfully:', response);
+
+            // Update UI
+            setGameStatus('paused');
+            setGameMessage('Game paused - Progress saved');
+            showToast('success', '✓ Game paused! Check Match History to resume');
+
+            // Navigate back to home after short delay
+            setTimeout(() => {
+                navigate('/');
+            }, 1500);
+
+        } catch (error: any) {
+            console.error('[VsBot] ✗ Failed to pause game:', error);
+            showToast('error', '✗ Failed to pause game. Please try again.');
+        }
+    };
+
+    // Handle resume game
+    const handleResumeGame = async () => {
+        if (!gameId || gameStatus !== 'paused') {
+            return;
+        }
+
+        try {
+            // Call API to resume game (sends resume command with saved FEN to AI)
+            const response = await gameService.resumeGame(gameId);
+            
+            console.log('[VsBot] ✓ Game resumed:', response);
+
+            // Load the saved FEN position
+            if (response.fenStr) {
+                const newBoard = fenToBoard(response.fenStr);
+                setBoard(newBoard);
+                chessGame.current.load(response.fenStr);
+                lastProcessedFen.current = response.fenStr;
+                
+                // Rebuild move history from chess.js
+                const history = chessGame.current.history();
+                const moves: Move[] = [];
+                for (let i = 0; i < history.length; i += 2) {
+                    moves.push({
+                        moveNumber: Math.floor(i / 2) + 1,
+                        white: history[i],
+                        black: history[i + 1]
+                    });
+                }
+                setMoveHistory(moves);
+            }
+
+            // Update UI
+            setGameStatus('in_progress');
+            setBoardSetupStatus('checking');
+            setGameMessage('Game resumed - Set up your board to continue');
+            showToast('success', '✓ Game resumed! Please set up your board');
+
+        } catch (error: any) {
+            console.error('[VsBot] ✗ Failed to resume game:', error);
+            showToast('error', '✗ Failed to resume game. Please try again.');
+        }
+    };
+
     // Handle resign game
     const handleResignGame = async () => {
-        if (!gameId || gameStatus !== 'playing') {
+        if (!gameId || gameStatus !== 'in_progress') {
             return;
         }
 
@@ -723,7 +878,7 @@ export default function VsBot() {
             console.log('[VsBot] ✓ Game resigned - Database updated and AI notified');
 
             // Update UI
-            setGameStatus('ended');
+            setGameStatus('finished');
             setGameMessage('You resigned - Game Over');
 
             // Show modal for resignation
@@ -740,32 +895,72 @@ export default function VsBot() {
         }
     };
 
-    // Handle square click
-    const handleSquareClick = (row: number, col: number, index: number) => {
-        const piece = board[index];
+    // Handle hint/AI suggestion
+    const handleHint = async () => {
+        if (!gameId || gameStatus !== 'in_progress') {
+            showToast('warning', 'Bạn chỉ có thể xem gợi ý khi đang chơi');
+            return;
+        }
 
-        if (selectedSquare) {
-            // Move piece (simplified - no validation)
-            const selectedIndex = selectedSquare.row * 8 + selectedSquare.col;
-            const selectedPiece = board[selectedIndex];
+        try {
+            // Get current FEN position
+            const currentFen = chessGame.current.fen();
+            
+            // Set loading state
+            setIsLoadingHint(true);
 
-            if (selectedSquare.row === row && selectedSquare.col === col) {
-                // Deselect
-                setSelectedSquare(null);
+            // Request AI suggestion
+            const suggestion = await gameService.getSuggestion({
+                gameId: gameId,
+                fenPosition: currentFen,
+                depth: 15, // Medium depth for balance between speed and accuracy
+            });
+
+            // Helper: Convert chess square notation to board index
+            const squareToIndex = (square: string): number => {
+                const file = square.charCodeAt(0) - 'a'.charCodeAt(0); // a=0, b=1, ..., h=7
+                const rank = 8 - parseInt(square[1]); // 8=0, 7=1, ..., 1=7
+                return rank * 8 + file;
+            };
+
+            // Parse the suggested move to get from/to squares
+            const move = chessGame.current.move(suggestion.suggestedMoveSan);
+            
+            if (move) {
+                // Convert chess.js square notation (e.g., 'e2', 'e4') to board indices
+                const fromIndex = squareToIndex(move.from);
+                const toIndex = squareToIndex(move.to);
+                
+                // Undo the move (we only wanted to parse it)
+                chessGame.current.undo();
+                
+                // Set hint squares to highlight on board
+                setHintSquares({ from: fromIndex, to: toIndex });
+                
+                console.log(`[VsBot] Hint displayed: ${suggestion.suggestedMoveSan} (from: ${move.from}, to: ${move.to})`);
+                console.log(`[VsBot] Points deducted: ${suggestion.pointsDeducted}, Remaining: ${suggestion.remainingPoints}`);
             } else {
-                // Make move
-                const newBoard = [...board];
-                newBoard[index] = selectedPiece;
-                newBoard[selectedIndex] = null;
-                setBoard(newBoard);
-                setLastMove({ from: selectedIndex, to: index });
-                setSelectedSquare(null);
+                showToast('error', 'Không thể phân tích nước đi gợi ý');
             }
-        } else if (piece) {
-            // Select piece
-            setSelectedSquare({ row, col });
+
+        } catch (error: any) {
+            console.error('[VsBot] Failed to get hint:', error);
+            
+            // Show specific error messages
+            if (error.message.includes('đủ điểm') || error.message.includes('Insufficient points')) {
+                showToast('error', error.message, true);
+            } else if (error.message.includes('đợi') || error.message.includes('rate limit')) {
+                showToast('warning', error.message, true);
+            } else {
+                showToast('error', 'Không thể lấy gợi ý. Vui lòng thử lại.', true);
+            }
+        } finally {
+            setIsLoadingHint(false);
         }
     };
+
+    // Note: Board interaction is disabled - users move pieces on physical board
+    // The web interface only displays the current state
 
     return (
         <div className="vs-bot-container">
@@ -804,8 +999,8 @@ export default function VsBot() {
                             selectedSquare={selectedSquare}
                             lastMove={lastMove}
                             checkSquare={checkSquare}
-                            interactive={true}
-                            onSquareClick={handleSquareClick}
+                            hintSquares={hintSquares}
+                            interactive={false}
                             size="full"
                         />
                     </div>
@@ -829,9 +1024,12 @@ export default function VsBot() {
                         isConnected={isConnected}
                         isStartingGame={isStartingGame}
                         gameStatus={gameStatus}
+                        isLoadingHint={isLoadingHint}
                         onConnect={handleConnect}
                         onStartGame={handleStartGame}
                         onResign={handleResignGame}
+                        onPause={gameStatus === 'paused' ? handleResumeGame : handlePauseGame}
+                        onHint={handleHint}
                     />
 
                     {/* Camera View */}

@@ -17,8 +17,9 @@ export const Colors = {
     icon: '#687076',
     tabIconDefault: '#687076',
     tabIconSelected: tintColorLight,
-    primary: '#2563EB', // Royal Blue
-    secondary: '#4F46E5', // Indigo
+    primary: '#f16f23', // Orange - Main brand color
+    secondary: '#1567b1', // Blue - Secondary color
+    accent: '#23b249', // Green - Success/Win color
     card: '#FFFFFF',
     border: '#E5E7EB',
     notification: '#FF3B30',
@@ -31,8 +32,9 @@ export const Colors = {
     icon: '#9BA1A6',
     tabIconDefault: '#9BA1A6',
     tabIconSelected: tintColorDark,
-    primary: '#3B82F6',
-    secondary: '#6366F1',
+    primary: '#f16f23', // Orange - Main brand color
+    secondary: '#1567b1', // Blue - Secondary color
+    accent: '#23b249', // Green - Success/Win color
     card: '#1E1E1E',
     border: '#2C2C2C',
     notification: '#FF453A',

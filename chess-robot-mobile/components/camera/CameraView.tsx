@@ -51,7 +51,7 @@ export default function CameraView({
                 <View style={styles.headerRight}>
                     {/* Status Badge */}
                     <View style={[styles.statusBadge, isConnected ? styles.statusConnected : styles.statusOffline]}>
-                        <View style={[styles.statusDot, { backgroundColor: isConnected ? '#10B981' : '#EF4444' }]} />
+                        <View style={[styles.statusDot, { backgroundColor: isConnected ? '#23b249' : '#EF4444' }]} />
                         <Text style={[styles.statusText, { color: isConnected ? '#065F46' : '#991B1B' }]}>
                             {isConnected ? 'Online' : 'Offline'}
                         </Text>

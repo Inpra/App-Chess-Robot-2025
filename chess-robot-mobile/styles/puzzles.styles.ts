@@ -83,4 +83,39 @@ export const puzzleListStyles = StyleSheet.create({
         color: Colors.light.primary,
         fontWeight: '500',
     },
+    puzzleDescription: {
+        fontSize: 13,
+        color: '#6B7280',
+        marginTop: 4,
+        lineHeight: 18,
+    },
+    filterContainer: {
+        flexDirection: 'row',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        gap: 8,
+        backgroundColor: Colors.light.background,
+    },
+    filterTab: {
+        flex: 1,
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        borderRadius: 12,
+        backgroundColor: Colors.light.card,
+        borderWidth: 1,
+        borderColor: Colors.light.border,
+        alignItems: 'center',
+    },
+    filterTabActive: {
+        backgroundColor: Colors.light.primary,
+        borderColor: Colors.light.primary,
+    },
+    filterText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: Colors.light.text,
+    },
+    filterTextActive: {
+        color: '#FFFFFF',
+    },
 });

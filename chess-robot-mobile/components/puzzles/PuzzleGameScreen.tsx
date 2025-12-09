@@ -4,15 +4,12 @@ import { Colors } from '@/constants/theme';
 import { getGameStyles } from '@/styles/game.styles';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useMemo, useState } from 'react';
-import { SafeAreaView, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import React, { useMemo, useState, useEffect } from 'react';
+import { SafeAreaView, Text, TouchableOpacity, useWindowDimensions, View, ActivityIndicator, Alert } from 'react-native';
 import ChessBoard from '../game/ChessBoard';
-
 import CameraView from '../camera/CameraView';
 import { CAMERA_CONFIG } from '@/services/apiConfig';
-
-// Mock Puzzle FEN (Mate in 1)
-const PUZZLE_FEN = '7k/7p/8/8/8/8/Q5PP/6K1 w - - 0 1'; // White to move
+import puzzleService, { type TrainingPuzzle } from '@/services/puzzleService';
 
 export default function PuzzleGameScreen() {
     const dimensions = useWindowDimensions();
@@ -20,14 +17,42 @@ export default function PuzzleGameScreen() {
     const router = useRouter();
     const { id } = useLocalSearchParams();
 
+    // Puzzle Data
+    const [puzzle, setPuzzle] = useState<TrainingPuzzle | null>(null);
+    const [loading, setLoading] = useState(true);
+
     // Game State
-    const [game, setGame] = useState(new Chess(PUZZLE_FEN));
-    const [fen, setFen] = useState(game.fen());
+    const [game, setGame] = useState<Chess>(new Chess());
+    const [fen, setFen] = useState('');
     const [selectedSquare, setSelectedSquare] = useState<{ row: number, col: number } | null>(null);
     const [possibleMoves, setPossibleMoves] = useState<{ row: number, col: number }[]>([]);
     const [message, setMessage] = useState<string | null>(null);
     const [isConnected, setIsConnected] = useState(false);
     const [showCamera, setShowCamera] = useState(false);
+
+    // Load puzzle from API
+    useEffect(() => {
+        loadPuzzle();
+    }, [id]);
+
+    const loadPuzzle = async () => {
+        try {
+            setLoading(true);
+            const puzzleData = await puzzleService.getPuzzleById(id as string);
+            setPuzzle(puzzleData);
+
+            // Initialize chess game with puzzle FEN
+            const newGame = new Chess(puzzleData.fenStr);
+            setGame(newGame);
+            setFen(puzzleData.fenStr);
+        } catch (error: any) {
+            console.error('[PuzzleGame] Error loading puzzle:', error);
+            Alert.alert('Error', 'Failed to load puzzle. Please try again.');
+            router.back();
+        } finally {
+            setLoading(false);
+        }
+    };
 
     // Logic helpers
     const getSquareName = (row: number, col: number): string => {
@@ -64,17 +89,21 @@ export default function PuzzleGameScreen() {
                     setSelectedSquare(null);
                     setPossibleMoves([]);
 
-                    // Check if puzzle solved (Mock logic: if checkmate)
-                    if (game.isCheckmate()) {
-                        setMessage('Correct! Checkmate.');
+                    // Check if puzzle solved by comparing with solution move
+                    if (puzzle && move.san === puzzle.solutionMove) {
+                        setMessage('✓ Correct! Well done!');
+                    } else if (game.isCheckmate()) {
+                        setMessage('✓ Checkmate! Puzzle solved.');
                     } else {
-                        setMessage('Incorrect move. Try again.');
+                        setMessage('✗ Incorrect move. Try again.');
                         // Reset board after delay
                         setTimeout(() => {
-                            game.load(PUZZLE_FEN);
-                            setFen(game.fen());
-                            setMessage(null);
-                        }, 1000);
+                            if (puzzle) {
+                                game.load(puzzle.fenStr);
+                                setFen(puzzle.fenStr);
+                                setMessage(null);
+                            }
+                        }, 1500);
                     }
 
                 } else {
@@ -121,29 +150,54 @@ export default function PuzzleGameScreen() {
         }
     };
 
+    if (loading) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <Stack.Screen options={{ headerShown: false }} />
+                <NavigationHeader
+                    title={`Puzzle #${id}`}
+                    onBack={() => router.navigate('/puzzles')}
+                />
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                    <ActivityIndicator size="large" color={Colors.light.primary} />
+                    <Text style={{ marginTop: 16, color: Colors.light.textSecondary }}>
+                        Loading puzzle...
+                    </Text>
+                </View>
+            </SafeAreaView>
+        );
+    }
+
+    if (!puzzle) {
+        return null;
+    }
+
     return (
         <SafeAreaView style={styles.container}>
             <Stack.Screen options={{ headerShown: false }} />
 
             {/* Header */}
             <NavigationHeader
-                title={`Puzzle #${id}`}
+                title={puzzle.name || `Puzzle #${id}`}
                 onBack={() => router.navigate('/puzzles')}
             />
 
             <View style={styles.contentContainer}>
                 {/* Board Section: Match Header + Board */}
                 <View style={styles.boardSection}>
-                    {/* Match Header Card */}
+                    {/* Puzzle Info Card */}
                     <View style={styles.matchHeader}>
-                        {/* Puzzle Bot (Left) */}
                         <View style={styles.playerSide}>
                             <View style={styles.avatarContainer}>
-                                <Ionicons name="hardware-chip" size={20} color="#6B7280" />
+                                <Ionicons name="extension-puzzle" size={20} color={Colors.light.primary} />
                             </View>
                             <View style={styles.playerDetails}>
-                                <Text style={styles.playerName}>Puzzle Bot</Text>
-                                <Text style={styles.playerElo}>1200</Text>
+                                <Text style={styles.playerName}>{puzzle.name}</Text>
+                                <Text style={styles.playerElo}>
+                                    {puzzle.difficulty 
+                                        ? puzzle.difficulty.charAt(0).toUpperCase() + puzzle.difficulty.slice(1)
+                                        : 'Puzzle'}
+                                </Text>
                             </View>
                         </View>
 
@@ -178,16 +232,35 @@ export default function PuzzleGameScreen() {
 
                 {/* Sidebar: Controls & Info */}
                 <View style={styles.sidebar}>
+                    {/* Puzzle Description */}
+                    {puzzle.description && (
+                        <View style={{
+                            padding: 16,
+                            backgroundColor: Colors.light.card,
+                            borderRadius: 16,
+                            borderWidth: 1,
+                            borderColor: Colors.light.border,
+                        }}>
+                            <Text style={{
+                                fontSize: 14,
+                                color: Colors.light.text,
+                                lineHeight: 20,
+                            }}>
+                                {puzzle.description}
+                            </Text>
+                        </View>
+                    )}
+
                     {/* Feedback Message */}
                     {message && (
                         <View style={{
                             padding: 16,
-                            backgroundColor: message.includes('Correct') ? '#D1FAE5' : '#FEE2E2',
+                            backgroundColor: message.includes('✓') ? '#D1FAE5' : '#FEE2E2',
                             borderRadius: 16,
                             alignItems: 'center'
                         }}>
                             <Text style={{
-                                color: message.includes('Correct') ? '#065F46' : '#991B1B',
+                                color: message.includes('✓') ? '#065F46' : '#991B1B',
                                 fontWeight: '600',
                                 fontSize: 16
                             }}>
@@ -196,7 +269,40 @@ export default function PuzzleGameScreen() {
                         </View>
                     )}
 
-                    {/* Robot Status */}
+                    {/* Game Actions */}
+                    <View style={styles.actionsCard}>
+                        <TouchableOpacity
+                            style={[styles.actionButton, styles.primaryButton]}
+                            onPress={() => {
+                                if (puzzle) {
+                                    game.load(puzzle.fenStr);
+                                    setFen(puzzle.fenStr);
+                                    setSelectedSquare(null);
+                                    setPossibleMoves([]);
+                                    setMessage(null);
+                                }
+                            }}
+                        >
+                            <Ionicons name="refresh" size={20} color="#FFF" />
+                            <Text style={[styles.actionButtonText, styles.primaryButtonText]}>
+                            </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[styles.actionButton]}
+                            onPress={() => {
+                                Alert.alert(
+                                    'Solution',
+                                    `The solution move is: ${puzzle?.solutionMove || 'N/A'}`,
+                                    [{ text: 'OK' }]
+                                );
+                            }}
+                        >
+                            <Ionicons name="bulb-outline" size={20} color={Colors.light.text} />
+                            <Text style={styles.actionButtonText}>Show Solution</Text>
+                        </TouchableOpacity>
+                    </View>
+
                     {/* Robot Camera (Embedded) */}
                     <CameraView
                         mode="embedded"
@@ -204,37 +310,6 @@ export default function PuzzleGameScreen() {
                         onExpand={() => setShowCamera(true)}
                         streamUrl={CAMERA_CONFIG.STREAM_URL}
                     />
-
-                    {/* Game Actions */}
-                    <View style={styles.actionsCard}>
-                        <TouchableOpacity
-                            style={[styles.actionButton, styles.primaryButton]}
-                            onPress={() => setIsConnected(!isConnected)}
-                        >
-                            <Ionicons name={isConnected ? "bluetooth" : "bluetooth-outline"} size={20} color="#FFF" />
-                            <Text style={[styles.actionButtonText, styles.primaryButtonText]}>
-                                {isConnected ? 'Disconnect Robot' : 'Connect Robot'}
-                            </Text>
-                        </TouchableOpacity>
-
-                        <View style={{ flexDirection: 'row', gap: 12 }}>
-                            <TouchableOpacity style={[styles.actionButton, { flex: 1 }]}>
-                                <Ionicons name="arrow-undo" size={20} color={Colors.light.text} />
-                                <Text style={styles.actionButtonText}>Undo</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity style={[styles.actionButton, { flex: 1 }]}>
-                                <Ionicons name="pause" size={20} color={Colors.light.text} />
-                                <Text style={styles.actionButtonText}>Pause</Text>
-                            </TouchableOpacity>
-
-
-                            <TouchableOpacity style={[styles.actionButton, { flex: 1 }]}>
-                                <Ionicons name="bulb" size={20} color={Colors.light.text} />
-                                <Text style={styles.actionButtonText}>Hint</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
                 </View>
             </View>
 

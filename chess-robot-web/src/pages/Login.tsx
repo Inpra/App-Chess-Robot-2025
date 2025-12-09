@@ -43,7 +43,7 @@ export default function Login() {
             <div className="auth-card">
                 <div className="auth-header">
                     <div className="auth-logo">
-                        <Gamepad2 size={60} color="#4F46E5" />
+                        <Gamepad2 size={60} />
                     </div>
                     <h1 className="auth-title">Welcome Back!</h1>
                     <p className="auth-subtitle">Sign in to continue your chess journey</p>

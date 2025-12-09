@@ -143,14 +143,14 @@
 }
 
 .game-over-modal-button-primary {
-    background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+    background: linear-gradient(135deg, #f16f23 0%, #d85a12 100%);
     color: white;
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 4px 12px rgba(241, 111, 35, 0.3);
 }
 
 .game-over-modal-button-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+    box-shadow: 0 6px 16px rgba(241, 111, 35, 0.4);
 }
 
 .game-over-modal-button-primary:active {

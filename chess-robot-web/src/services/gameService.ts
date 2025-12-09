@@ -3,7 +3,7 @@
    * Handles all game-related API calls
    */
 
-  import { API_CONFIG, GAME_ENDPOINTS } from './apiConfig';
+  import { API_CONFIG, GAME_ENDPOINTS, AI_SUGGESTION_ENDPOINTS } from './apiConfig';
 
   export interface StartGameRequest {
     gameTypeCode: string;
@@ -18,6 +18,23 @@
     difficulty: string;
     status: string;
     message: string;
+  }
+
+  export interface PauseGameResponse {
+    gameId: string;
+    status: string;
+    message: string;
+    savedStateId: string;
+  }
+
+  export interface ResumeGameResponse {
+    gameId: string;
+    requestId: string;
+    status: string;
+    fenStr: string;
+    lastMoveId?: string;
+    message: string;
+    savedAt: string;
   }
 
   export interface VerifyBoardSetupRequest {
@@ -96,6 +113,30 @@
     statistics?: GameStatistics;
   }
 
+  export interface GetSuggestionRequest {
+    gameId: string;
+    fenPosition: string;
+    depth?: number;
+  }
+
+  export interface SuggestionResponse {
+    suggestionId: string;
+    suggestedMove: string;
+    suggestedMoveSan: string;
+    evaluation?: number;
+    confidence: number;
+    bestLine: string[];
+    pointsDeducted: number;
+    remainingPoints: number;
+    createdAt: string;
+  }
+
+  export interface SuggestionCostResponse {
+    cost: number;
+    description: string;
+    rateLimitSeconds: number;
+  }
+
   class GameService {
     private baseUrl: string;
 
@@ -160,29 +201,6 @@
         }
       } catch (error) {
         console.error('[GameService] Start game error:', error);
-        throw error;
-      }
-    }
-
-    /**
-     * Resume an existing game
-     */
-    async resumeGame(gameId: string): Promise<StartGameResponse> {
-      try {
-        const response = await fetch(`${this.baseUrl}/Games/resume`, {
-          method: 'POST',
-          headers: this.getHeaders(),
-          body: JSON.stringify({ gameId }),
-        });
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.message || 'Failed to resume game');
-        }
-
-        return await response.json();
-      } catch (error) {
-        console.error('[GameService] Resume game error:', error);
         throw error;
       }
     }
@@ -409,6 +427,50 @@
     }
 
     /**
+     * Pause the current game and save state
+     */
+    async pauseGame(gameId: string): Promise<PauseGameResponse> {
+      try {
+        const response = await fetch(`${this.baseUrl}/Games/${gameId}/pause`, {
+          method: 'POST',
+          headers: this.getHeaders(),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.message || 'Failed to pause game');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('[GameService] Pause game error:', error);
+        throw error;
+      }
+    }
+
+    /**
+     * Resume a paused game from saved state
+     */
+    async resumeGame(gameId: string): Promise<ResumeGameResponse> {
+      try {
+        const response = await fetch(`${this.baseUrl}/Games/${gameId}/resume`, {
+          method: 'POST',
+          headers: this.getHeaders(),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.message || 'Failed to resume game');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('[GameService] Resume game error:', error);
+        throw error;
+      }
+    }
+
+    /**
      * Get complete game replay data (optimized for replay feature)
      */
     async getGameReplay(gameId: string): Promise<GameReplayResponse> {
@@ -433,9 +495,26 @@
     /**
      * Get player games (match history)
      */
-    async getPlayerGames(playerId: string): Promise<any[]> {
+    async getPlayerGames(
+      playerId: string, 
+      filters?: {
+        status?: string;
+        result?: string;
+        fromDate?: string;
+        toDate?: string;
+      }
+    ): Promise<any[]> {
       try {
-        const response = await fetch(`${this.baseUrl}/Games/player/${playerId}`, {
+        const queryParams = new URLSearchParams();
+        if (filters?.status) queryParams.append('status', filters.status);
+        if (filters?.result) queryParams.append('result', filters.result);
+        if (filters?.fromDate) queryParams.append('fromDate', filters.fromDate);
+        if (filters?.toDate) queryParams.append('toDate', filters.toDate);
+        
+        const queryString = queryParams.toString();
+        const url = `${this.baseUrl}/Games/player/${playerId}${queryString ? `?${queryString}` : ''}`;
+        
+        const response = await fetch(url, {
           method: 'GET',
           headers: this.getHeaders(),
         });
@@ -448,6 +527,62 @@
         return await response.json();
       } catch (error) {
         console.error('[GameService] Get player games error:', error);
+        throw error;
+      }
+    }
+
+    /**
+     * Get AI chess move suggestion
+     * Costs 5 points per suggestion
+     * Rate limited: 1 request per 3 seconds
+     */
+    async getSuggestion(request: GetSuggestionRequest): Promise<SuggestionResponse> {
+      try {
+        const response = await fetch(`${this.baseUrl}${AI_SUGGESTION_ENDPOINTS.GET_SUGGESTION}`, {
+          method: 'POST',
+          headers: this.getHeaders(),
+          body: JSON.stringify(request),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          
+          // Handle specific error codes
+          if (error.errorCode === 'INSUFFICIENT_POINTS') {
+            throw new Error('Không đủ điểm để nhận gợi ý. Vui lòng mua thêm điểm.');
+          }
+          
+          if (error.errorCode === 'RATE_LIMITED') {
+            throw new Error('Vui lòng đợi 3 giây trước khi yêu cầu gợi ý tiếp theo.');
+          }
+
+          throw new Error(error.message || 'Failed to get AI suggestion');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('[GameService] Get suggestion error:', error);
+        throw error;
+      }
+    }
+
+    /**
+     * Get the cost in points for AI suggestions
+     */
+    async getSuggestionCost(): Promise<SuggestionCostResponse> {
+      try {
+        const response = await fetch(`${this.baseUrl}${AI_SUGGESTION_ENDPOINTS.GET_COST}`, {
+          method: 'GET',
+          headers: this.getHeaders(false), // No auth required
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to get suggestion cost');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('[GameService] Get suggestion cost error:', error);
         throw error;
       }
     }

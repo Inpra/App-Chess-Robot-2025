@@ -1,9 +1,10 @@
 .vs-bot-container {
     flex: 1;
     background-color: var(--color-background);
-    height: 100vh;
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
+    overflow-y: auto;
 }
 
 .vs-bot-header {
@@ -22,7 +23,6 @@
     flex-direction: row;
     padding: 24px;
     gap: 32px;
-    overflow: hidden;
 }
 
 /* Board Section */
@@ -42,21 +42,6 @@
     gap: 16px;
     max-width: 400px;
     min-width: 320px;
-    overflow-y: auto;
-    padding-right: 8px;
-}
-
-.vs-bot-sidebar::-webkit-scrollbar {
-    width: 6px;
-}
-
-.vs-bot-sidebar::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.vs-bot-sidebar::-webkit-scrollbar-thumb {
-    background-color: var(--color-border);
-    border-radius: 3px;
 }
 
 .vs-bot-match-header {

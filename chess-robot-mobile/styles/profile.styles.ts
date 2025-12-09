@@ -62,6 +62,11 @@ export const profileStyles = StyleSheet.create({
     userEmail: {
         fontSize: 14,
         color: '#6B7280',
+        marginBottom: 4,
+    },
+    userPhone: {
+        fontSize: 14,
+        color: '#6B7280',
         marginBottom: 16,
     },
     editProfileButton: {

@@ -113,6 +113,54 @@
     box-shadow: inset 0 0 10px rgba(255, 0, 0, 0.6);
 }
 
+/* Hint highlight */
+.chess-square.hint-from {
+    background-color: rgba(255, 215, 0, 0.5) !important;
+    box-shadow: inset 0 0 15px rgba(255, 215, 0, 0.8);
+    animation: hint-pulse 2s ease-in-out infinite;
+}
+
+.chess-square.hint-to {
+    background-color: rgba(255, 215, 0, 0.5) !important;
+    box-shadow: inset 0 0 15px rgba(255, 215, 0, 0.8);
+    animation: hint-pulse 2s ease-in-out infinite;
+}
+
+.hint-indicator {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3;
+    pointer-events: none;
+}
+
+.hint-arrow {
+    font-size: 2em;
+    animation: hint-bounce 1s ease-in-out infinite;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+@keyframes hint-pulse {
+    0%, 100% {
+        box-shadow: inset 0 0 15px rgba(255, 215, 0, 0.8);
+    }
+    50% {
+        box-shadow: inset 0 0 25px rgba(255, 215, 0, 1);
+    }
+}
+
+@keyframes hint-bounce {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-5px);
+    }
+}
+
 /* Chess piece */
 .chess-piece {
     width: 85%;

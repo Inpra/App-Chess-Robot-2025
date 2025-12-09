@@ -121,11 +121,11 @@
 }
 
 .contact-card {
-    background: linear-gradient(135deg, var(--color-primary) 0%, #2563EB 100%);
+    background: linear-gradient(135deg, var(--color-primary) 0%, #d85a12 100%);
     border-radius: 20px;
     padding: 32px;
     text-align: center;
-    box-shadow: 0 10px 30px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 10px 30px rgba(241, 111, 35, 0.3);
 }
 
 .contact-icon-container {

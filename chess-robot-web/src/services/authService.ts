@@ -20,10 +20,22 @@ export interface UserResponse {
     email: string;
     username: string;
     fullName?: string;
+    phoneNumber?: string;
     avatarUrl?: string;
     role: string;
     isActive: boolean;
     lastLoginAt?: string;
+    
+    // Points Balance
+    pointsBalance: number;
+    
+    // Elo Rating information
+    eloRating: number;
+    peakElo?: number;
+    totalGamesPlayed: number;
+    wins: number;
+    losses: number;
+    draws: number;
 }
 
 export interface AuthResponse {

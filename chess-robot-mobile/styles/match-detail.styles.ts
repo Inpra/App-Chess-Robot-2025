@@ -107,7 +107,7 @@ export const getMatchDetailStyles = ({ width, height }: ScaledSize) => {
         resultText: {
             fontSize: isTablet ? 16 : 14,
             fontWeight: '700',
-            color: '#10B981',
+            color: '#23b249',
         },
         boardContainer: {
             width: boardSize,

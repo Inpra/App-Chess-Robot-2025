@@ -21,10 +21,22 @@ export interface UserResponse {
     email: string;
     username: string;
     fullName?: string;
+    phoneNumber?: string;
     avatarUrl?: string;
     role: string;
     isActive: boolean;
     lastLoginAt?: string;
+
+    // Points Balance
+    pointsBalance: number;
+
+    // Elo Rating information
+    eloRating: number;
+    peakElo?: number;
+    totalGamesPlayed: number;
+    wins: number;
+    losses: number;
+    draws: number;
 }
 
 export interface AuthResponse {
@@ -91,17 +103,17 @@ class AuthService {
 
     /**
      * Logout user
+     * Clears local storage immediately and calls API in background
+     * This ensures instant logout UX without waiting for API response
      */
     async logout(): Promise<void> {
-        try {
-            await apiClient.post(AUTH_ENDPOINTS.LOGOUT);
-        } catch (error) {
-            console.error('Logout error:', error);
-        } finally {
-            // Clear storage
-            await AsyncStorage.removeItem('auth_token');
-            await AsyncStorage.removeItem('user');
-        }
+        // Clear storage immediately (non-blocking)
+        AsyncStorage.removeItem('auth_token');
+        AsyncStorage.removeItem('user');
+
+        // Call logout API in background (fire and forget)
+        apiClient.post(AUTH_ENDPOINTS.LOGOUT)
+            .catch(error => console.error('Logout API error (ignored):', error));
     }
 
     /**
@@ -158,6 +170,50 @@ class AuthService {
         } catch (error) {
             console.error('Get profile error:', error);
             return null;
+        }
+    }
+
+    /**
+     * Update user profile
+     */
+    async updateProfile(data: { username?: string; fullName?: string; phoneNumber?: string }): Promise<{ success: boolean; message?: string; error?: string }> {
+        try {
+            await apiClient.put('/Auth/profile', data);
+
+            // Refresh profile
+            await this.getProfile();
+
+            return {
+                success: true,
+                message: 'Cập nhật thông tin thành công',
+            };
+        } catch (error: any) {
+            return {
+                success: false,
+                error: error.message || 'Không thể cập nhật thông tin',
+            };
+        }
+    }
+
+    /**
+     * Change password
+     */
+    async changePassword(currentPassword: string, newPassword: string): Promise<{ success: boolean; message?: string; error?: string }> {
+        try {
+            await apiClient.post('/Auth/change-password', {
+                currentPassword,
+                newPassword,
+            });
+
+            return {
+                success: true,
+                message: 'Đổi mật khẩu thành công',
+            };
+        } catch (error: any) {
+            return {
+                success: false,
+                error: error.message || 'Không thể đổi mật khẩu',
+            };
         }
     }
 }

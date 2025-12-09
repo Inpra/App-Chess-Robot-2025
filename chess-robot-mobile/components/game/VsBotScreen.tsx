@@ -8,21 +8,18 @@ import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react'
 import { SafeAreaView, ScrollView, Text, TouchableOpacity, useWindowDimensions, View, Alert } from 'react-native';
 import ChessBoard from './ChessBoard';
 import CameraView from '../camera/CameraView';
+import MoveHistory, { type Move } from './MoveHistory';
+import MatchHeader from './MatchHeader';
+import { GameOverModal } from './GameOverModal';
 import gameService from '@/services/gameService';
 import wsService from '@/services/websocketService';
 import { CAMERA_CONFIG } from '@/services/apiConfig';
-
-interface Move {
-    moveNumber: number;
-    white: string;
-    black?: string;
-}
 
 export default function VsBotScreen() {
     const dimensions = useWindowDimensions();
     const styles = useMemo(() => getGameStyles(dimensions), [dimensions]);
     const router = useRouter();
-    const { elo, difficulty } = useLocalSearchParams();
+    const { elo, difficulty, resumeGameId, difficultyName } = useLocalSearchParams();
 
     // Connection State
     const [isConnected, setIsConnected] = useState(false);
@@ -30,16 +27,28 @@ export default function VsBotScreen() {
     const [showCamera, setShowCamera] = useState(false);
 
     // Game State
-    const [gameId, setGameId] = useState<string | null>(null);
-    const [gameStatus, setGameStatus] = useState<'idle' | 'starting' | 'playing' | 'paused' | 'ended'>('idle');
+    const [gameId, setGameId] = useState<string | null>((resumeGameId as string) || null);
+    const [gameStatus, setGameStatus] = useState<'idle' | 'starting' | 'playing' | 'paused' | 'ended'>((resumeGameId as string) ? 'paused' : 'idle');
     const [game, setGame] = useState(new Chess());
     const [fen, setFen] = useState(game.fen());
-    const [selectedSquare, setSelectedSquare] = useState<{ row: number, col: number } | null>(null);
-    const [possibleMoves, setPossibleMoves] = useState<{ row: number, col: number }[]>([]);
+    // Note: selectedSquare and possibleMoves removed - players use physical board only
     const [checkSquare, setCheckSquare] = useState<{ row: number, col: number } | null>(null);
     const [moveHistory, setMoveHistory] = useState<Move[]>([]);
     const [gameMessage, setGameMessage] = useState<string>('Waiting to start game...');
     const [boardSetupStatus, setBoardSetupStatus] = useState<'checking' | 'correct' | 'incorrect' | null>(null);
+    const [hintSquares, setHintSquares] = useState<{ from: number, to: number } | null>(null);
+    const [isLoadingHint, setIsLoadingHint] = useState(false);
+    const [gameOverModal, setGameOverModal] = useState<{
+        isOpen: boolean;
+        result: 'win' | 'lose' | 'draw';
+        reason: string;
+        message: string;
+    }>({
+        isOpen: false,
+        result: 'draw',
+        reason: '',
+        message: ''
+    });
 
     // Refs
     const lastProcessedFen = useRef<string>('');
@@ -97,6 +106,15 @@ export default function VsBotScreen() {
         };
     }, []);
 
+    // Auto-resume game if resumeGameId is provided
+    useEffect(() => {
+        if (resumeGameId && gameStatus === 'paused' && isConnected) {
+            console.log('[VsBot] Auto-resuming game:', resumeGameId);
+            setGameMessage('Resuming paused game...');
+            handleResumeGame();
+        }
+    }, [resumeGameId, isConnected]);
+
     // Handle game over
     const handleGameOver = useCallback(async (data: any) => {
         console.log('[handleGameOver] ========== CALLED ==========');
@@ -105,13 +123,20 @@ export default function VsBotScreen() {
         const { reason, winner, message } = data;
 
         try {
-            // Save pending moves
+            // Save pending moves first
+            console.log('[handleGameOver] Pending moves count:', pendingMoves.current.length);
             if (pendingMoves.current.length > 0) {
+                console.log('[handleGameOver] Saving pending moves...');
                 await savePendingMoves();
+                console.log('[handleGameOver] ✓ Pending moves saved');
             }
 
-            const totalMoves = game.history().length;
+            // Calculate total moves from moveHistory state (NOT game.history() which is empty when loaded from FEN)
+            const totalMoves = moveHistory.reduce((sum, m) => sum + (m.black ? 2 : 1), 0);
             const currentFen = game.fen();
+
+            console.log('[handleGameOver] Total moves:', totalMoves);
+            console.log('[handleGameOver] Current FEN:', currentFen);
 
             let result: 'win' | 'lose' | 'draw';
             let notificationMessage: string;
@@ -132,23 +157,32 @@ export default function VsBotScreen() {
                 notificationMessage = message || 'Game Over - Draw';
             }
 
+            console.log('[handleGameOver] Updating game result:', { gameId, result, totalMoves });
             await gameService.updateGameResult(
                 gameId,
                 result,
                 'completed',
-                Math.ceil(totalMoves / 2),
+                totalMoves,  // Don't divide by 2 - totalMoves is already the actual move count
                 currentFen
             );
+            console.log('[handleGameOver] ✓ Game result updated');
 
             setGameStatus('ended');
             setGameMessage(notificationMessage);
-            Alert.alert('Game Over', notificationMessage);
+
+            // Show game over modal instead of alert
+            setGameOverModal({
+                isOpen: true,
+                result: result,
+                reason: reason.charAt(0).toUpperCase() + reason.slice(1),
+                message: notificationMessage
+            });
 
         } catch (error) {
             console.error('[VsBot] Failed to update game over:', error);
             Alert.alert('Error', 'Failed to save game result.');
         }
-    }, [gameId, game]);
+    }, [gameId, game, moveHistory]);
 
     const computeMessageHash = (type: string, data: any): string => {
         return JSON.stringify({
@@ -179,7 +213,10 @@ export default function VsBotScreen() {
                     const newGame = new Chess(data.fen_str);
                     setGame(newGame);
                     setFen(data.fen_str);
-                    updateMoveHistoryFromFen(data.fen_str);
+                    // Pass the NEW game object to update move history correctly
+                    updateMoveHistoryFromFen(data.fen_str, newGame);
+                    // Clear hint highlights when board updates
+                    setHintSquares(null);
                 } catch (error) {
                     console.error('[VsBot] Failed to parse FEN:', error);
                 }
@@ -232,64 +269,169 @@ export default function VsBotScreen() {
         const movesToSave = [...pendingMoves.current];
         pendingMoves.current = [];
 
+        console.log('[savePendingMoves] Saving', movesToSave.length, 'moves to database');
+        console.log('[savePendingMoves] Moves:', movesToSave.map(m => `${m.notation} (${m.playerColor})`).join(', '));
+
         try {
             if (movesToSave.length === 1) {
                 await gameService.saveMove(movesToSave[0]);
+                console.log('[savePendingMoves] ✓ Single move saved');
             } else {
                 await gameService.saveMovesBatch(movesToSave[0].gameId, movesToSave);
+                console.log('[savePendingMoves] ✓ Batch saved', movesToSave.length, 'moves');
             }
         } catch (error) {
-            console.error('[VsBot] Failed to save moves:', error);
+            console.error('[savePendingMoves] ✗ Failed to save moves:', error);
             pendingMoves.current.unshift(...movesToSave);
         }
     };
 
     const queueMoveForSave = useCallback((moveData: any) => {
+        console.log('[queueMoveForSave] Queuing move:', moveData.notation, 'for', moveData.playerColor);
         pendingMoves.current.push(moveData);
+        console.log('[queueMoveForSave] Queue size:', pendingMoves.current.length);
+
         if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
 
         if (pendingMoves.current.length >= 5) {
+            console.log('[queueMoveForSave] Queue full (5 moves), saving immediately');
             savePendingMoves();
         } else {
+            console.log('[queueMoveForSave] Setting timer for 3 seconds');
             saveTimerRef.current = setTimeout(() => {
+                console.log('[queueMoveForSave] Timer triggered, saving moves');
                 savePendingMoves();
             }, 3000);
         }
     }, []);
 
-    const updateMoveHistoryFromFen = (newFen: string) => {
+    const updateMoveHistoryFromFen = (newFen: string, newGame: Chess) => {
         if (newFen === lastProcessedFen.current) return;
 
         try {
-            const newPosition = newFen.split(' ')[0];
-            const currentPosition = game.fen().split(' ')[0];
+            // If this is the first FEN or a game reset, just update
+            if (!lastProcessedFen.current || lastProcessedFen.current === 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1') {
+                lastProcessedFen.current = newFen;
 
-            if (newPosition === currentPosition) return;
-
-            // Logic to find move and update history (simplified for now)
-            // In a real scenario, we'd need to diff the boards or use chess.js history if we are maintaining it correctly
-
-            // Since we are setting game from FEN, we might lose history if we don't be careful.
-            // But here we just want to update the UI list.
-
-            // Re-calculate history from the current game object
-            const history = game.history();
-            const moves: Move[] = [];
-            for (let i = 0; i < history.length; i += 2) {
-                moves.push({
-                    moveNumber: Math.floor(i / 2) + 1,
-                    white: history[i],
-                    black: history[i + 1]
-                });
+                // Check for check using the NEW game object
+                if (newGame.inCheck()) {
+                    const turn = newGame.turn();
+                    const board = newGame.board();
+                    for (let r = 0; r < 8; r++) {
+                        for (let c = 0; c < 8; c++) {
+                            const p = board[r][c];
+                            if (p && p.type === 'k' && p.color === turn) {
+                                setCheckSquare({ row: r, col: c });
+                            }
+                        }
+                    }
+                } else {
+                    setCheckSquare(null);
+                }
+                return;
             }
-            setMoveHistory(moves);
+
+            // Try to detect the move by comparing old and new positions
+            const oldGame = new Chess(lastProcessedFen.current);
+            const oldPosition = lastProcessedFen.current.split(' ')[0];
+            const newPosition = newFen.split(' ')[0];
+
+            if (oldPosition === newPosition) {
+                lastProcessedFen.current = newFen;
+                return;
+            }
+
+            // Find the move by trying all possible moves from old position
+            const possibleMoves = oldGame.moves({ verbose: true });
+            let detectedMove: any = null;
+
+            for (const move of possibleMoves) {
+                const testGame = new Chess(lastProcessedFen.current);
+                testGame.move(move);
+                const testPosition = testGame.fen().split(' ')[0];
+
+                if (testPosition === newPosition) {
+                    detectedMove = move;
+                    break;
+                }
+            }
+
+            if (detectedMove) {
+                console.log('[VsBot] Move detected from FEN:', detectedMove.san);
+
+                // 💾 Queue move for batch save to database (if game is active)
+                if (gameId) {
+                    setMoveHistory(prevHistory => {
+                        const totalMoves = prevHistory.reduce((sum, m) => sum + (m.black ? 2 : 1), 0);
+                        const moveNumber = Math.floor(totalMoves / 2) + 1;
+
+                        // Queue move for save
+                        queueMoveForSave({
+                            gameId: gameId,
+                            moveNumber: moveNumber,
+                            playerColor: detectedMove.color === 'w' ? 'white' : 'black',
+                            fromSquare: detectedMove.from,
+                            toSquare: detectedMove.to,
+                            fromPiece: `${detectedMove.color === 'w' ? 'white' : 'black'}_${detectedMove.piece}`,
+                            toPiece: detectedMove.captured
+                                ? `${detectedMove.color === 'w' ? 'black' : 'white'}_${detectedMove.captured}`
+                                : undefined,
+                            notation: detectedMove.san,
+                            resultsInCheck: newGame.inCheck(),
+                            fenStr: newFen
+                        });
+
+                        // Update UI move history
+                        const newHistory = [...prevHistory];
+                        const isWhiteMove = totalMoves % 2 === 0;
+
+                        if (isWhiteMove) {
+                            // Add new move pair with white move
+                            newHistory.push({
+                                moveNumber,
+                                white: detectedMove.san,
+                                black: undefined
+                            });
+                        } else {
+                            // Update last move pair with black move
+                            if (newHistory.length > 0) {
+                                newHistory[newHistory.length - 1].black = detectedMove.san;
+                            }
+                        }
+
+                        return newHistory;
+                    });
+                } else {
+                    // No gameId - just update UI
+                    setMoveHistory(prevHistory => {
+                        const newHistory = [...prevHistory];
+                        const totalMoves = prevHistory.reduce((sum, m) => sum + (m.black ? 2 : 1), 0);
+                        const moveNumber = Math.floor(totalMoves / 2) + 1;
+                        const isWhiteMove = totalMoves % 2 === 0;
+
+                        if (isWhiteMove) {
+                            newHistory.push({
+                                moveNumber,
+                                white: detectedMove.san,
+                                black: undefined
+                            });
+                        } else {
+                            if (newHistory.length > 0) {
+                                newHistory[newHistory.length - 1].black = detectedMove.san;
+                            }
+                        }
+
+                        return newHistory;
+                    });
+                }
+            }
+
             lastProcessedFen.current = newFen;
 
-            // Check for check
-            if (game.inCheck()) {
-                // Update check square
-                const turn = game.turn();
-                const board = game.board();
+            // Check for check using the NEW game object
+            if (newGame.inCheck()) {
+                const turn = newGame.turn();
+                const board = newGame.board();
                 for (let r = 0; r < 8; r++) {
                     for (let c = 0; c < 8; c++) {
                         const p = board[r][c];
@@ -357,25 +499,42 @@ export default function VsBotScreen() {
                     style: 'destructive',
                     onPress: async () => {
                         try {
-                            if (pendingMoves.current.length > 0) await savePendingMoves();
+                            // Save any pending moves first
+                            if (pendingMoves.current.length > 0) {
+                                await savePendingMoves();
+                            }
 
-                            const totalMoves = game.history().length;
+                            // Get current game state from moveHistory (not game.history())
+                            const totalMoves = moveHistory.reduce((sum, m) => sum + (m.black ? 2 : 1), 0);
                             const currentFen = game.fen();
 
+                            console.log('[handleResignGame] Total moves:', totalMoves);
+
+                            // Update game result in database (this also sends end command to AI)
                             await gameService.updateGameResult(
                                 gameId,
                                 'lose',
                                 'completed',
-                                Math.ceil(totalMoves / 2),
+                                totalMoves,  // Don't divide by 2
                                 currentFen
                             );
 
+                            console.log('[VsBot] ✓ Game resigned - Database updated and AI notified');
+
+                            // Update UI
                             setGameStatus('ended');
                             setGameMessage('You resigned - Game Over');
-                            Alert.alert('Game Over', 'You resigned the game');
-                        } catch (error) {
-                            console.error('[VsBot] Failed to resign:', error);
-                            Alert.alert('Error', 'Failed to resign game');
+
+                            // Show game over modal
+                            setGameOverModal({
+                                isOpen: true,
+                                result: 'lose',
+                                reason: 'Resignation',
+                                message: 'You resigned the game'
+                            });
+                        } catch (error: any) {
+                            console.error('[VsBot] ✗ Failed to resign game:', error);
+                            Alert.alert('Error', error.message || 'Failed to resign game. Please try again.');
                         }
                     }
                 }
@@ -383,132 +542,161 @@ export default function VsBotScreen() {
         );
     };
 
-    const handleSquareClick = (row: number, col: number) => {
-        // Only allow moves if game is playing
-        if (gameStatus !== 'playing' && gameStatus !== 'idle') return; // Allow moving in idle for testing? Maybe not.
+    const handlePauseGame = async () => {
+        if (!gameId || gameStatus !== 'playing') return;
 
-        // If game is idle, maybe auto-start? No, explicit start is better.
-        // But for testing without robot, we might want to allow it.
-        // Let's stick to strict mode: must start game first.
-        if (gameStatus !== 'playing') {
-            // Optional: Alert.alert('Game not started', 'Please start a new game first.');
-            // But maybe we want to allow analysis?
-            // For now, let's allow it but not save moves if no gameId
-        }
-
-        const squareName = getSquareName(row, col);
-        const piece = game.get(squareName as any);
-
-        if (selectedSquare) {
-            const sourceSquare = getSquareName(selectedSquare.row, selectedSquare.col);
-
-            if (selectedSquare.row === row && selectedSquare.col === col) {
-                setSelectedSquare(null);
-                setPossibleMoves([]);
-                return;
-            }
-
-            try {
-                const move = game.move({
-                    from: sourceSquare,
-                    to: squareName,
-                    promotion: 'q'
-                });
-
-                if (move) {
-                    setFen(game.fen());
-                    setSelectedSquare(null);
-                    setPossibleMoves([]);
-
-                    // Queue move for save if game is active
-                    if (gameId) {
-                        const totalMoves = game.history().length;
-                        const moveNumber = Math.ceil(totalMoves / 2);
-
-                        queueMoveForSave({
-                            gameId: gameId,
-                            moveNumber: moveNumber,
-                            playerColor: move.color === 'w' ? 'white' : 'black',
-                            fromSquare: move.from,
-                            toSquare: move.to,
-                            fromPiece: `${move.color === 'w' ? 'white' : 'black'}_${move.piece}`,
-                            toPiece: move.captured ? `${move.color === 'w' ? 'black' : 'white'}_${move.captured}` : undefined,
-                            notation: move.san,
-                            resultsInCheck: game.inCheck(),
-                            fenStr: game.fen()
-                        });
-                    }
-
-                    // Update history UI
-                    const history = game.history();
-                    const moves: Move[] = [];
-                    for (let i = 0; i < history.length; i += 2) {
-                        moves.push({
-                            moveNumber: Math.floor(i / 2) + 1,
-                            white: history[i],
-                            black: history[i + 1]
-                        });
-                    }
-                    setMoveHistory(moves);
-
-                    // Check for check
-                    if (game.inCheck()) {
-                        const turn = game.turn();
-                        const board = game.board();
-                        for (let r = 0; r < 8; r++) {
-                            for (let c = 0; c < 8; c++) {
-                                const p = board[r][c];
-                                if (p && p.type === 'k' && p.color === turn) {
-                                    setCheckSquare({ row: r, col: c });
-                                }
+        Alert.alert(
+            'Pause Game',
+            'Your progress will be saved and you can resume later from Match History.\n\nDo you want to pause this game?',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Pause',
+                    onPress: async () => {
+                        try {
+                            // Save any pending moves first
+                            if (pendingMoves.current.length > 0) {
+                                await savePendingMoves();
                             }
-                        }
-                    } else {
-                        setCheckSquare(null);
-                    }
 
-                } else {
-                    // Invalid move, maybe select new piece
-                    if (piece && piece.color === game.turn()) {
-                        setSelectedSquare({ row, col });
-                        const moves = game.moves({ square: squareName as any, verbose: true });
-                        setPossibleMoves(moves.map(m => {
-                            const file = m.to.charCodeAt(0) - 'a'.charCodeAt(0);
-                            const rank = 8 - parseInt(m.to[1]);
-                            return { row: rank, col: file };
-                        }));
-                    } else {
-                        setSelectedSquare(null);
-                        setPossibleMoves([]);
+                            // Call API to pause game (saves state and sends end command to AI)
+                            const response = await gameService.pauseGame(gameId);
+
+                            console.log('[VsBot] ✓ Game paused:', response);
+
+                            // Update UI
+                            setGameStatus('paused');
+                            setGameMessage('Game paused - Progress saved');
+
+                            Alert.alert('Game Paused', '✓ Game paused! Check Match History to resume', [
+                                {
+                                    text: 'OK',
+                                    onPress: () => router.navigate('/(tabs)')
+                                }
+                            ]);
+                        } catch (error: any) {
+                            console.error('[VsBot] ✗ Failed to pause game:', error);
+                            Alert.alert('Error', error.message || 'Failed to pause game. Please try again.');
+                        }
                     }
                 }
-            } catch (e) {
-                // Invalid move
-                if (piece && piece.color === game.turn()) {
-                    setSelectedSquare({ row, col });
-                    const moves = game.moves({ square: squareName as any, verbose: true });
-                    setPossibleMoves(moves.map(m => {
-                        const file = m.to.charCodeAt(0) - 'a'.charCodeAt(0);
-                        const rank = 8 - parseInt(m.to[1]);
-                        return { row: rank, col: file };
-                    }));
-                } else {
-                    setSelectedSquare(null);
-                    setPossibleMoves([]);
+            ]
+        );
+    };
+
+    const handleResumeGame = async () => {
+        if (!gameId || gameStatus !== 'paused') return;
+
+        try {
+            // Call API to resume game (sends resume command with saved FEN to AI)
+            const response = await gameService.resumeGame(gameId);
+
+            console.log('[VsBot] ✓ Game resumed:', response);
+
+            // Load the saved FEN position
+            if (response.fenStr) {
+                const newGame = new Chess(response.fenStr);
+                setGame(newGame);
+                setFen(response.fenStr);
+                lastProcessedFen.current = response.fenStr;
+
+                // Rebuild move history from chess.js
+                const history = newGame.history();
+                const moves: Move[] = [];
+                for (let i = 0; i < history.length; i += 2) {
+                    moves.push({
+                        moveNumber: Math.floor(i / 2) + 1,
+                        white: history[i],
+                        black: history[i + 1]
+                    });
                 }
+                setMoveHistory(moves);
             }
-        } else {
-            if (piece && piece.color === game.turn()) {
-                setSelectedSquare({ row, col });
-                const moves = game.moves({ square: squareName as any, verbose: true });
-                setPossibleMoves(moves.map(m => {
-                    const file = m.to.charCodeAt(0) - 'a'.charCodeAt(0);
-                    const rank = 8 - parseInt(m.to[1]);
-                    return { row: rank, col: file };
-                }));
-            }
+
+            // Update UI
+            setGameStatus('playing');
+            setBoardSetupStatus('checking');
+            setGameMessage('Game resumed - Set up your board to continue');
+            Alert.alert('Game Resumed', '✓ Game resumed! Please set up your board');
+        } catch (error: any) {
+            console.error('[VsBot] ✗ Failed to resume game:', error);
+            Alert.alert('Error', error.message || 'Failed to resume game. Please try again.');
         }
     };
+
+    // Handle hint/AI suggestion
+    const handleHint = async () => {
+        if (!gameId || gameStatus !== 'playing') {
+            Alert.alert('Cannot Get Hint', 'You can only get hints during an active game');
+            return;
+        }
+
+        try {
+            // Get current FEN position
+            const currentFen = game.fen();
+
+            // Set loading state
+            setIsLoadingHint(true);
+
+            // Request AI suggestion
+            const suggestion = await gameService.getSuggestion({
+                gameId: gameId,
+                fenPosition: currentFen,
+                depth: 15, // Medium depth for balance between speed and accuracy
+            });
+
+            // Helper: Convert chess square notation to board index
+            const squareToIndex = (square: string): number => {
+                const file = square.charCodeAt(0) - 'a'.charCodeAt(0); // a=0, b=1, ..., h=7
+                const rank = 8 - parseInt(square[1]); // 8=0, 7=1, ..., 1=7
+                return rank * 8 + file;
+            };
+
+            // Parse the suggested move to get from/to squares
+            const tempGame = new Chess(currentFen);
+            const move = tempGame.move(suggestion.suggestedMoveSan);
+
+            if (move) {
+                // Convert chess.js square notation to board indices
+                const fromIndex = squareToIndex(move.from);
+                const toIndex = squareToIndex(move.to);
+
+                // Set hint squares to highlight on board
+                setHintSquares({ from: fromIndex, to: toIndex });
+
+                console.log(`[VsBot] Hint displayed: ${suggestion.suggestedMoveSan} (from: ${move.from}, to: ${move.to})`);
+                console.log(`[VsBot] Points deducted: ${suggestion.pointsDeducted}, Remaining: ${suggestion.remainingPoints}`);
+
+                Alert.alert(
+                    '💡 AI Suggestion',
+                    `Suggested move: ${suggestion.suggestedMoveSan}\n\n` +
+                    `Confidence: ${(suggestion.confidence * 100).toFixed(0)}%\n` +
+                    `Points deducted: ${suggestion.pointsDeducted}\n` +
+                    `Remaining points: ${suggestion.remainingPoints}`,
+                    [{ text: 'OK' }]
+                );
+            } else {
+                Alert.alert('Error', 'Cannot parse suggested move');
+            }
+
+        } catch (error: any) {
+            console.error('[VsBot] Failed to get hint:', error);
+
+            // Show specific error messages
+            if (error.message.includes('Not enough points') || error.message.includes('Insufficient points')) {
+                Alert.alert('Insufficient Points', error.message);
+            } else if (error.message.includes('wait') || error.message.includes('rate limit')) {
+                Alert.alert('Rate Limited', error.message);
+            } else {
+                Alert.alert('Error', 'Cannot get hint. Please try again.');
+            }
+        } finally {
+            setIsLoadingHint(false);
+        }
+    };
+
+    // Note: handleSquareClick removed - players interact with physical board only
+
 
     return (
         <SafeAreaView style={styles.container}>
@@ -521,48 +709,39 @@ export default function VsBotScreen() {
                 {/* Board Section: Players + Board */}
                 <View style={styles.boardSection}>
                     {/* Match Header Card */}
-                    <View style={styles.matchHeader}>
-                        {/* You (Left) */}
-                        <View style={styles.playerSide}>
-                            <View style={styles.avatarContainer}>
-                                <Ionicons name="person" size={20} color="#6B7280" />
-                            </View>
-                            <View style={styles.playerDetails}>
-                                <Text style={styles.playerName}>You</Text>
-                                <Text style={styles.playerElo}>1200</Text>
-                            </View>
-                        </View>
+                    <MatchHeader
+                        userElo={1200}
+                        robotElo={parseInt(elo as string) || 800}
+                        difficultyName={(difficulty as string) || 'Easy'}
+                        timer={gameStatus === 'playing' ? '10:00' :
+                            gameStatus === 'starting' ? 'Starting' :
+                                gameStatus === 'ended' ? 'Ended' : 'Idle'}
+                        styles={styles}
+                    />
 
-                        {/* Score/Status (Center) */}
-                        <View style={styles.scoreContainer}>
-                            <View style={styles.timerPill}>
-                                <Text style={styles.timerText}>
-                                    {gameStatus === 'playing' ? 'Playing' :
-                                        gameStatus === 'starting' ? 'Starting' :
-                                            gameStatus === 'ended' ? 'Ended' : 'Idle'}
-                                </Text>
-                            </View>
-                        </View>
-
-                        {/* Robot (Right) */}
-                        <View style={styles.playerSideRight}>
-                            <View style={styles.avatarContainer}>
-                                <Ionicons name="hardware-chip" size={16} color="#6B7280" />
-                            </View>
-                            <View style={styles.playerDetailsRight}>
-                                <Text style={styles.playerName}>Robot</Text>
-                                <Text style={styles.playerElo}>{elo || '1500'}</Text>
-                            </View>
-                        </View>
-                    </View>
-
-                    {/* Chess Board Area */}
+                    {/* Chess Board Area - Display Only (No interaction) */}
                     <ChessBoard
                         fen={fen}
-                        onSquareClick={handleSquareClick}
-                        selectedSquare={selectedSquare}
-                        possibleMoves={possibleMoves}
+                        onSquareClick={() => { }} // Disabled - players use physical board
+                        selectedSquare={null}
+                        possibleMoves={[]}
                         checkSquare={checkSquare}
+                        highlightedSquares={
+                            hintSquares
+                                ? [
+                                    {
+                                        row: Math.floor(hintSquares.from / 8),
+                                        col: hintSquares.from % 8,
+                                        color: 'rgba(0, 150, 255, 0.4)' // Blue for from square
+                                    },
+                                    {
+                                        row: Math.floor(hintSquares.to / 8),
+                                        col: hintSquares.to % 8,
+                                        color: 'rgba(0, 255, 150, 0.4)' // Green for to square
+                                    }
+                                ]
+                                : []
+                        }
                         styles={styles}
                     />
                 </View>
@@ -580,8 +759,8 @@ export default function VsBotScreen() {
                             <View style={[
                                 styles.statusDot,
                                 {
-                                    backgroundColor: connectionStatus === 'connected' ? '#10B981' :
-                                        connectionStatus === 'connecting' ? '#F59E0B' :
+                                    backgroundColor: connectionStatus === 'connected' ? '#23b249' :
+                                        connectionStatus === 'connecting' ? '#f16f23' :
                                             connectionStatus === 'error' ? '#EF4444' : '#6B7280'
                                 }
                             ]} />
@@ -660,24 +839,44 @@ export default function VsBotScreen() {
                             </Text>
                         </TouchableOpacity>
 
-                        {/* Action Buttons Row: Undo, Pause, Hint */}
+                        {/* Hint Button */}
                         {gameStatus === 'playing' && (
-                            <View style={{ flexDirection: 'row', gap: 12 }}>
-                                <TouchableOpacity style={[styles.actionButton, { flex: 1 }]}>
-                                    <Ionicons name="arrow-undo" size={20} color={Colors.light.text} />
-                                    <Text style={styles.actionButtonText}>Undo</Text>
-                                </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.actionButton, isLoadingHint && { opacity: 0.5 }]}
+                                onPress={handleHint}
+                                disabled={isLoadingHint}
+                            >
+                                <Ionicons name="bulb-outline" size={20} color={Colors.light.text} />
+                                <Text style={styles.actionButtonText}>
+                                    {isLoadingHint ? 'Loading...' : 'Get Hint'}
+                                </Text>
+                            </TouchableOpacity>
+                        )}
 
-                                <TouchableOpacity style={[styles.actionButton, { flex: 1 }]}>
-                                    <Ionicons name="pause" size={20} color={Colors.light.text} />
-                                    <Text style={styles.actionButtonText}>Pause</Text>
-                                </TouchableOpacity>
+                        {/* Pause Game Button */}
+                        {gameStatus === 'playing' && (
+                            <TouchableOpacity
+                                style={[styles.actionButton, { backgroundColor: '#F3F4F6' }]}
+                                onPress={handlePauseGame}
+                            >
+                                <Ionicons name="pause" size={20} color="#8B5CF6" />
+                                <Text style={[styles.actionButtonText, { color: '#8B5CF6' }]}>
+                                    Pause Game
+                                </Text>
+                            </TouchableOpacity>
+                        )}
 
-                                <TouchableOpacity style={[styles.actionButton, { flex: 1 }]}>
-                                    <Ionicons name="bulb-outline" size={20} color={Colors.light.text} />
-                                    <Text style={styles.actionButtonText}>Hint</Text>
-                                </TouchableOpacity>
-                            </View>
+                        {/* Resume Game Button */}
+                        {gameStatus === 'paused' && (
+                            <TouchableOpacity
+                                style={[styles.actionButton, { backgroundColor: '#F0FDF4' }]}
+                                onPress={handleResumeGame}
+                            >
+                                <Ionicons name="play" size={20} color="#23b249" />
+                                <Text style={[styles.actionButtonText, { color: '#23b249' }]}>
+                                    Resume Game
+                                </Text>
+                            </TouchableOpacity>
                         )}
 
                         {/* Resign Game Button */}
@@ -699,28 +898,8 @@ export default function VsBotScreen() {
                         </Text>
                     </View>
 
-                    {/* Move History - Always visible */}
-                    <View style={styles.historyContainer}>
-                        <Text style={styles.historyTitle}>Move History</Text>
-                        <ScrollView
-                            style={styles.historyList}
-                            nestedScrollEnabled={true}
-                        >
-                            {moveHistory.length > 0 ? (
-                                moveHistory.map((move) => (
-                                    <View key={move.moveNumber} style={styles.historyItem}>
-                                        <Text style={styles.historyMove}>{move.moveNumber}.</Text>
-                                        <Text style={styles.historyMove}>{move.white}</Text>
-                                        <Text style={styles.historyMove}>{move.black || ''}</Text>
-                                    </View>
-                                ))
-                            ) : (
-                                <Text style={{ textAlign: 'center', color: '#9CA3AF', marginTop: 20 }}>
-                                    No moves yet
-                                </Text>
-                            )}
-                        </ScrollView>
-                    </View>
+                    {/* Move History - Component */}
+                    <MoveHistory moves={moveHistory} />
                 </ScrollView>
             </View>
 
@@ -731,6 +910,15 @@ export default function VsBotScreen() {
                 isConnected={isConnected}
                 streamUrl={CAMERA_CONFIG.STREAM_URL}
                 title="Robot Camera"
+            />
+
+            {/* Game Over Modal */}
+            <GameOverModal
+                isOpen={gameOverModal.isOpen}
+                result={gameOverModal.result}
+                reason={gameOverModal.reason}
+                message={gameOverModal.message}
+                onClose={() => setGameOverModal({ ...gameOverModal, isOpen: false })}
             />
         </SafeAreaView>
     );
