@@ -15,32 +15,32 @@ export default function Profile() {
     const location = useLocation();
     const [isDarkMode, setIsDarkMode] = useState(false);
     const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(true);
-    const [user, setUser] = useState<UserResponse | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [user, setUser] = useState<UserResponse | null>(() => authService.getCurrentUser());
+    const [loading, setLoading] = useState(!authService.getCurrentUser());
 
     useEffect(() => {
         fetchUserProfile();
     }, [location]); // Re-fetch when navigating back to this page
 
     const fetchUserProfile = async () => {
-        setLoading(true);
+        // Only show loading if we don't have cached data
+        if (!authService.getCurrentUser()) {
+            setLoading(true);
+        }
+
         try {
             const profile = await authService.getProfile();
             if (profile) {
                 setUser(profile);
-            } else {
-                // If failed to get profile, try from localStorage
-                const localUser = authService.getCurrentUser();
-                if (localUser) {
-                    setUser(localUser);
-                } else {
-                    toast.error('Không thể tải thông tin người dùng');
-                    navigate('/login');
-                }
             }
         } catch (error) {
             console.error('Error fetching profile:', error);
-            toast.error('Lỗi khi tải thông tin người dùng');
+            // Only show error if we also failed to get cached data or user explicitly needs to know
+            if (!authService.getCurrentUser()) {
+                toast.error('Lỗi khi tải thông tin người dùng');
+                // Optional: navigate to login if absolutely no data available
+                // navigate('/login');
+            }
         } finally {
             setLoading(false);
         }
@@ -106,7 +106,7 @@ export default function Profile() {
     return (
         <div className="profile-container">
             <ToastContainer position="top-right" autoClose={3000} />
-            
+
             <div className="profile-header">
                 <div onClick={() => navigate('/')} style={{ cursor: 'pointer', padding: '8px' }}>
                     <ArrowLeft size={24} color="var(--color-text)" />
@@ -130,7 +130,7 @@ export default function Profile() {
                                     className="profile-avatar"
                                 />
                             ) : (
-                                <div 
+                                <div
                                     className="profile-avatar"
                                     style={{
                                         backgroundColor: '#667eea',
@@ -156,7 +156,7 @@ export default function Profile() {
                                 📱 {(user as any).phoneNumber}
                             </div>
                         )} */}
-                        <button 
+                        <button
                             className="edit-profile-button"
                             onClick={() => navigate('/personal-information')}
                         >
@@ -187,73 +187,73 @@ export default function Profile() {
                         </div>
                     </div>
 
-                <div className="section">
-                    <div className="section-header">Account</div>
-                    <div className="section-content">
-                        <div className="setting-item" onClick={() => navigate('/personal-information')}>
-                            <div className="setting-left">
-                                <div className="setting-icon-container">
-                                    <User size={20} color="var(--color-text)" />
+                    <div className="section">
+                        <div className="section-header">Account</div>
+                        <div className="section-content">
+                            <div className="setting-item" onClick={() => navigate('/personal-information')}>
+                                <div className="setting-left">
+                                    <div className="setting-icon-container">
+                                        <User size={20} color="var(--color-text)" />
+                                    </div>
+                                    <div className="setting-title">Personal Information</div>
                                 </div>
-                                <div className="setting-title">Personal Information</div>
+                                <ChevronRight size={20} color="#9CA3AF" />
                             </div>
-                            <ChevronRight size={20} color="#9CA3AF" />
-                        </div>
-                        <div className="setting-item" onClick={() => navigate('/security-password')}>
-                            <div className="setting-left">
-                                <div className="setting-icon-container">
-                                    <Lock size={20} color="var(--color-text)" />
+                            <div className="setting-item" onClick={() => navigate('/security-password')}>
+                                <div className="setting-left">
+                                    <div className="setting-icon-container">
+                                        <Lock size={20} color="var(--color-text)" />
+                                    </div>
+                                    <div className="setting-title">Security & Password</div>
                                 </div>
-                                <div className="setting-title">Security & Password</div>
+                                <ChevronRight size={20} color="#9CA3AF" />
                             </div>
-                            <ChevronRight size={20} color="#9CA3AF" />
-                        </div>
-                        <div className="setting-item" onClick={() => navigate('/purchase-points')}>
-                            <div className="setting-left">
-                                <div className="setting-icon-container">
-                                    <Coins size={20} color="var(--color-text)" />
+                            <div className="setting-item" onClick={() => navigate('/purchase-points')}>
+                                <div className="setting-left">
+                                    <div className="setting-icon-container">
+                                        <Coins size={20} color="var(--color-text)" />
+                                    </div>
+                                    <div className="setting-title">Purchase Points</div>
                                 </div>
-                                <div className="setting-title">Purchase Points</div>
+                                <ChevronRight size={20} color="#9CA3AF" />
                             </div>
-                            <ChevronRight size={20} color="#9CA3AF" />
-                        </div>
-                        <div className="setting-item" onClick={() => navigate('/points-history')}>
-                            <div className="setting-left">
-                                <div className="setting-icon-container">
-                                    <History size={20} color="var(--color-text)" />
+                            <div className="setting-item" onClick={() => navigate('/points-history')}>
+                                <div className="setting-left">
+                                    <div className="setting-icon-container">
+                                        <History size={20} color="var(--color-text)" />
+                                    </div>
+                                    <div className="setting-title">Points History</div>
                                 </div>
-                                <div className="setting-title">Points History</div>
+                                <ChevronRight size={20} color="#9CA3AF" />
                             </div>
-                            <ChevronRight size={20} color="#9CA3AF" />
                         </div>
                     </div>
-                </div>
 
-                <div className="section">
-                    <div className="section-header">Preferences</div>
-                    <div className="section-content">
-                        {renderSettingItem(Moon, 'Dark Mode', 'switch', isDarkMode, setIsDarkMode)}
-                        {renderSettingItem(Bell, 'Notifications', 'switch', isNotificationsEnabled, setIsNotificationsEnabled)}
-                        {renderSettingItem(Globe, 'Language')}
+                    <div className="section">
+                        <div className="section-header">Preferences</div>
+                        <div className="section-content">
+                            {renderSettingItem(Moon, 'Dark Mode', 'switch', isDarkMode, setIsDarkMode)}
+                            {renderSettingItem(Bell, 'Notifications', 'switch', isNotificationsEnabled, setIsNotificationsEnabled)}
+                            {renderSettingItem(Globe, 'Language')}
+                        </div>
                     </div>
-                </div>
 
-                <div className="section">
-                    <div className="section-header">Support</div>
-                    <div className="section-content">
-                        {renderSettingItem(HelpCircle, 'Help Center')}
-                        {renderSettingItem(FileText, 'Terms of Service')}
-                        {renderSettingItem(Shield, 'Privacy Policy')}
+                    <div className="section">
+                        <div className="section-header">Support</div>
+                        <div className="section-content">
+                            {renderSettingItem(HelpCircle, 'Help Center')}
+                            {renderSettingItem(FileText, 'Terms of Service')}
+                            {renderSettingItem(Shield, 'Privacy Policy')}
+                        </div>
                     </div>
+
+                    <button className="logout-button" onClick={handleLogout}>
+                        <LogOut size={20} color="#EF4444" />
+                        <span className="logout-text">Log Out</span>
+                    </button>
+
+                    <div className="version-text">Version 1.0.0</div>
                 </div>
-
-                <button className="logout-button" onClick={handleLogout}>
-                    <LogOut size={20} color="#EF4444" />
-                    <span className="logout-text">Log Out</span>
-                </button>
-
-                <div className="version-text">Version 1.0.0</div>
-            </div>
             )}
         </div>
     );

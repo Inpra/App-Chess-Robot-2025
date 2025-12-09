@@ -25,10 +25,10 @@ export interface UserResponse {
     role: string;
     isActive: boolean;
     lastLoginAt?: string;
-    
+
     // Points Balance
     pointsBalance: number;
-    
+
     // Elo Rating information
     eloRating: number;
     peakElo?: number;
@@ -147,10 +147,10 @@ class AuthService {
             const response = await apiClient.get<{ user: UserResponse }>(
                 AUTH_ENDPOINTS.ME
             );
-            
+
             // Update local storage
             localStorage.setItem('user', JSON.stringify(response.user));
-            
+
             return response.user;
         } catch (error) {
             console.error('Get profile error:', error);

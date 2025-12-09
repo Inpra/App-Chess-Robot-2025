@@ -15,12 +15,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import authService from '@/services/authService';
+import QRCodeLogin from '@/components/QRCodeLogin';
 
 export default function LoginScreen() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showQRLogin, setShowQRLogin] = useState(false);
 
   const [loading, setLoading] = useState(false);
 
@@ -53,122 +55,113 @@ export default function LoginScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Back Button */}
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => router.replace('/(tabs)')}
-        >
-          <Ionicons name="arrow-back" size={24} color={Colors.light.text} />
-          <Text style={styles.backButtonText}>Back to Dashboard</Text>
-        </TouchableOpacity>
-
-        <View style={styles.header}>
-          <View style={styles.logoContainer}>
-            <Ionicons name="game-controller" size={60} color={Colors.light.primary} />
-          </View>
-          <Text style={styles.title}>Welcome Back!</Text>
-          <Text style={styles.subtitle}>Sign in to continue your chess journey</Text>
-        </View>
-
-        <View style={styles.form}>
-          <View style={styles.inputContainer}>
-            <Ionicons name="mail-outline" size={20} color={Colors.light.textSecondary} style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Email Address"
-              placeholderTextColor={Colors.light.textSecondary}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Ionicons name="lock-closed-outline" size={20} color={Colors.light.textSecondary} style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Password"
-              placeholderTextColor={Colors.light.textSecondary}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-            />
-            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-              <Ionicons
-                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                size={20}
-                color={Colors.light.textSecondary}
-              />
+        {showQRLogin ? (
+          <QRCodeLogin onBack={() => setShowQRLogin(false)} />
+        ) : (
+          <ScrollView contentContainerStyle={styles.scrollContent}>
+            {/* Back Button */}
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => router.replace('/(tabs)')}
+            >
+              <Ionicons name="arrow-back" size={24} color={Colors.light.text} />
+              <Text style={styles.backButtonText}>Back to Dashboard</Text>
             </TouchableOpacity>
-          </View>
 
-          <TouchableOpacity style={styles.forgotPassword}>
-            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-          </TouchableOpacity>
+            <View style={styles.header}>
+              <View style={styles.logoContainer}>
+                <Ionicons name="game-controller" size={60} color={Colors.light.primary} />
+              </View>
+              <Text style={styles.title}>Welcome Back!</Text>
+              <Text style={styles.subtitle}>Sign in to continue your chess journey</Text>
+            </View>
 
-          <TouchableOpacity
-            style={[styles.loginButton, loading && { opacity: 0.7 }]}
-            onPress={handleLogin}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.loginButtonText}>Log In</Text>
-            )}
-          </TouchableOpacity>
+            <View style={styles.form}>
+              <View style={styles.inputContainer}>
+                <Ionicons name="mail-outline" size={20} color={Colors.light.textSecondary} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Email Address"
+                  placeholderTextColor={Colors.light.textSecondary}
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </View>
 
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>Or continue with</Text>
-            <View style={styles.dividerLine} />
-          </View>
+              <View style={styles.inputContainer}>
+                <Ionicons name="lock-closed-outline" size={20} color={Colors.light.textSecondary} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Password"
+                  placeholderTextColor={Colors.light.textSecondary}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                />
+                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                  <Ionicons
+                    name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                    size={20}
+                    color={Colors.light.textSecondary}
+                  />
+                </TouchableOpacity>
+              </View>
 
-          <View style={styles.socialButtons}>
-            <TouchableOpacity style={styles.socialButton}>
-              <Ionicons name="logo-google" size={24} color="#DB4437" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.socialButton}>
-              <Ionicons name="logo-facebook" size={24} color="#4267B2" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.socialButton}>
-              <Ionicons name="logo-apple" size={24} color="#000000" />
-            </TouchableOpacity>
-          </View>
-
-          <TouchableOpacity
-            style={{ alignItems: 'center', marginBottom: 20 }}
-            onPress={async () => {
-              try {
-                alert('Testing connection to: ' + require('@/services/apiConfig').API_CONFIG.BASE_URL);
-                const response = await fetch(require('@/services/apiConfig').API_CONFIG.BASE_URL.replace('/api', '/health') || require('@/services/apiConfig').API_CONFIG.BASE_URL);
-                if (response.ok || response.status === 404) { // 404 means server is reachable but endpoint might not exist
-                  alert('Connection Successful! Server is reachable.');
-                } else {
-                  alert(`Server reachable but returned status: ${response.status}`);
-                }
-              } catch (e: any) {
-                alert('Connection Failed: ' + e.message + '\n\nCheck if your computer IP is correct in apiConfig.ts and firewall is off.');
-              }
-            }}
-          >
-            <Text style={{ color: Colors.light.textSecondary, fontSize: 12, textDecorationLine: 'underline' }}>
-              Test Server Connection
-            </Text>
-          </TouchableOpacity>
-
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Don't have an account? </Text>
-            <Link href="/(auth)/register" asChild>
-              <TouchableOpacity>
-                <Text style={styles.signupText}>Sign Up</Text>
+              <TouchableOpacity style={styles.forgotPassword}>
+                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
               </TouchableOpacity>
-            </Link>
-          </View>
-        </View>
-      </ScrollView>
+
+              <TouchableOpacity
+                style={[styles.loginButton, loading && { opacity: 0.7 }]}
+                onPress={handleLogin}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.loginButtonText}>Log In</Text>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.qrButton}
+                onPress={() => setShowQRLogin(true)}
+              >
+                <Ionicons name="qr-code-outline" size={20} color={Colors.light.primary} style={{ marginRight: 8 }} />
+                <Text style={styles.qrButtonText}>Login with QR Code</Text>
+              </TouchableOpacity>
+
+              <View style={styles.divider}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>Or continue with</Text>
+                <View style={styles.dividerLine} />
+              </View>
+
+              <View style={styles.socialButtons}>
+                <TouchableOpacity style={styles.socialButton}>
+                  <Ionicons name="logo-google" size={24} color="#DB4437" />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.socialButton}>
+                  <Ionicons name="logo-facebook" size={24} color="#4267B2" />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.socialButton}>
+                  <Ionicons name="logo-apple" size={24} color="#000000" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.footer}>
+                <Text style={styles.footerText}>Don't have an account? </Text>
+                <Link href="/(auth)/register" asChild>
+                  <TouchableOpacity>
+                    <Text style={styles.signupText}>Sign Up</Text>
+                  </TouchableOpacity>
+                </Link>
+              </View>
+            </View>
+          </ScrollView>
+        )}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -272,6 +265,22 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  qrButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    borderWidth: 1,
+    borderColor: Colors.light.primary,
+    borderRadius: 12,
+    marginBottom: 24,
+    borderStyle: 'dashed',
+  },
+  qrButtonText: {
+    color: Colors.light.primary,
+    fontSize: 16,
+    fontWeight: '600',
   },
   divider: {
     flexDirection: 'row',

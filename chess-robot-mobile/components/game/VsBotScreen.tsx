@@ -115,10 +115,14 @@ export default function VsBotScreen() {
         }
     }, [resumeGameId, isConnected]);
 
+    const gameOverHandled = useRef<boolean>(false);
+
     // Handle game over
-    const handleGameOver = useCallback(async (data: any) => {
+    const handleGameOver = useCallback(async (data: any, providedGame?: Chess) => {
         console.log('[handleGameOver] ========== CALLED ==========');
-        if (!gameId) return;
+        if (!gameId || gameOverHandled.current) return;
+
+        gameOverHandled.current = true; // Mark as handled immediately
 
         const { reason, winner, message } = data;
 
@@ -131,9 +135,16 @@ export default function VsBotScreen() {
                 console.log('[handleGameOver] ✓ Pending moves saved');
             }
 
-            // Calculate total moves from moveHistory state (NOT game.history() which is empty when loaded from FEN)
+            // Use the provided game instance for most up-to-date state, or fallback to current state
+            const targetGame = providedGame || game;
+
+            // Calculate total moves. If we have a fresh game instance, use its history.
+            // Otherwise fallback to moveHistory state.
+            // Note: game.history() might be empty if loaded from FEN without history, 
+            // so moveHistory state is safer unless we are sure about the game object.
+            // However, for total count, we can try to estimate or rely on what we have.
             const totalMoves = moveHistory.reduce((sum, m) => sum + (m.black ? 2 : 1), 0);
-            const currentFen = game.fen();
+            const currentFen = targetGame.fen();
 
             console.log('[handleGameOver] Total moves:', totalMoves);
             console.log('[handleGameOver] Current FEN:', currentFen);
@@ -162,7 +173,7 @@ export default function VsBotScreen() {
                 gameId,
                 result,
                 'completed',
-                totalMoves,  // Don't divide by 2 - totalMoves is already the actual move count
+                totalMoves,
                 currentFen
             );
             console.log('[handleGameOver] ✓ Game result updated');
@@ -180,9 +191,52 @@ export default function VsBotScreen() {
 
         } catch (error) {
             console.error('[VsBot] Failed to update game over:', error);
+            // Allow retry if it failed?
+            gameOverHandled.current = false;
             Alert.alert('Error', 'Failed to save game result.');
         }
     }, [gameId, game, moveHistory]);
+
+    // Check for local game over using Chess.js logic
+    const checkLocalGameOver = (newGame: Chess) => {
+        if (newGame.isGameOver()) {
+            console.log('[checkLocalGameOver] Local game over detected!');
+
+            let reason = 'draw';
+            let winner = 'draw';
+            let message = 'Game Over';
+
+            if (newGame.isCheckmate()) {
+                reason = 'checkmate';
+                // If turn is 'w', it means White was checkmated -> Black wins.
+                // Assuming User is White and Robot is Black (standard/common).
+                // If turn is 'b', Black checkmated -> White wins.
+                // NOTE: This logic assumes: User=White, Robot=Black.
+                // If your app supports User=Black, you need to check player color.
+                // For now, assuming User is Player (White usually)
+                winner = newGame.turn() === 'w' ? 'black' : 'white';
+            } else if (newGame.isStalemate()) {
+                reason = 'stalemate';
+                message = 'Stalemate';
+            } else if (newGame.isInsufficientMaterial()) {
+                reason = 'insufficient material';
+                message = 'Insufficient Material';
+            } else if (newGame.isThreefoldRepetition()) {
+                reason = 'threefold repetition';
+                message = 'Threefold Repetition';
+            } else if (newGame.isDraw()) {
+                reason = 'draw';
+            }
+
+            // Construct data similar to server event
+            handleGameOver({
+                type: 'game_over',
+                reason,
+                winner,
+                message
+            }, newGame);
+        }
+    };
 
     const computeMessageHash = (type: string, data: any): string => {
         return JSON.stringify({
@@ -217,6 +271,10 @@ export default function VsBotScreen() {
                     updateMoveHistoryFromFen(data.fen_str, newGame);
                     // Clear hint highlights when board updates
                     setHintSquares(null);
+
+                    // Check for Game Over locally
+                    checkLocalGameOver(newGame);
+
                 } catch (error) {
                     console.error('[VsBot] Failed to parse FEN:', error);
                 }
@@ -466,6 +524,7 @@ export default function VsBotScreen() {
             lastProcessedFen.current = '';
             pendingMoves.current = [];
             setCheckSquare(null);
+            gameOverHandled.current = false;
 
             const response = await gameService.startGame({
                 gameTypeCode: 'normal_game',

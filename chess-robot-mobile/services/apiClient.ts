@@ -85,9 +85,21 @@ class ApiClient {
     }
 
     /**
+     * Refresh token handler
+     */
+    private refreshTokenHandler: (() => Promise<boolean>) | null = null;
+
+    /**
+     * Set refresh token handler
+     */
+    setRefreshTokenHandler(handler: () => Promise<boolean>) {
+        this.refreshTokenHandler = handler;
+    }
+
+    /**
      * Handle API response
      */
-    private async handleResponse<T>(response: Response): Promise<T> {
+    private async handleResponse<T>(response: Response, originalRequest?: () => Promise<T>): Promise<T> {
         const contentType = response.headers.get('content-type');
         const isJson = contentType?.includes('application/json');
 
@@ -101,7 +113,26 @@ class ApiClient {
         if (!response.ok) {
             // Handle 401 Unauthorized - Token expired
             if (response.status === 401) {
-                console.log('[ApiClient] 401 Unauthorized - Token expired, triggering logout');
+                console.log('[ApiClient] 401 Unauthorized - Token might be expired');
+
+                // Check if the failed request was the refresh token request itself
+                // Prevents infinite loop
+                const isRefreshRequest = response.url.includes('/refresh');
+
+                // Try to refresh token if handler is available and we haven't retried yet
+                if (this.refreshTokenHandler && originalRequest && !isRefreshRequest) {
+                    console.log('[ApiClient] Attempting to refresh token...');
+                    const refreshSuccess = await this.refreshTokenHandler();
+
+                    if (refreshSuccess) {
+                        console.log('[ApiClient] Token refresh successful, retrying original request');
+                        return originalRequest();
+                    } else {
+                        console.log('[ApiClient] Token refresh failed');
+                    }
+                }
+
+                console.log('[ApiClient] Triggering logout');
                 // Clear auth data
                 await AsyncStorage.removeItem('auth_token');
                 await AsyncStorage.removeItem('user');
@@ -171,7 +202,7 @@ class ApiClient {
                 signal: controller.signal,
             });
 
-            return await this.handleResponse<T>(response);
+            return await this.handleResponse<T>(response, () => this.makeRequest<T>(endpoint, options));
         } catch (error: any) {
             if (error.name === 'AbortError') {
                 throw {

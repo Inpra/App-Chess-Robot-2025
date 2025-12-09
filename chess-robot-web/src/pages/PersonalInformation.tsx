@@ -8,13 +8,18 @@ import apiClient from '../services/apiClient';
 
 export default function PersonalInformation() {
     const navigate = useNavigate();
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(!authService.getCurrentUser());
     const [saving, setSaving] = useState(false);
-    const [formData, setFormData] = useState({
-        username: '',
-        fullName: '',
-        email: '',
-        phoneNumber: '',
+
+    // Initialize with cached data if available
+    const [formData, setFormData] = useState(() => {
+        const cachedUser = authService.getCurrentUser();
+        return {
+            username: cachedUser?.username || '',
+            fullName: cachedUser?.fullName || '',
+            email: cachedUser?.email || '',
+            phoneNumber: (cachedUser as any)?.phoneNumber || '',
+        };
     });
 
     useEffect(() => {
@@ -22,7 +27,11 @@ export default function PersonalInformation() {
     }, []);
 
     const fetchUserProfile = async () => {
-        setLoading(true);
+        // Only show loading if we don't have cached data
+        if (!authService.getCurrentUser()) {
+            setLoading(true);
+        }
+
         try {
             const profile = await authService.getProfile();
             if (profile) {
@@ -34,7 +43,9 @@ export default function PersonalInformation() {
                 });
             }
         } catch (error) {
-            toast.error('Không thể tải thông tin người dùng');
+            if (!authService.getCurrentUser()) {
+                toast.error('Không thể tải thông tin người dùng');
+            }
         } finally {
             setLoading(false);
         }
@@ -49,7 +60,7 @@ export default function PersonalInformation() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (!formData.username || !formData.email) {
             toast.error('Username và Email là bắt buộc');
             return;
@@ -65,10 +76,10 @@ export default function PersonalInformation() {
             });
 
             toast.success('✓ Cập nhật thông tin thành công!');
-            
+
             // Refresh profile
             await authService.getProfile();
-            
+
             setTimeout(() => {
                 navigate('/profile');
             }, 1500);
@@ -83,22 +94,22 @@ export default function PersonalInformation() {
     return (
         <div style={{ minHeight: '100vh', backgroundColor: '#F9FAFB', padding: '20px' }}>
             <ToastContainer position="top-right" autoClose={3000} />
-            
+
             {/* Header */}
-            <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
+            <div style={{
+                display: 'flex',
+                alignItems: 'center',
                 justifyContent: 'space-between',
                 marginBottom: '24px',
                 maxWidth: '600px',
                 margin: '0 auto 24px'
             }}>
-                <div 
-                    onClick={() => navigate('/profile')} 
-                    style={{ 
-                        cursor: 'pointer', 
-                        padding: '8px', 
-                        borderRadius: '12px', 
+                <div
+                    onClick={() => navigate('/profile')}
+                    style={{
+                        cursor: 'pointer',
+                        padding: '8px',
+                        borderRadius: '12px',
                         backgroundColor: 'white',
                         boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
                     }}
@@ -112,8 +123,8 @@ export default function PersonalInformation() {
             </div>
 
             {/* Form */}
-            <div style={{ 
-                maxWidth: '600px', 
+            <div style={{
+                maxWidth: '600px',
                 margin: '0 auto',
                 backgroundColor: 'white',
                 borderRadius: '16px',
@@ -128,12 +139,12 @@ export default function PersonalInformation() {
                     <form onSubmit={handleSubmit}>
                         {/* Username */}
                         <div style={{ marginBottom: '20px' }}>
-                            <label style={{ 
+                            <label style={{
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '8px',
-                                fontSize: '14px', 
-                                fontWeight: '600', 
+                                fontSize: '14px',
+                                fontWeight: '600',
                                 color: '#374151',
                                 marginBottom: '8px'
                             }}>
@@ -162,12 +173,12 @@ export default function PersonalInformation() {
 
                         {/* Full Name */}
                         <div style={{ marginBottom: '20px' }}>
-                            <label style={{ 
+                            <label style={{
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '8px',
-                                fontSize: '14px', 
-                                fontWeight: '600', 
+                                fontSize: '14px',
+                                fontWeight: '600',
                                 color: '#374151',
                                 marginBottom: '8px'
                             }}>
@@ -195,12 +206,12 @@ export default function PersonalInformation() {
 
                         {/* Email (Read-only) */}
                         <div style={{ marginBottom: '20px' }}>
-                            <label style={{ 
+                            <label style={{
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '8px',
-                                fontSize: '14px', 
-                                fontWeight: '600', 
+                                fontSize: '14px',
+                                fontWeight: '600',
                                 color: '#374151',
                                 marginBottom: '8px'
                             }}>
@@ -230,12 +241,12 @@ export default function PersonalInformation() {
 
                         {/* Phone Number */}
                         <div style={{ marginBottom: '24px' }}>
-                            <label style={{ 
+                            <label style={{
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '8px',
-                                fontSize: '14px', 
-                                fontWeight: '600', 
+                                fontSize: '14px',
+                                fontWeight: '600',
                                 color: '#374151',
                                 marginBottom: '8px'
                             }}>

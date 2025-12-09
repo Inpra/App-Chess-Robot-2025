@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, Gamepad2 } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Gamepad2, QrCode } from 'lucide-react';
 import authService from '../services/authService';
+import QRCodeLogin from '../components/QRCodeLogin';
 import '../styles/Auth.css';
 
 export default function Login() {
@@ -11,6 +12,7 @@ export default function Login() {
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [loginMode, setLoginMode] = useState<'email' | 'qr'>('email');
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -49,6 +51,27 @@ export default function Login() {
                     <p className="auth-subtitle">Sign in to continue your chess journey</p>
                 </div>
 
+                {/* Login Mode Toggle */}
+                <div className="login-mode-toggle">
+                    <button
+                        type="button"
+                        className={`mode-button ${loginMode === 'email' ? 'active' : ''}`}
+                        onClick={() => setLoginMode('email')}
+                    >
+                        <Mail size={18} />
+                        <span>Email Login</span>
+                    </button>
+                    <button
+                        type="button"
+                        className={`mode-button ${loginMode === 'qr' ? 'active' : ''}`}
+                        onClick={() => setLoginMode('qr')}
+                    >
+                        <QrCode size={18} />
+                        <span>QR Code</span>
+                    </button>
+                </div>
+
+                {loginMode === 'email' ? (
                 <form className="auth-form" onSubmit={handleLogin}>
                     {error && (
                         <div className="error-message">
@@ -143,6 +166,9 @@ export default function Login() {
                         <Link to="/register" className="footer-link">Sign Up</Link>
                     </div>
                 </form>
+                ) : (
+                    <QRCodeLogin />
+                )}
             </div>
         </div>
     );

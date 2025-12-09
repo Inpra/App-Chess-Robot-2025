@@ -216,6 +216,40 @@ class AuthService {
             };
         }
     }
+    /**
+     * Set auth data manually (used for QR Login)
+     */
+    async setAuthData(token: string, user: any): Promise<void> {
+        await AsyncStorage.setItem('auth_token', token);
+        await AsyncStorage.setItem('user', JSON.stringify(user));
+    }
+
+    /**
+     * Refresh auth token
+     */
+    async refreshToken(): Promise<boolean> {
+        try {
+            const currentToken = await this.getToken();
+            if (!currentToken) return false;
+
+            // Optional: Check if token is actually expired or close to expiry here
+            // For now, we rely on the API call to check/refresh
+
+            // Note: This endpoint should return a new token
+            // If your backend implements refresh tokens differently (e.g. separate refresh token), adjust this
+            // Assuming endpoint is POST /Auth/refresh
+            const response = await apiClient.post<AuthResponse>(AUTH_ENDPOINTS.REFRESH);
+
+            if (response.success && response.token) {
+                await AsyncStorage.setItem('auth_token', response.token);
+                return true;
+            }
+            return false;
+        } catch (error) {
+            console.error('Refresh token error:', error);
+            return false;
+        }
+    }
 }
 
 // Export singleton instance

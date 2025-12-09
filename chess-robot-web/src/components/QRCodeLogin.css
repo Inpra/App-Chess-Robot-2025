@@ -1,0 +1,154 @@
+.qr-login-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    min-height: 400px;
+}
+
+.qr-status {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    text-align: center;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #4F46E5;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.qr-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    max-width: 400px;
+    width: 100%;
+}
+
+.qr-content h3 {
+    font-size: 24px;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0;
+}
+
+.qr-code-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.qr-instructions {
+    background: #f9fafb;
+    border-radius: 12px;
+    padding: 20px;
+    width: 100%;
+    text-align: left;
+}
+
+.instruction-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #374151;
+    margin: 0 0 12px 0;
+}
+
+.instruction-list {
+    margin: 0;
+    padding-left: 20px;
+    color: #6b7280;
+    line-height: 1.8;
+}
+
+.instruction-list li {
+    margin-bottom: 8px;
+}
+
+.qr-expiry {
+    color: #9ca3af;
+    font-size: 14px;
+    margin: 0;
+}
+
+.qr-hint {
+    color: #6b7280;
+    font-size: 13px;
+    margin: 8px 0 0 0;
+    font-style: italic;
+}
+
+.success-icon,
+.error-icon {
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    border-radius: 50%;
+}
+
+.success-icon {
+    background: #10b981;
+    color: white;
+}
+
+.error-icon {
+    background: #ef4444;
+    color: white;
+    font-size: 32px;
+}
+
+.qr-status.success h3 {
+    color: #10b981;
+    margin: 8px 0;
+}
+
+.qr-status.expired h3,
+.qr-status.error h3 {
+    color: #ef4444;
+    margin: 8px 0;
+}
+
+.qr-status.expired .error-icon {
+    background: #f59e0b;
+}
+
+.qr-status p {
+    color: #6b7280;
+    margin: 0;
+}
+
+.refresh-button {
+    margin-top: 16px;
+    padding: 12px 24px;
+    background: #4F46E5;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.refresh-button:hover {
+    background: #4338CA;
+}
+
+.refresh-button:active {
+    transform: scale(0.98);
+}

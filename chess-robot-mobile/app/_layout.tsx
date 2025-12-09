@@ -1,7 +1,15 @@
 import { Stack } from 'expo-router';
 import { LanguageProvider } from '@/context/LanguageContext';
+import { useEffect } from 'react';
+import apiClient from '@/services/apiClient';
+import authService from '@/services/authService';
 
 export default function RootLayout() {
+    useEffect(() => {
+        // Configure API Client with refresh token logic
+        apiClient.setRefreshTokenHandler(() => authService.refreshToken());
+    }, []);
+
     return (
         <LanguageProvider>
             <Stack screenOptions={{ headerShown: false }}>

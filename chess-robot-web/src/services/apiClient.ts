@@ -70,7 +70,7 @@ class ApiClient {
      */
     private buildURL(endpoint: string, params?: Record<string, string>): string {
         const url = new URL(`${this.baseURL}${endpoint}`);
-        
+
         if (params) {
             Object.entries(params).forEach(([key, value]) => {
                 url.searchParams.append(key, value);

@@ -10,6 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@microsoft/signalr": "^10.0.0",
+    "@supabase/supabase-js": "^2.86.2",
     "chess.js": "^1.4.0",
     "lucide-react": "^0.555.0",
     "qrcode.react": "^4.2.0",

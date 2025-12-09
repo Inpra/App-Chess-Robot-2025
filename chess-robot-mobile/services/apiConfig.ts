@@ -2,13 +2,13 @@
 // Note: For Android Emulator use 'http://10.0.2.2:7096/api'
 // For Physical Device use your computer's IP address e.g. 'http://192.168.1.x:7096/api'
 export const API_CONFIG = {
-    BASE_URL: 'http://10.17.0.187:7096/api', // Update this with your actual IP
-    TIMEOUT: 30000, 
+    BASE_URL: process.env.EXPO_PUBLIC_API_URL || 'http://100.73.130.46:7096/api',
+    TIMEOUT: 30000,
 };
 
 // Camera Configuration
 export const CAMERA_CONFIG = {
-    STREAM_URL: 'http://10.17.0.187:8000/stream', // Update this with your actual IP
+    STREAM_URL: process.env.EXPO_PUBLIC_STREAM_URL || 'http://100.73.130.46:8000/stream',
 };
 
 // Auth endpoints
