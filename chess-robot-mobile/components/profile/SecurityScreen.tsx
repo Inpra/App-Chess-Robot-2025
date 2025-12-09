@@ -26,7 +26,7 @@ export default function SecurityScreen() {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [is2FAEnabled, setIs2FAEnabled] = useState(false);
     const [saving, setSaving] = useState(false);
-    
+
     // Password visibility toggles
     const [showCurrentPassword, setShowCurrentPassword] = useState(false);
     const [showNewPassword, setShowNewPassword] = useState(false);
@@ -69,7 +69,7 @@ export default function SecurityScreen() {
         setSaving(true);
         try {
             const result = await authService.changePassword(currentPassword, newPassword);
-            
+
             if (result.success) {
                 Alert.alert(
                     'Thành công',
@@ -126,10 +126,10 @@ export default function SecurityScreen() {
                                         autoCapitalize="none"
                                     />
                                     <TouchableOpacity onPress={() => setShowCurrentPassword(!showCurrentPassword)}>
-                                        <Ionicons 
-                                            name={showCurrentPassword ? "eye-outline" : "eye-off-outline"} 
-                                            size={20} 
-                                            color="#9CA3AF" 
+                                        <Ionicons
+                                            name={showCurrentPassword ? "eye-outline" : "eye-off-outline"}
+                                            size={20}
+                                            color="#9CA3AF"
                                         />
                                     </TouchableOpacity>
                                 </View>
@@ -150,10 +150,10 @@ export default function SecurityScreen() {
                                         autoCapitalize="none"
                                     />
                                     <TouchableOpacity onPress={() => setShowNewPassword(!showNewPassword)}>
-                                        <Ionicons 
-                                            name={showNewPassword ? "eye-outline" : "eye-off-outline"} 
-                                            size={20} 
-                                            color="#9CA3AF" 
+                                        <Ionicons
+                                            name={showNewPassword ? "eye-outline" : "eye-off-outline"}
+                                            size={20}
+                                            color="#9CA3AF"
                                         />
                                     </TouchableOpacity>
                                 </View>
@@ -172,17 +172,17 @@ export default function SecurityScreen() {
                                         autoCapitalize="none"
                                     />
                                     <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
-                                        <Ionicons 
-                                            name={showConfirmPassword ? "eye-outline" : "eye-off-outline"} 
-                                            size={20} 
-                                            color="#9CA3AF" 
+                                        <Ionicons
+                                            name={showConfirmPassword ? "eye-outline" : "eye-off-outline"}
+                                            size={20}
+                                            color="#9CA3AF"
                                         />
                                     </TouchableOpacity>
                                 </View>
                             </View>
 
-                            <TouchableOpacity 
-                                style={[styles.updateButton, saving && { opacity: 0.6 }]} 
+                            <TouchableOpacity
+                                style={[styles.updateButton, saving && { opacity: 0.6 }]}
                                 onPress={handleSave}
                                 disabled={saving}
                             >

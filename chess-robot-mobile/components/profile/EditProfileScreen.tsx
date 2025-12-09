@@ -21,7 +21,6 @@ import authService, { type UserResponse } from '@/services/authService';
 
 export default function EditProfileScreen() {
     const router = useRouter();
-    const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [user, setUser] = useState<UserResponse | null>(null);
     const [fullName, setFullName] = useState('');
@@ -29,28 +28,34 @@ export default function EditProfileScreen() {
     const [phoneNumber, setPhoneNumber] = useState('');
 
     useEffect(() => {
-        fetchUserProfile();
+        loadUserProfile();
     }, []);
 
-    const fetchUserProfile = async () => {
-        setLoading(true);
+    /**
+     * Load user profile immediately from cache, then refresh from API
+     */
+    const loadUserProfile = async () => {
         try {
+            // First, load from cache (instant)
+            const cachedUser = await authService.getCurrentUser();
+            if (cachedUser) {
+                setUser(cachedUser);
+                setFullName(cachedUser.fullName || '');
+                setEmail(cachedUser.email || '');
+                setPhoneNumber(cachedUser.phoneNumber || '');
+            }
+
+            // Then, fetch fresh data in background
             const profile = await authService.getProfile();
             if (profile) {
                 setUser(profile);
                 setFullName(profile.fullName || '');
                 setEmail(profile.email || '');
                 setPhoneNumber(profile.phoneNumber || '');
-            } else {
-                Alert.alert('Lỗi', 'Không thể tải thông tin người dùng');
-                router.back();
             }
         } catch (error) {
-            console.error('Error fetching profile:', error);
+            console.error('Error loading profile:', error);
             Alert.alert('Lỗi', 'Lỗi khi tải thông tin người dùng');
-            router.back();
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -99,19 +104,6 @@ export default function EditProfileScreen() {
         const name = fullName || user?.username || 'User';
         return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=667eea&color=fff&size=100`;
     };
-
-    if (loading) {
-        return (
-            <SafeAreaView style={styles.container}>
-                <Stack.Screen options={{ headerShown: false }} />
-                <NavigationHeader title="Chỉnh sửa thông tin" />
-                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                    <ActivityIndicator size="large" color={Colors.light.primary} />
-                </View>
-            </SafeAreaView>
-        );
-    }
-
 
     return (
         <SafeAreaView style={styles.container}>

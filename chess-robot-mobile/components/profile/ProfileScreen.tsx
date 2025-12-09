@@ -4,6 +4,7 @@ import { profileStyles as styles } from '@/styles/profile.styles';
 import { Ionicons } from '@expo/vector-icons';
 import { Link, Stack, useRouter, useFocusEffect } from 'expo-router';
 import React, { useState, useEffect, useCallback } from 'react';
+import { useLanguage } from '@/context/LanguageContext';
 import {
     Image,
     SafeAreaView,
@@ -14,60 +15,79 @@ import {
     View,
     ActivityIndicator,
     Alert,
-    StyleSheet,
+    RefreshControl,
 } from 'react-native';
 import authService, { type UserResponse } from '@/services/authService';
+import LanguageSelector from '@/components/settings/LanguageSelector';
 
 export default function ProfileScreen() {
     const router = useRouter();
+    const { t } = useLanguage();
     const [isDarkMode, setIsDarkMode] = useState(false);
     const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(true);
     const [user, setUser] = useState<UserResponse | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
+    // Load cached user immediately on mount
     useEffect(() => {
-        fetchUserProfile();
+        loadCachedUser();
     }, []);
 
     // Reload profile when screen comes into focus
     useFocusEffect(
         useCallback(() => {
-            fetchUserProfile();
+            refreshUserProfile();
         }, [])
     );
 
-    const fetchUserProfile = async () => {
-        setLoading(true);
+    /**
+     * Load user from AsyncStorage immediately (no loading state)
+     * This ensures instant UI rendering with cached data
+     */
+    const loadCachedUser = async () => {
+        try {
+            const cachedUser = await authService.getCurrentUser();
+            if (cachedUser) {
+                setUser(cachedUser);
+                // Fetch fresh data in background
+                refreshUserProfile();
+            } else {
+                // No cached user, redirect to login
+                router.replace('/(auth)/login');
+            }
+        } catch (error) {
+            console.error('Error loading cached user:', error);
+            router.replace('/(auth)/login');
+        }
+    };
+
+    /**
+     * Fetch latest profile from API and update cache
+     * Runs in background without blocking UI
+     */
+    const refreshUserProfile = async () => {
+        setIsRefreshing(true);
         try {
             const profile = await authService.getProfile();
             if (profile) {
                 setUser(profile);
-            } else {
-                // If failed to get profile, try from storage
-                const localUser = await authService.getCurrentUser();
-                if (localUser) {
-                    setUser(localUser);
-                } else {
-                    Alert.alert('Lỗi', 'Không thể tải thông tin người dùng');
-                    router.replace('/(auth)/login');
-                }
             }
         } catch (error) {
-            console.error('Error fetching profile:', error);
-            Alert.alert('Lỗi', 'Lỗi khi tải thông tin người dùng');
+            console.error('Error refreshing profile:', error);
+            // Silent fail - keep showing cached data
         } finally {
-            setLoading(false);
+            setIsRefreshing(false);
         }
     };
 
     const handleLogout = async () => {
         Alert.alert(
-            'Đăng xuất',
-            'Bạn có chắc chắn muốn đăng xuất?',
+            t('logout'),
+            t('logoutConfirm'),
             [
-                { text: 'Hủy', style: 'cancel' },
+                { text: t('cancel'), style: 'cancel' },
                 {
-                    text: 'Đăng xuất',
+                    text: t('logout'),
                     style: 'destructive',
                     onPress: async () => {
                         await authService.logout();
@@ -130,21 +150,31 @@ export default function ProfileScreen() {
         <SafeAreaView style={styles.container}>
             <Stack.Screen options={{ headerShown: false }} />
 
-            {/* Header */}
+            {/* Header with refresh indicator */}
             <NavigationHeader
-                title="Profile & Settings"
+                title={t('profileAndSettings')}
                 onBack={() => router.navigate('/(tabs)')}
+                rightComponent={
+                    isRefreshing ? (
+                        <ActivityIndicator size="small" color={Colors.light.primary} />
+                    ) : null
+                }
             />
 
-            {loading ? (
-                <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color={Colors.light.primary} />
-                    <Text style={styles.loadingText}>Đang tải...</Text>
-                </View>
-            ) : (
-                <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-                    {/* User Profile Card */}
-                    <View style={styles.profileCard}>
+            <ScrollView 
+                contentContainerStyle={styles.content} 
+                showsVerticalScrollIndicator={false}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={isRefreshing}
+                        onRefresh={refreshUserProfile}
+                        colors={[Colors.light.primary]}
+                        tintColor={Colors.light.primary}
+                    />
+                }
+            >
+                {/* User Profile Card */}
+                <View style={styles.profileCard}>
                         <View style={styles.avatarContainer}>
                             <Image
                                 source={{ uri: getAvatarUrl() }}
@@ -161,7 +191,7 @@ export default function ProfileScreen() {
                         )}
                         <Link href="/profile/edit" asChild>
                             <TouchableOpacity style={styles.editProfileButton}>
-                                <Text style={styles.editProfileText}>Chỉnh sửa hồ sơ</Text>
+                                <Text style={styles.editProfileText}>{t('editProfile')}</Text>
                             </TouchableOpacity>
                         </Link>
                     </View>
@@ -175,77 +205,72 @@ export default function ProfileScreen() {
                         <View style={styles.statDivider} />
                         <View style={styles.statItem}>
                             <Text style={styles.statValue}>{(user as any)?.wins || 0}</Text>
-                            <Text style={styles.statLabel}>Thắng</Text>
+                            <Text style={styles.statLabel}>{t('wins')}</Text>
                         </View>
                         <View style={styles.statDivider} />
                         <View style={styles.statItem}>
                             <Text style={styles.statValue}>{(user as any)?.totalGamesPlayed || 0}</Text>
-                            <Text style={styles.statLabel}>Trận</Text>
+                            <Text style={styles.statLabel}>{t('matches')}</Text>
                         </View>
                     </View>
 
-                {/* Settings Sections */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionHeader}>Tài khoản</Text>
-                    <View style={styles.sectionContent}>
-                        <Link href="/profile/edit" asChild>
-                            {renderSettingItem('person-outline', 'Thông tin cá nhân')}
-                        </Link>
-                        <Link href="/profile/security" asChild>
-                            {renderSettingItem('lock-closed-outline', 'Bảo mật & Mật khẩu')}
-                        </Link>
-                        <Link href="/points-history" asChild>
-                            {renderSettingItem('wallet-outline', 'Lịch sử giao dịch')}
-                        </Link>
+                    {/* Settings Sections */}
+                    <View style={styles.section}>
+                        <Text style={styles.sectionHeader}>{t('account')}</Text>
+                        <View style={styles.sectionContent}>
+                            <Link href="/profile/edit" asChild>
+                                {renderSettingItem('person-outline', t('personalInfo'))}
+                            </Link>
+                            <Link href="/profile/security" asChild>
+                                {renderSettingItem('lock-closed-outline', t('securityAndPassword'))}
+                            </Link>
+                            <Link href="/points-history" asChild>
+                                {renderSettingItem('wallet-outline', t('transactionHistory'))}
+                            </Link>
+                        </View>
                     </View>
-                </View>
 
-                <View style={styles.section}>
-                    <Text style={styles.sectionHeader}>Lịch sử</Text>
-                    <View style={styles.sectionContent}>
-                        <Link href="/match-history" asChild>
-                            {renderSettingItem('game-controller-outline', 'Lịch sử đấu')}
-                        </Link>
-                        <Link href="/ranking" asChild>
-                            {renderSettingItem('trophy-outline', 'Bảng xếp hạng')}
-                        </Link>
+                    <View style={styles.section}>
+                        <Text style={styles.sectionHeader}>{t('history')}</Text>
+                        <View style={styles.sectionContent}>
+                            <Link href="/match-history" asChild>
+                                {renderSettingItem('game-controller-outline', t('matchHistory'))}
+                            </Link>
+                            <Link href="/ranking" asChild>
+                                {renderSettingItem('trophy-outline', t('ranking'))}
+                            </Link>
+                        </View>
                     </View>
-                </View>
 
-                <View style={styles.section}>
-                    <Text style={styles.sectionHeader}>Cài đặt</Text>
-                    <View style={styles.sectionContent}>
-                        {renderSettingItem('moon-outline', 'Chế độ tối', 'switch', isDarkMode, setIsDarkMode)}
-                        {renderSettingItem('notifications-outline', 'Thông báo', 'switch', isNotificationsEnabled, setIsNotificationsEnabled)}
+                    <View style={styles.section}>
+                        <Text style={styles.sectionHeader}>{t('settings')}</Text>
+                        <View style={styles.sectionContent}>
+                            {renderSettingItem('moon-outline', t('darkMode'), 'switch', isDarkMode, setIsDarkMode)}
+                            {renderSettingItem('notifications-outline', t('notifications'), 'switch', isNotificationsEnabled, setIsNotificationsEnabled)}
+                        </View>
                     </View>
-                </View>
 
-                <View style={styles.section}>
-                    <Text style={styles.sectionHeader}>Hỗ trợ</Text>
-                    <View style={styles.sectionContent}>
-                        <Link href="/faq" asChild>
-                            {renderSettingItem('help-circle-outline', 'Câu hỏi thường gặp')}
-                        </Link>
+                    <View style={styles.section}>
+                        <Text style={styles.sectionHeader}>{t('language')}</Text>
+                        <LanguageSelector />
                     </View>
-                </View>
 
-                <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-                    <Ionicons name="log-out-outline" size={20} color="#EF4444" />
-                    <Text style={styles.logoutText}>Đăng xuất</Text>
-                </TouchableOpacity>
+                    <View style={styles.section}>
+                        <Text style={styles.sectionHeader}>{t('support')}</Text>
+                        <View style={styles.sectionContent}>
+                            <Link href="/faq" asChild>
+                                {renderSettingItem('help-circle-outline', t('faq'))}
+                            </Link>
+                        </View>
+                    </View>
 
-                <Text style={styles.versionText}>Version 1.0.0</Text>
-            </ScrollView>
-            )}
+                    <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+                        <Ionicons name="log-out-outline" size={20} color="#EF4444" />
+                        <Text style={styles.logoutText}>{t('logout')}</Text>
+                    </TouchableOpacity>
+
+                    <Text style={styles.versionText}>Version 1.0.0</Text>
+                </ScrollView>
         </SafeAreaView>
     );
 }
-
-const loadingStyles = StyleSheet.create({
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: Colors.background,
-    },
-});

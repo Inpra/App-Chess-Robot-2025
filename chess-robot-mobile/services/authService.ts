@@ -26,10 +26,10 @@ export interface UserResponse {
     role: string;
     isActive: boolean;
     lastLoginAt?: string;
-    
+
     // Points Balance
     pointsBalance: number;
-    
+
     // Elo Rating information
     eloRating: number;
     peakElo?: number;
@@ -179,10 +179,10 @@ class AuthService {
     async updateProfile(data: { username?: string; fullName?: string; phoneNumber?: string }): Promise<{ success: boolean; message?: string; error?: string }> {
         try {
             await apiClient.put('/Auth/profile', data);
-            
+
             // Refresh profile
             await this.getProfile();
-            
+
             return {
                 success: true,
                 message: 'Cập nhật thông tin thành công',
@@ -204,7 +204,7 @@ class AuthService {
                 currentPassword,
                 newPassword,
             });
-            
+
             return {
                 success: true,
                 message: 'Đổi mật khẩu thành công',

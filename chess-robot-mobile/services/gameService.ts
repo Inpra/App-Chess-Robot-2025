@@ -243,14 +243,14 @@ class GameService {
         try {
             const headers = await this.getHeaders();
             console.log('[GameService] Making POST request to:', `${this.baseUrl}/Games/${gameId}/pause`);
-            
+
             const response = await fetch(`${this.baseUrl}/Games/${gameId}/pause`, {
                 method: 'POST',
                 headers,
             });
 
             console.log('[GameService] Response status:', response.status);
-            
+
             if (!response.ok) {
                 const error = await response.json();
                 console.error('[GameService] API error response:', error);
@@ -429,7 +429,7 @@ class GameService {
         try {
             const headers = await this.getHeaders();
             console.log('[GameService] Making PUT request to:', `${this.baseUrl}/Games/${gameId}/result`);
-            
+
             const response = await fetch(`${this.baseUrl}/Games/${gameId}/result`, {
                 method: 'PUT',
                 headers,
@@ -443,7 +443,7 @@ class GameService {
             });
 
             console.log('[GameService] Response status:', response.status);
-            
+
             if (!response.ok) {
                 const error = await response.json();
                 console.error('[GameService] API error response:', error);

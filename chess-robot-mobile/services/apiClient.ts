@@ -99,6 +99,17 @@ class ApiClient {
         }
 
         if (!response.ok) {
+            // Handle 401 Unauthorized - Token expired
+            if (response.status === 401) {
+                console.log('[ApiClient] 401 Unauthorized - Token expired, triggering logout');
+                // Clear auth data
+                await AsyncStorage.removeItem('auth_token');
+                await AsyncStorage.removeItem('user');
+
+                // Emit logout event
+                this.emitLogout();
+            }
+
             const error: ApiError = {
                 message: data?.error || data?.message || `HTTP ${response.status}: ${response.statusText}`,
                 status: response.status,
@@ -108,6 +119,35 @@ class ApiClient {
         }
 
         return data as T;
+    }
+
+    /**
+     * Logout event listeners
+     */
+    private logoutListeners: Array<() => void> = [];
+
+    /**
+     * Subscribe to logout events
+     */
+    onLogout(callback: () => void): () => void {
+        this.logoutListeners.push(callback);
+        // Return unsubscribe function
+        return () => {
+            this.logoutListeners = this.logoutListeners.filter(cb => cb !== callback);
+        };
+    }
+
+    /**
+     * Emit logout event to all listeners
+     */
+    private emitLogout(): void {
+        this.logoutListeners.forEach(callback => {
+            try {
+                callback();
+            } catch (error) {
+                console.error('[ApiClient] Error in logout listener:', error);
+            }
+        });
     }
 
     /**
