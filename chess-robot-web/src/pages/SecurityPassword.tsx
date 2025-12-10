@@ -92,27 +92,27 @@ export default function SecurityPassword() {
 
     const validatePassword = () => {
         if (!formData.currentPassword) {
-            toast.error('Vui lòng nhập mật khẩu hiện tại');
+            toast.error('Please enter current password');
             return false;
         }
 
         if (!formData.newPassword) {
-            toast.error('Vui lòng nhập mật khẩu mới');
+            toast.error('Please enter new password');
             return false;
         }
 
         if (formData.newPassword.length < 6) {
-            toast.error('Mật khẩu mới phải có ít nhất 6 ký tự');
+            toast.error('New password must be at least 6 characters');
             return false;
         }
 
         if (formData.newPassword === formData.currentPassword) {
-            toast.error('Mật khẩu mới phải khác mật khẩu hiện tại');
+            toast.error('New password must be different from current password');
             return false;
         }
 
         if (formData.newPassword !== formData.confirmPassword) {
-            toast.error('Mật khẩu xác nhận không khớp');
+            toast.error('Password confirmation does not match');
             return false;
         }
 
@@ -134,8 +134,8 @@ export default function SecurityPassword() {
                 newPassword: formData.newPassword,
             });
 
-            toast.success('✓ Đổi mật khẩu thành công!');
-            
+            toast.success('✓ Password changed successfully!');
+
             // Reset form
             setFormData({
                 currentPassword: '',
@@ -149,9 +149,9 @@ export default function SecurityPassword() {
         } catch (error: any) {
             console.error('Change password error:', error);
             if (error.message.includes('incorrect') || error.message.includes('wrong')) {
-                toast.error('Mật khẩu hiện tại không đúng');
+                toast.error('Current password is incorrect');
             } else {
-                toast.error(error.message || 'Không thể đổi mật khẩu');
+                toast.error(error.message || 'Unable to change password');
             }
         } finally {
             setLoading(false);
@@ -184,14 +184,14 @@ export default function SecurityPassword() {
                     <ArrowLeft size={24} color="#111827" />
                 </div>
                 <h2 style={{ fontSize: '20px', fontWeight: 'bold', margin: 0, color: '#111827' }}>
-                    Bảo mật & Mật khẩu
+                    Security & Password
                 </h2>
                 <div style={{ width: 40 }}></div>
             </div>
 
             {/* Info Card */}
-            <div style={{ 
-                maxWidth: '600px', 
+            <div style={{
+                maxWidth: '600px',
                 margin: '0 auto 16px',
                 backgroundColor: '#EFF6FF',
                 borderRadius: '12px',
@@ -203,18 +203,18 @@ export default function SecurityPassword() {
                 <Shield size={24} color="#3B82F6" style={{ flexShrink: 0 }} />
                 <div>
                     <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#1E40AF', margin: '0 0 4px' }}>
-                        Bảo mật tài khoản
+                        Account Security
                     </h3>
                     <p style={{ fontSize: '13px', color: '#1E40AF', margin: 0, lineHeight: '1.5' }}>
-                        Mật khẩu mạnh giúp bảo vệ tài khoản của bạn. Sử dụng ít nhất 6 ký tự, 
-                        bao gồm chữ hoa, chữ thường và số.
+                        A strong password helps protect your account. Use at least 6 characters,
+                        including uppercase, lowercase and numbers.
                     </p>
                 </div>
             </div>
 
             {/* Form */}
-            <div style={{ 
-                maxWidth: '600px', 
+            <div style={{
+                maxWidth: '600px',
                 margin: '0 auto',
                 backgroundColor: 'white',
                 borderRadius: '16px',
@@ -223,7 +223,7 @@ export default function SecurityPassword() {
             }}>
                 <form onSubmit={handleSubmit}>
                     <PasswordInput
-                        label="Mật khẩu hiện tại"
+                        label="Current Password"
                         name="currentPassword"
                         value={formData.currentPassword}
                         show={showCurrentPassword}
@@ -232,7 +232,7 @@ export default function SecurityPassword() {
                     />
 
                     <PasswordInput
-                        label="Mật khẩu mới"
+                        label="New Password"
                         name="newPassword"
                         value={formData.newPassword}
                         show={showNewPassword}
@@ -241,7 +241,7 @@ export default function SecurityPassword() {
                     />
 
                     <PasswordInput
-                        label="Xác nhận mật khẩu mới"
+                        label="Confirm New Password"
                         name="confirmPassword"
                         value={formData.confirmPassword}
                         show={showConfirmPassword}
@@ -253,10 +253,10 @@ export default function SecurityPassword() {
                     {formData.newPassword && (
                         <div style={{ marginBottom: '24px' }}>
                             <p style={{ fontSize: '12px', color: '#6B7280', marginBottom: '8px' }}>
-                                Độ mạnh mật khẩu:
+                                Password strength:
                             </p>
-                            <div style={{ 
-                                display: 'flex', 
+                            <div style={{
+                                display: 'flex',
                                 gap: '4px',
                                 marginBottom: '4px'
                             }}>
@@ -267,22 +267,22 @@ export default function SecurityPassword() {
                                             flex: 1,
                                             height: '4px',
                                             borderRadius: '2px',
-                                            backgroundColor: 
+                                            backgroundColor:
                                                 formData.newPassword.length >= level * 3
                                                     ? level === 1 ? '#EF4444'
-                                                    : level === 2 ? '#F59E0B'
-                                                    : level === 3 ? '#10B981'
-                                                    : '#059669'
+                                                        : level === 2 ? '#F59E0B'
+                                                            : level === 3 ? '#10B981'
+                                                                : '#059669'
                                                     : '#E5E7EB'
                                         }}
                                     />
                                 ))}
                             </div>
                             <p style={{ fontSize: '11px', color: '#6B7280', margin: 0 }}>
-                                {formData.newPassword.length < 6 && 'Yếu'}
-                                {formData.newPassword.length >= 6 && formData.newPassword.length < 9 && 'Trung bình'}
-                                {formData.newPassword.length >= 9 && formData.newPassword.length < 12 && 'Mạnh'}
-                                {formData.newPassword.length >= 12 && 'Rất mạnh'}
+                                {formData.newPassword.length < 6 && 'Weak'}
+                                {formData.newPassword.length >= 6 && formData.newPassword.length < 9 && 'Medium'}
+                                {formData.newPassword.length >= 9 && formData.newPassword.length < 12 && 'Strong'}
+                                {formData.newPassword.length >= 12 && 'Very Strong'}
                             </p>
                         </div>
                     )}
@@ -315,7 +315,7 @@ export default function SecurityPassword() {
                         }}
                     >
                         <Lock size={20} />
-                        {loading ? 'Đang cập nhật...' : 'Đổi mật khẩu'}
+                        {loading ? 'Updating...' : 'Change Password'}
                     </button>
                 </form>
             </div>

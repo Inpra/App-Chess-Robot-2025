@@ -16,7 +16,7 @@ export default function ResetPassword() {
   useEffect(() => {
     const tokenFromUrl = searchParams.get('token');
     if (!tokenFromUrl) {
-      setError('Token không hợp lệ hoặc đã hết hạn.');
+      setError('Invalid or expired token.');
     } else {
       setToken(tokenFromUrl);
     }
@@ -28,17 +28,17 @@ export default function ResetPassword() {
     setMessage('');
 
     if (!token) {
-      setError('Token không hợp lệ.');
+      setError('Invalid token.');
       return;
     }
 
     if (password.length < 6) {
-      setError('Mật khẩu phải có ít nhất 6 ký tự.');
+      setError('Password must be at least 6 characters.');
       return;
     }
 
     if (password !== confirmPassword) {
-      setError('Mật khẩu xác nhận không khớp.');
+      setError('Password confirmation does not match.');
       return;
     }
 
@@ -47,15 +47,15 @@ export default function ResetPassword() {
     try {
       const result = await authService.resetPassword(token, password);
       if (result.success) {
-        setMessage(result.message || 'Đặt lại mật khẩu thành công!');
+        setMessage(result.message || 'Password reset successfully!');
         setTimeout(() => {
           navigate('/login');
         }, 2000);
       } else {
-        setError(result.error || 'Có lỗi xảy ra. Vui lòng thử lại.');
+        setError(result.error || 'An error occurred. Please try again.');
       }
     } catch (err) {
-      setError('Có lỗi xảy ra. Vui lòng thử lại.');
+      setError('An error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -66,10 +66,10 @@ export default function ResetPassword() {
       <div className="reset-password-container">
         <div className="reset-password-card">
           <div className="error-message">
-            <h3>⚠️ Token không hợp lệ</h3>
-            <p>Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.</p>
+            <h3>⚠️ Invalid Token</h3>
+            <p>The password reset link is invalid or has expired.</p>
             <button onClick={() => navigate('/forgot-password')} className="back-btn">
-              Yêu cầu đặt lại mật khẩu mới
+              Request New Password Reset
             </button>
           </div>
         </div>
@@ -80,15 +80,15 @@ export default function ResetPassword() {
   return (
     <div className="reset-password-container">
       <div className="reset-password-card">
-        <h2>Đặt lại mật khẩu</h2>
+        <h2>Reset Password</h2>
         <p className="description">
-          Nhập mật khẩu mới cho tài khoản của bạn.
+          Enter a new password for your account.
         </p>
 
         {message && (
           <div className="success-message">
             <p>✅ {message}</p>
-            <p className="redirect-text">Đang chuyển hướng đến trang đăng nhập...</p>
+            <p className="redirect-text">Redirecting to login page...</p>
           </div>
         )}
 
@@ -97,40 +97,40 @@ export default function ResetPassword() {
             {error && <div className="error-message">{error}</div>}
 
             <div className="form-group">
-              <label htmlFor="password">Mật khẩu mới</label>
+              <label htmlFor="password">New Password</label>
               <input
                 type="password"
                 id="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                placeholder="Nhập mật khẩu mới (tối thiểu 6 ký tự)"
+                placeholder="Enter new password (minimum 6 characters)"
                 disabled={loading}
                 minLength={6}
               />
             </div>
 
             <div className="form-group">
-              <label htmlFor="confirmPassword">Xác nhận mật khẩu</label>
+              <label htmlFor="confirmPassword">Confirm Password</label>
               <input
                 type="password"
                 id="confirmPassword"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
-                placeholder="Nhập lại mật khẩu mới"
+                placeholder="Re-enter new password"
                 disabled={loading}
                 minLength={6}
               />
             </div>
 
             <button type="submit" disabled={loading} className="submit-btn">
-              {loading ? 'Đang xử lý...' : 'Đặt lại mật khẩu'}
+              {loading ? 'Processing...' : 'Reset Password'}
             </button>
 
             <div className="back-link">
               <button type="button" onClick={() => navigate('/login')} className="link-btn">
-                ← Quay lại đăng nhập
+                ← Back to Login
               </button>
             </div>
           </form>

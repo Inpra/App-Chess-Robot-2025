@@ -23,7 +23,7 @@ export default function PointsHistory() {
     const fetchData = async () => {
         setLoading(true);
         setError(null);
-        
+
         try {
             if (activeTab === 'payments') {
                 const data = await getMyPaymentHistory();
@@ -34,7 +34,7 @@ export default function PointsHistory() {
             }
         } catch (err: any) {
             console.error('Error fetching data:', err);
-            const errorMessage = err.message || 'Không thể tải dữ liệu. Vui lòng thử lại.';
+            const errorMessage = err.message || 'Unable to load data. Please try again.';
             setError(errorMessage);
             toast.error(errorMessage);
         } finally {
@@ -84,13 +84,13 @@ export default function PointsHistory() {
     return (
         <div className="points-history-container">
             <ToastContainer position="top-right" autoClose={3000} />
-            
+
             {/* Header */}
             <div className="points-history-header">
                 <div onClick={() => navigate('/profile')} style={{ cursor: 'pointer', padding: '8px', borderRadius: '12px', backgroundColor: '#F3F4F6' }}>
                     <ArrowLeft size={24} color="var(--color-text)" />
                 </div>
-                <h2 style={{ fontSize: '20px', fontWeight: 'bold', margin: 0 }}>Lịch sử điểm</h2>
+                <h2 style={{ fontSize: '20px', fontWeight: 'bold', margin: 0 }}>Points History</h2>
                 <div style={{ width: 40 }}></div>
             </div>
 
@@ -100,13 +100,13 @@ export default function PointsHistory() {
                     className={`tab ${activeTab === 'payments' ? 'active-tab' : ''}`}
                     onClick={() => setActiveTab('payments')}
                 >
-                    <span className={`tab-text ${activeTab === 'payments' ? 'active-tab-text' : ''}`}>Thanh toán</span>
+                    <span className={`tab-text ${activeTab === 'payments' ? 'active-tab-text' : ''}`}>Payments</span>
                 </button>
                 <button
                     className={`tab ${activeTab === 'usage' ? 'active-tab' : ''}`}
                     onClick={() => setActiveTab('usage')}
                 >
-                    <span className={`tab-text ${activeTab === 'usage' ? 'active-tab-text' : ''}`}>Sử dụng điểm</span>
+                    <span className={`tab-text ${activeTab === 'usage' ? 'active-tab-text' : ''}`}>Points Usage</span>
                 </button>
             </div>
 
@@ -114,13 +114,13 @@ export default function PointsHistory() {
             <div className="history-content">
                 {loading ? (
                     <div style={{ textAlign: 'center', padding: '40px', color: '#6B7280' }}>
-                        Đang tải...
+                        Loading...
                     </div>
                 ) : error ? (
                     <div style={{ textAlign: 'center', padding: '40px' }}>
                         <AlertCircle size={48} color="#EF4444" style={{ margin: '0 auto 16px' }} />
                         <div style={{ color: '#EF4444', marginBottom: '16px' }}>{error}</div>
-                        <button 
+                        <button
                             onClick={fetchData}
                             style={{
                                 padding: '8px 16px',
@@ -131,7 +131,7 @@ export default function PointsHistory() {
                                 cursor: 'pointer'
                             }}
                         >
-                            Thử lại
+                            Retry
                         </button>
                     </div>
                 ) : activeTab === 'payments' ? (
@@ -140,8 +140,8 @@ export default function PointsHistory() {
                             payments.map((item) => (
                                 <div key={item.id} className="history-card">
                                     <div className="card-left">
-                                        <div className="icon-container" style={{ 
-                                            backgroundColor: item.status === 'success' ? '#D1FAE5' : '#FEE2E2' 
+                                        <div className="icon-container" style={{
+                                            backgroundColor: item.status === 'success' ? '#D1FAE5' : '#FEE2E2'
                                         }}>
                                             {item.status === 'success' ? (
                                                 <CheckCircle size={24} color="#10B981" />
@@ -151,25 +151,25 @@ export default function PointsHistory() {
                                         </div>
                                         <div>
                                             <div className="card-title">
-                                                {item.package?.name || 'Gói điểm'} 
-                                                {item.package?.points && ` (+${item.package.points} điểm)`}
+                                                {item.package?.name || 'Points Package'}
+                                                {item.package?.points && ` (+${item.package.points} points)`}
                                             </div>
                                             <div className="card-date">{formatDate(item.createdAt)}</div>
                                         </div>
                                     </div>
                                     <div className="card-right">
                                         <div className="amount-text">{formatCurrency(item.amount)}</div>
-                                        <div className="status-text" style={{ 
-                                            color: item.status === 'success' ? '#10B981' : '#EF4444' 
+                                        <div className="status-text" style={{
+                                            color: item.status === 'success' ? '#10B981' : '#EF4444'
                                         }}>
-                                            {item.status === 'success' ? 'Thành công' : 
-                                             item.status === 'pending' ? 'Đang xử lý' : 'Thất bại'}
+                                            {item.status === 'success' ? 'Success' :
+                                                item.status === 'pending' ? 'Pending' : 'Failed'}
                                         </div>
                                     </div>
                                 </div>
                             ))
                         ) : (
-                            <div className="empty-text">Chưa có lịch sử thanh toán.</div>
+                            <div className="empty-text">No payment history yet.</div>
                         )}
                     </div>
                 ) : (
@@ -178,7 +178,7 @@ export default function PointsHistory() {
                             transactions.map((item) => {
                                 const iconData = getTransactionIcon(item.transactionType);
                                 const IconComponent = iconData.icon;
-                                
+
                                 return (
                                     <div key={item.id} className="history-card">
                                         <div className="card-left">
@@ -187,27 +187,27 @@ export default function PointsHistory() {
                                             </div>
                                             <div>
                                                 <div className="card-title">
-                                                    {item.description || 
-                                                     (item.transactionType === 'ai_suggestion' ? 'Gợi ý AI' :
-                                                      item.transactionType === 'deposit' ? 'Nạp điểm' : 
-                                                      item.transactionType === 'adjustment' ? 'Điều chỉnh' : 'Giao dịch')}
+                                                    {item.description ||
+                                                        (item.transactionType === 'ai_suggestion' ? 'AI Suggestion' :
+                                                            item.transactionType === 'deposit' ? 'Deposit' :
+                                                                item.transactionType === 'adjustment' ? 'Adjustment' : 'Transaction')}
                                                 </div>
                                                 <div className="card-date">{formatDate(item.createdAt)}</div>
                                             </div>
                                         </div>
                                         <div className="card-right">
-                                            <div className="amount-text" style={{ 
-                                                color: item.amount >= 0 ? '#10B981' : '#EF4444' 
+                                            <div className="amount-text" style={{
+                                                color: item.amount >= 0 ? '#10B981' : '#EF4444'
                                             }}>
                                                 {item.amount >= 0 ? '+' : ''}{item.amount}
                                             </div>
-                                            <div className="points-label">Điểm</div>
+                                            <div className="points-label">Points</div>
                                         </div>
                                     </div>
                                 );
                             })
                         ) : (
-                            <div className="empty-text">Chưa có lịch sử sử dụng điểm.</div>
+                            <div className="empty-text">No points usage history yet.</div>
                         )}
                     </div>
                 )}

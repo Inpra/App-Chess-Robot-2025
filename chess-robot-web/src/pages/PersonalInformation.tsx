@@ -44,7 +44,7 @@ export default function PersonalInformation() {
             }
         } catch (error) {
             if (!authService.getCurrentUser()) {
-                toast.error('Không thể tải thông tin người dùng');
+                toast.error('Unable to load user information');
             }
         } finally {
             setLoading(false);
@@ -62,7 +62,7 @@ export default function PersonalInformation() {
         e.preventDefault();
 
         if (!formData.username || !formData.email) {
-            toast.error('Username và Email là bắt buộc');
+            toast.error('Username and Email are required');
             return;
         }
 
@@ -75,7 +75,7 @@ export default function PersonalInformation() {
                 phoneNumber: formData.phoneNumber,
             });
 
-            toast.success('✓ Cập nhật thông tin thành công!');
+            toast.success('✓ Information updated successfully!');
 
             // Refresh profile
             await authService.getProfile();
@@ -85,7 +85,7 @@ export default function PersonalInformation() {
             }, 1500);
         } catch (error: any) {
             console.error('Update profile error:', error);
-            toast.error(error.message || 'Không thể cập nhật thông tin');
+            toast.error(error.message || 'Unable to update information');
         } finally {
             setSaving(false);
         }
@@ -117,7 +117,7 @@ export default function PersonalInformation() {
                     <ArrowLeft size={24} color="#111827" />
                 </div>
                 <h2 style={{ fontSize: '20px', fontWeight: 'bold', margin: 0, color: '#111827' }}>
-                    Thông tin cá nhân
+                    Personal Information
                 </h2>
                 <div style={{ width: 40 }}></div>
             </div>
@@ -133,7 +133,7 @@ export default function PersonalInformation() {
             }}>
                 {loading ? (
                     <div style={{ textAlign: 'center', padding: '40px', color: '#6B7280' }}>
-                        Đang tải...
+                        Loading...
                     </div>
                 ) : (
                     <form onSubmit={handleSubmit}>
@@ -183,7 +183,7 @@ export default function PersonalInformation() {
                                 marginBottom: '8px'
                             }}>
                                 <User size={16} />
-                                Họ và tên
+                                Full Name
                             </label>
                             <input
                                 type="text"
@@ -235,7 +235,7 @@ export default function PersonalInformation() {
                                 }}
                             />
                             <p style={{ fontSize: '12px', color: '#6B7280', marginTop: '4px' }}>
-                                Email không thể thay đổi
+                                Email cannot be changed
                             </p>
                         </div>
 
@@ -251,7 +251,7 @@ export default function PersonalInformation() {
                                 marginBottom: '8px'
                             }}>
                                 <Phone size={16} />
-                                Số điện thoại
+                                Phone Number
                             </label>
                             <input
                                 type="tel"
@@ -301,7 +301,7 @@ export default function PersonalInformation() {
                             }}
                         >
                             <Save size={20} />
-                            {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
+                            {saving ? 'Saving...' : 'Save Changes'}
                         </button>
                     </form>
                 )}

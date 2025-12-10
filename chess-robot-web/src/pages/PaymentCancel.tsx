@@ -30,7 +30,7 @@ export default function PaymentCancel() {
                     marginBottom: '12px',
                     color: '#F59E0B'
                 }}>
-                    Đã hủy thanh toán
+                    Payment Cancelled
                 </h2>
                 
                 <p style={{ 
@@ -38,7 +38,7 @@ export default function PaymentCancel() {
                     marginBottom: '32px',
                     lineHeight: '1.6'
                 }}>
-                    Giao dịch đã bị hủy. Bạn có thể thử lại hoặc chọn gói điểm khác.
+                    Transaction has been cancelled. You can try again or choose a different points package.
                 </p>
 
                 <button
@@ -59,9 +59,9 @@ export default function PaymentCancel() {
                     onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2563EB'}
                     onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3B82F6'}
                 >
-                    Mua điểm
+                    Purchase Points
                 </button>
-                
+
                 <button
                     onClick={() => navigate('/')}
                     style={{
@@ -79,7 +79,7 @@ export default function PaymentCancel() {
                     onMouseEnter={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
                     onMouseLeave={(e) => e.currentTarget.style.borderColor = '#E5E7EB'}
                 >
-                    Về trang chủ
+                    Back to Home
                 </button>
             </div>
         </div>
