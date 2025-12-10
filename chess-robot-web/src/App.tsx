@@ -46,6 +46,8 @@ import PaymentSuccess from './pages/PaymentSuccess';
 import PaymentCancel from './pages/PaymentCancel';
 import PersonalInformation from './pages/PersonalInformation';
 import SecurityPassword from './pages/SecurityPassword';
+import EloSelection from './pages/EloSelection';
+import AvatarSelection from './pages/AvatarSelection';
 
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -62,12 +64,18 @@ function Dashboard() {
     const localUser = authService.getCurrentUser();
     if (localUser) {
       setUser(localUser);
-      
+
       // Fetch fresh data from API only if user is logged in
       authService.getProfile().then(profile => {
         if (profile) {
           setUser(profile);
           setPointsBalance((profile as any).pointsBalance || 0);
+
+          // Check if we need to offer initial Elo selection
+          const eloSetKey = `initial_elo_set_${profile.id}`;
+          if (profile.totalGamesPlayed === 0 && !localStorage.getItem(eloSetKey)) {
+            navigate('/elo-selection');
+          }
         }
       });
     }
@@ -183,7 +191,7 @@ function Dashboard() {
 
           <div className="header-actions">
             {user ? (
-              <div 
+              <div
                 onClick={() => navigate('/purchase-points')}
                 style={{
                   display: 'flex',
@@ -200,21 +208,21 @@ function Dashboard() {
                   <Coins size={20} color="#FFD700" />
                   <span style={{ fontWeight: 'bold', fontSize: '16px' }}>{pointsBalance.toLocaleString()}</span>
                 </div>
-                <div style={{ 
-                  width: '24px', 
-                  height: '24px', 
-                  borderRadius: '50%', 
-                  backgroundColor: '#667eea', 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center' 
+                <div style={{
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '50%',
+                  backgroundColor: '#667eea',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
                 }}>
                   <Plus size={16} color="white" />
                 </div>
               </div>
             ) : (
               <div style={{ display: 'flex', gap: '12px' }}>
-                <button 
+                <button
                   onClick={() => navigate('/login')}
                   style={{
                     padding: '8px 24px',
@@ -228,7 +236,7 @@ function Dashboard() {
                 >
                   Login
                 </button>
-                <button 
+                <button
                   onClick={() => navigate('/register')}
                   style={{
                     padding: '8px 24px',
@@ -253,8 +261,8 @@ function Dashboard() {
             <div className="banner-tag">CHALLENGE</div>
             <h2 className="banner-title">Welcome to Chess Robot</h2>
             <p className="banner-text">Can you beat the robot? Test your skills and climb the leaderboard!</p>
-            <button 
-              className="banner-button" 
+            <button
+              className="banner-button"
               onClick={() => user ? setShowDifficultyModal(true) : navigate('/register')}
             >
               {user ? 'Play Now' : 'Register Now'}
@@ -294,7 +302,7 @@ function Dashboard() {
           {user && (
             <div className="card">
               <h3 className="card-title">Your Stats</h3>
-              
+
               {/* Main Stats Grid */}
               <div className="stats-row" style={{ marginBottom: '20px' }}>
                 <div className="stat-item">
@@ -307,8 +315,8 @@ function Dashboard() {
                 </div>
                 <div className="stat-item">
                   <div className="stat-value" style={{ color: '#F59E0B' }}>
-                    {(user as any)?.totalGamesPlayed > 0 
-                      ? Math.round(((user as any)?.wins || 0) / (user as any)?.totalGamesPlayed * 100) 
+                    {(user as any)?.totalGamesPlayed > 0
+                      ? Math.round(((user as any)?.wins || 0) / (user as any)?.totalGamesPlayed * 100)
                       : 0}%
                   </div>
                   <div className="stat-label">Win Rate</div>
@@ -354,15 +362,15 @@ function Dashboard() {
                     const wins = (user as any)?.wins || 0;
                     const losses = (user as any)?.losses || 0;
                     const draws = (user as any)?.draws || 0;
-                    
+
                     if (total === 0) {
                       return <div style={{ width: '100%', backgroundColor: '#E5E7EB' }}></div>;
                     }
-                    
+
                     const winPercent = (wins / total) * 100;
                     const lossPercent = (losses / total) * 100;
                     const drawPercent = (draws / total) * 100;
-                    
+
                     return (
                       <>
                         {wins > 0 && <div style={{ width: `${winPercent}%`, backgroundColor: '#10B981' }}></div>}
@@ -390,10 +398,10 @@ function Dashboard() {
 
               {/* Peak ELO Info */}
               {(user as any)?.peakElo && (
-                <div style={{ 
-                  marginTop: '16px', 
-                  padding: '12px', 
-                  backgroundColor: 'rgba(102, 126, 234, 0.05)', 
+                <div style={{
+                  marginTop: '16px',
+                  padding: '12px',
+                  backgroundColor: 'rgba(102, 126, 234, 0.05)',
                   borderRadius: '12px',
                   borderLeft: '3px solid #667eea'
                 }}>
@@ -437,8 +445,8 @@ function Dashboard() {
                     transition: 'transform 0.2s ease',
                     cursor: 'pointer'
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-                  onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                    onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                    onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
                   >
                     <div className="rank-number" style={{
                       width: '32px',
@@ -451,16 +459,16 @@ function Dashboard() {
                       fontSize: '16px',
                       color: index === 0 ? '#D97706' : index === 1 ? '#9CA3AF' : index === 2 ? '#B45309' : '#6B7280'
                     }}>
-                      {index === 0 ? <Crown size={24} fill="#FFD700" color="#D97706" /> : 
-                       index === 1 ? <Medal size={24} fill="#E5E7EB" color="#9CA3AF" /> :
-                       index === 2 ? <Medal size={24} fill="#FEF3C7" color="#B45309" /> :
-                       `#${player.rank}`}
+                      {index === 0 ? <Crown size={24} fill="#FFD700" color="#D97706" /> :
+                        index === 1 ? <Medal size={24} fill="#E5E7EB" color="#9CA3AF" /> :
+                          index === 2 ? <Medal size={24} fill="#FEF3C7" color="#B45309" /> :
+                            `#${player.rank}`}
                     </div>
-                    
+
                     <div className="rank-avatar" style={{ position: 'relative', marginRight: '12px' }}>
                       {player.avatarUrl ? (
-                        <img 
-                          src={player.avatarUrl} 
+                        <img
+                          src={player.avatarUrl}
                           alt={player.username}
                           style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '2px solid white', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
                         />
@@ -501,7 +509,7 @@ function Dashboard() {
                         }}>1</div>
                       )}
                     </div>
-                    
+
                     <div className="rank-info" style={{ flex: 1 }}>
                       <div className="rank-name" style={{ fontWeight: '600', color: '#1F2937', fontSize: '14px' }}>
                         {player.fullName || player.username}
@@ -510,10 +518,10 @@ function Dashboard() {
                         {player.wins} Wins • {player.winRate}% WR
                       </div>
                     </div>
-                    
-                    <div className="rank-score" style={{ 
-                      fontWeight: 'bold', 
-                      color: '#667eea', 
+
+                    <div className="rank-score" style={{
+                      fontWeight: 'bold',
+                      color: '#667eea',
                       backgroundColor: 'rgba(102, 126, 234, 0.1)',
                       padding: '4px 8px',
                       borderRadius: '6px',
@@ -563,7 +571,7 @@ function App() {
         <Route path="/ranking" element={<Ranking />} />
         <Route path="/faq" element={<FAQ />} />
         <Route path="/tutorial" element={<Tutorial />} />
-        
+
         {/* Protected Routes */}
         <Route path="/game/vs-bot" element={
           <ProtectedRoute>
@@ -628,6 +636,16 @@ function App() {
         <Route path="/theme-settings" element={
           <ProtectedRoute>
             <ThemeSettings />
+          </ProtectedRoute>
+        } />
+        <Route path="/elo-selection" element={
+          <ProtectedRoute>
+            <EloSelection />
+          </ProtectedRoute>
+        } />
+        <Route path="/avatar-selection" element={
+          <ProtectedRoute>
+            <AvatarSelection />
           </ProtectedRoute>
         } />
       </Routes>

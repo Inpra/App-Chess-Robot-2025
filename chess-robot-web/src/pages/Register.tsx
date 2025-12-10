@@ -45,8 +45,12 @@ export default function Register() {
             });
 
             if (response.success) {
-                setShowSuccessMessage(true);
-                // Don't navigate immediately - show the success message
+                // Check if user is new (0 games played) to set initial Elo
+                if (response.user && response.user.totalGamesPlayed === 0) {
+                    navigate('/avatar-selection');
+                } else {
+                    setShowSuccessMessage(true);
+                }
             } else {
                 setError(response.error || 'Registration failed. Please try again.');
             }
@@ -78,9 +82,9 @@ export default function Register() {
                                 Click the link in the email to activate your account and start playing.
                             </p>
                         </div>
-                        
+
                         <div className="success-actions">
-                            <button 
+                            <button
                                 className="btn-primary"
                                 onClick={() => navigate('/login')}
                             >
@@ -109,8 +113,8 @@ export default function Register() {
         <div className="auth-container">
             <div className="auth-card">
                 <div className="auth-header">
-                    <button 
-                        className="back-button" 
+                    <button
+                        className="back-button"
                         onClick={() => navigate('/login')}
                     >
                         <ArrowLeft size={24} />

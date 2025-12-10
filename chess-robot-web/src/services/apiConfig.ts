@@ -20,6 +20,7 @@ export const AUTH_ENDPOINTS = {
     RESEND_VERIFICATION: '/auth/resend-verification',
     FORGOT_PASSWORD: '/auth/forgot-password',
     RESET_PASSWORD: '/auth/reset-password',
+    PROFILE: '/auth/profile',
 };
 
 // User endpoints

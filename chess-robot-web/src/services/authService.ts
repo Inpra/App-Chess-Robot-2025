@@ -249,6 +249,60 @@ class AuthService {
             };
         }
     }
+
+    /**
+     * Set initial Elo rating
+     */
+    async setInitialElo(eloRating: number): Promise<{ success: boolean; user?: UserResponse; error?: string }> {
+        try {
+            const response = await apiClient.post<{ success: boolean; message: string; user: UserResponse }>(
+                '/Users/initial-elo',
+                { eloRating }
+            );
+
+            if (response.success && response.user) {
+                // Update local storage
+                localStorage.setItem('user', JSON.stringify(response.user));
+            }
+
+            return {
+                success: response.success,
+                user: response.user,
+            };
+        } catch (error: any) {
+            return {
+                success: false,
+                error: error.message || 'Failed to set initial Elo',
+            };
+        }
+    }
+
+    /**
+     * Update user avatar
+     */
+    async updateAvatar(avatarUrl: string): Promise<{ success: boolean; user?: UserResponse; error?: string }> {
+        try {
+            const response = await apiClient.put<{ success: boolean; user: UserResponse }>(
+                AUTH_ENDPOINTS.PROFILE,
+                { avatarUrl }
+            );
+
+            if (response.success && response.user) {
+                // Update local storage
+                localStorage.setItem('user', JSON.stringify(response.user));
+            }
+
+            return {
+                success: response.success,
+                user: response.user,
+            };
+        } catch (error: any) {
+            return {
+                success: false,
+                error: error.message || 'Failed to update avatar',
+            };
+        }
+    }
 }
 
 // Export singleton instance

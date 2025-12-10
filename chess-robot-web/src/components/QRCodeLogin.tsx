@@ -67,9 +67,13 @@ export default function QRCodeLogin() {
                     localStorage.setItem('auth_token', token)
                     localStorage.setItem('user', JSON.stringify(user))
 
-                    // Redirect to home
+                    // Redirect to Avatar Selection if new user, otherwise home
                     setTimeout(() => {
-                        navigate('/')
+                        if (user && user.totalGamesPlayed === 0) {
+                            navigate('/avatar-selection')
+                        } else {
+                            navigate('/')
+                        }
                         window.location.reload() // Refresh to update auth state
                     }, 1500)
                 }
