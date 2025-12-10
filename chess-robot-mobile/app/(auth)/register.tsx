@@ -9,23 +9,27 @@ import {
   Platform,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Link } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
+import authService from '@/services/authService';
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const [username, setUsername] = useState('');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleRegister = () => {
-    if (!fullName || !email || !password || !confirmPassword) {
+  const handleRegister = async () => {
+    if (!username || !fullName || !email || !password || !confirmPassword) {
       Alert.alert('Error', 'Please fill in all fields.');
       return;
     }
@@ -33,10 +37,32 @@ export default function RegisterScreen() {
       Alert.alert('Error', 'Passwords do not match.');
       return;
     }
-    // Mock registration success
-    Alert.alert('Success', 'Account created successfully!', [
-      { text: 'OK', onPress: () => router.replace('/(auth)/login') }
-    ]);
+    if (password.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters.');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await authService.signUp({
+        username,
+        email,
+        password,
+        fullName,
+      });
+
+      if (response.success) {
+        // Navigate to avatar selection after successful registration
+        router.replace('/(auth)/avatar-selection');
+      } else {
+        Alert.alert('Error', response.error || 'Registration failed. Please try again.');
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'An unexpected error occurred');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -59,6 +85,18 @@ export default function RegisterScreen() {
         </View>
 
         <View style={styles.form}>
+          <View style={styles.inputContainer}>
+            <Ionicons name="at-outline" size={20} color={Colors.light.textSecondary} style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder="Username"
+              placeholderTextColor={Colors.light.textSecondary}
+              value={username}
+              onChangeText={setUsername}
+              autoCapitalize="none"
+            />
+          </View>
+
           <View style={styles.inputContainer}>
             <Ionicons name="person-outline" size={20} color={Colors.light.textSecondary} style={styles.inputIcon} />
             <TextInput
@@ -121,8 +159,16 @@ export default function RegisterScreen() {
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={styles.registerButton} onPress={handleRegister}>
-            <Text style={styles.registerButtonText}>Sign Up</Text>
+          <TouchableOpacity 
+            style={[styles.registerButton, loading && styles.registerButtonDisabled]} 
+            onPress={handleRegister}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.registerButtonText}>Sign Up</Text>
+            )}
           </TouchableOpacity>
 
           <View style={styles.footer}>
@@ -209,6 +255,9 @@ const styles = StyleSheet.create({
     elevation: 4,
     marginTop: 16,
     marginBottom: 24,
+  },
+  registerButtonDisabled: {
+    opacity: 0.6,
   },
   registerButtonText: {
     color: '#FFFFFF',

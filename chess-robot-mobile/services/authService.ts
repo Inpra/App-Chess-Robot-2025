@@ -216,6 +216,64 @@ class AuthService {
             };
         }
     }
+
+    /**
+     * Set initial ELO rating
+     */
+    async setInitialElo(eloRating: number): Promise<{ success: boolean; user?: UserResponse; error?: string }> {
+        try {
+            const response = await apiClient.post<{ success: boolean; message: string; user: UserResponse }>(
+                '/Users/initial-elo',
+                { eloRating }
+            );
+
+            if (response.success && response.user) {
+                // Update AsyncStorage
+                await AsyncStorage.setItem('user', JSON.stringify(response.user));
+            }
+
+            return {
+                success: response.success,
+                user: response.user,
+            };
+        } catch (error: any) {
+            return {
+                success: false,
+                error: error.message || 'Failed to set initial Elo',
+            };
+        }
+    }
+
+    /**
+     * Update user avatar
+     */
+    async updateAvatar(avatarUrl: string): Promise<{ success: boolean; user?: UserResponse; error?: string }> {
+        try {
+            console.log('[authService] Updating avatar:', avatarUrl);
+            const response = await apiClient.put<{ success: boolean; user: UserResponse }>(
+                '/Auth/profile',
+                { avatarUrl }
+            );
+
+            console.log('[authService] Avatar update response:', response);
+
+            if (response.success && response.user) {
+                // Update AsyncStorage
+                await AsyncStorage.setItem('user', JSON.stringify(response.user));
+            }
+
+            return {
+                success: response.success,
+                user: response.user,
+            };
+        } catch (error: any) {
+            console.error('[authService] Avatar update error:', error);
+            return {
+                success: false,
+                error: error.message || 'Failed to update avatar',
+            };
+        }
+    }
     /**
      * Set auth data manually (used for QR Login)
      */

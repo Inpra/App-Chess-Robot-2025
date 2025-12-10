@@ -75,9 +75,14 @@ export default function QRCodeLogin({ onBack }: { onBack: () => void }) {
                     // Save auth data using authService
                     await authService.setAuthData(token, user);
 
-                    // Redirect to dashboard
+                    // Redirect based on user status
                     setTimeout(() => {
-                        router.replace('/(tabs)');
+                        // If new user (no games played), go to avatar selection
+                        if (user && user.totalGamesPlayed === 0) {
+                            router.replace('/(auth)/avatar-selection');
+                        } else {
+                            router.replace('/(tabs)');
+                        }
                     }, 1500);
                 }
             });

@@ -110,6 +110,13 @@ class ApiClient {
             data = await response.text();
         }
 
+        console.log('[ApiClient] Response:', {
+            url: response.url,
+            status: response.status,
+            ok: response.ok,
+            data
+        });
+
         if (!response.ok) {
             // Handle 401 Unauthorized - Token expired
             if (response.status === 401) {
