@@ -26,21 +26,21 @@ export default function EloSelectionScreen() {
             value: 800,
             title: 'Beginner',
             description: 'I know the rules but have little experience.',
-            icon: 'school-outline',
+            image: require('@/assets/images/Beginner.png'),
             color: '#10B981'
         },
         {
             value: 1200,
             title: 'Intermediate',
             description: 'I play occasionally and know some basic tactics.',
-            icon: 'game-controller-outline',
+            image: require('@/assets/images/Intermediate.png'),
             color: '#F59E0B'
         },
         {
             value: 1600,
             title: 'Advanced',
             description: 'I am an experienced player or have a club rating.',
-            icon: 'trophy-outline',
+            image: require('@/assets/images/Advanced.png'),
             color: '#EF4444'
         }
     ];
@@ -102,29 +102,31 @@ export default function EloSelectionScreen() {
                                 <View style={styles.checkIconContainer}>
                                     <Ionicons 
                                         name="checkmark-circle" 
-                                        size={28} 
+                                        size={24} 
                                         color={option.color} 
                                     />
                                 </View>
                             )}
 
-                            <View style={[styles.iconContainer, { backgroundColor: option.color }]}>
-                                <Ionicons 
-                                    name={option.icon as any} 
-                                    size={48} 
-                                    color="#FFFFFF" 
+                            <View style={[styles.imageContainer, { borderColor: option.color }]}>
+                                <Image 
+                                    source={option.image}
+                                    style={styles.optionImage}
+                                    resizeMode="cover"
                                 />
                             </View>
 
-                            <Text style={styles.optionTitle}>{option.title}</Text>
-                            
-                            <Text style={[styles.optionElo, { color: option.color }]}>
-                                {option.value}
-                            </Text>
+                            <View style={styles.textContainer}>
+                                <Text style={styles.optionTitle}>{option.title}</Text>
+                                
+                                <Text style={[styles.optionElo, { color: option.color }]}>
+                                    {option.value}
+                                </Text>
 
-                            <Text style={styles.optionDescription}>
-                                {option.description}
-                            </Text>
+                                <Text style={styles.optionDescription}>
+                                    {option.description}
+                                </Text>
+                            </View>
                         </TouchableOpacity>
                     ))}
                 </View>
@@ -185,7 +187,8 @@ const styles = StyleSheet.create({
     optionCard: {
         backgroundColor: '#f8fafc',
         borderRadius: 16,
-        padding: 24,
+        padding: 16,
+        flexDirection: 'row',
         alignItems: 'center',
         borderWidth: 2,
         borderColor: 'transparent',
@@ -197,30 +200,37 @@ const styles = StyleSheet.create({
         right: 12,
         zIndex: 1,
     },
-    iconContainer: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 16,
+    imageContainer: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        borderWidth: 2,
+        marginRight: 16,
+        overflow: 'hidden',
+    },
+    optionImage: {
+        width: '100%',
+        height: '100%',
+    },
+    textContainer: {
+        flex: 1,
+        paddingRight: 24, // Space for check icon
     },
     optionTitle: {
-        fontSize: 20,
+        fontSize: 18,
         fontWeight: '600',
         color: Colors.light.text,
-        marginBottom: 4,
+        marginBottom: 2,
     },
     optionElo: {
-        fontSize: 28,
+        fontSize: 20,
         fontWeight: 'bold',
-        marginBottom: 12,
+        marginBottom: 4,
     },
     optionDescription: {
-        fontSize: 14,
+        fontSize: 13,
         color: Colors.light.textSecondary,
-        textAlign: 'center',
-        lineHeight: 20,
+        lineHeight: 18,
     },
     actions: {
         alignItems: 'center',
