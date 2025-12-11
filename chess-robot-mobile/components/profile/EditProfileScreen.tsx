@@ -102,7 +102,7 @@ export default function EditProfileScreen() {
     const getAvatarUrl = () => {
         if (user?.avatarUrl) return user.avatarUrl;
         const name = fullName || user?.username || 'User';
-        return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=667eea&color=fff&size=100`;
+        return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=f16f23&color=fff&size=100`;
     };
 
     return (

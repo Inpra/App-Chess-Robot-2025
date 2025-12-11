@@ -29,7 +29,7 @@ export default function DashboardScreen() {
       const localUser = await authService.getCurrentUser();
       if (localUser) {
         setUser(localUser);
-        
+
         // Fetch fresh data from API
         try {
           const profile = await authService.getProfile();
@@ -128,7 +128,7 @@ export default function DashboardScreen() {
             </TouchableOpacity>
           </Link>
           <View style={{ flex: 1 }} />
-          
+
           {/* Profile / Login Button */}
           {user ? (
             <Link href={"/profile" as any} asChild>
@@ -144,7 +144,7 @@ export default function DashboardScreen() {
                       width: 32,
                       height: 32,
                       borderRadius: 16,
-                      backgroundColor: '#667eea',
+                      backgroundColor: '#f16f23',
                       alignItems: 'center',
                       justifyContent: 'center'
                     }}
@@ -186,7 +186,7 @@ export default function DashboardScreen() {
             <View style={styles.headerActions}>
               {user ? (
                 <Link href="/purchase-points" asChild>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={{
                       flexDirection: 'row',
                       alignItems: 'center',
@@ -265,7 +265,7 @@ export default function DashboardScreen() {
               <Text style={styles.bannerTitle}>Welcome to Chess Robot</Text>
               <Text style={styles.bannerText}>Can you beat the robot? Test your skills and climb the leaderboard!</Text>
               {user ? (
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.bannerButton}
                   onPress={() => setShowGameModal(true)}
                 >
@@ -329,7 +329,7 @@ export default function DashboardScreen() {
             {user && (
               <View style={styles.card}>
                 <Text style={styles.cardTitle}>Your Stats</Text>
-                
+
                 {/* Main Stats Grid */}
                 <View style={[styles.statsRow, { marginBottom: 20 }]}>
                   <View style={styles.statItem}>
@@ -346,7 +346,7 @@ export default function DashboardScreen() {
                   </View>
                   <View style={styles.statItem}>
                     <Text style={[styles.statValue, { color: '#f16f23' }]}>
-                      {user?.totalGamesPlayed > 0 
+                      {user?.totalGamesPlayed > 0
                         ? `${Math.round((user?.wins || 0) / user?.totalGamesPlayed * 100)}%`
                         : '0%'}
                     </Text>
@@ -355,58 +355,58 @@ export default function DashboardScreen() {
                 </View>
 
                 {/* Detailed Stats */}
-                <View style={{ 
-                  flexDirection: 'row', 
-                  flexWrap: 'wrap', 
-                  gap: 12, 
-                  marginBottom: 20 
+                <View style={{
+                  flexDirection: 'row',
+                  flexWrap: 'wrap',
+                  gap: 12,
+                  marginBottom: 20
                 }}>
-                  <View style={{ 
-                    flex: 1, 
+                  <View style={{
+                    flex: 1,
                     minWidth: '22%',
-                    alignItems: 'center', 
-                    padding: 12, 
-                    backgroundColor: 'rgba(102, 126, 234, 0.1)', 
-                    borderRadius: 12 
+                    alignItems: 'center',
+                    padding: 12,
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    borderRadius: 12
                   }}>
                     <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#667eea', marginBottom: 4 }}>
                       {user?.totalGamesPlayed || 0}
                     </Text>
                     <Text style={{ fontSize: 11, color: '#6B7280', fontWeight: '500' }}>Total Games</Text>
                   </View>
-                  <View style={{ 
-                    flex: 1, 
+                  <View style={{
+                    flex: 1,
                     minWidth: '22%',
-                    alignItems: 'center', 
-                    padding: 12, 
-                    backgroundColor: 'rgba(16, 185, 129, 0.1)', 
-                    borderRadius: 12 
+                    alignItems: 'center',
+                    padding: 12,
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    borderRadius: 12
                   }}>
                     <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#23b249', marginBottom: 4 }}>
                       {user?.wins || 0}
                     </Text>
                     <Text style={{ fontSize: 11, color: '#6B7280', fontWeight: '500' }}>Wins</Text>
                   </View>
-                  <View style={{ 
-                    flex: 1, 
+                  <View style={{
+                    flex: 1,
                     minWidth: '22%',
-                    alignItems: 'center', 
-                    padding: 12, 
-                    backgroundColor: 'rgba(239, 68, 68, 0.1)', 
-                    borderRadius: 12 
+                    alignItems: 'center',
+                    padding: 12,
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    borderRadius: 12
                   }}>
                     <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#EF4444', marginBottom: 4 }}>
                       {user?.losses || 0}
                     </Text>
                     <Text style={{ fontSize: 11, color: '#6B7280', fontWeight: '500' }}>Losses</Text>
                   </View>
-                  <View style={{ 
-                    flex: 1, 
+                  <View style={{
+                    flex: 1,
                     minWidth: '22%',
-                    alignItems: 'center', 
-                    padding: 12, 
-                    backgroundColor: 'rgba(245, 158, 11, 0.1)', 
-                    borderRadius: 12 
+                    alignItems: 'center',
+                    padding: 12,
+                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                    borderRadius: 12
                   }}>
                     <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#1567b1', marginBottom: 4 }}>
                       {user?.draws || 0}
@@ -420,27 +420,27 @@ export default function DashboardScreen() {
                   <Text style={{ fontSize: 13, fontWeight: '600', color: '#1F2937', marginBottom: 12 }}>
                     Performance Distribution
                   </Text>
-                  <View style={{ 
-                    flexDirection: 'row', 
-                    height: 8, 
-                    borderRadius: 8, 
-                    overflow: 'hidden', 
-                    backgroundColor: '#F3F4F6' 
+                  <View style={{
+                    flexDirection: 'row',
+                    height: 8,
+                    borderRadius: 8,
+                    overflow: 'hidden',
+                    backgroundColor: '#F3F4F6'
                   }}>
                     {(() => {
                       const total = user?.totalGamesPlayed || 0;
                       const wins = user?.wins || 0;
                       const losses = user?.losses || 0;
                       const draws = user?.draws || 0;
-                      
+
                       if (total === 0) {
                         return <View style={{ width: '100%', backgroundColor: '#E5E7EB' }}></View>;
                       }
-                      
+
                       const winPercent = `${(wins / total) * 100}%`;
                       const lossPercent = `${(losses / total) * 100}%`;
                       const drawPercent = `${(draws / total) * 100}%`;
-                      
+
                       return (
                         <>
                           {wins > 0 && <View style={{ flex: (wins / total), backgroundColor: '#23b249' }}></View>}
@@ -450,9 +450,9 @@ export default function DashboardScreen() {
                       );
                     })()}
                   </View>
-                  <View style={{ 
-                    flexDirection: 'row', 
-                    justifyContent: 'space-between', 
+                  <View style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
                     marginTop: 8
                   }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -472,10 +472,10 @@ export default function DashboardScreen() {
 
                 {/* Peak ELO Info */}
                 {user?.peakElo && (
-                  <View style={{ 
-                    marginTop: 16, 
-                    padding: 12, 
-                    backgroundColor: 'rgba(102, 126, 234, 0.05)', 
+                  <View style={{
+                    marginTop: 16,
+                    padding: 12,
+                    backgroundColor: 'rgba(102, 126, 234, 0.05)',
                     borderRadius: 12,
                     borderLeftWidth: 3,
                     borderLeftColor: '#667eea'
@@ -567,7 +567,7 @@ export default function DashboardScreen() {
                             width: 40,
                             height: 40,
                             borderRadius: 20,
-                            backgroundColor: '#667eea',
+                            backgroundColor: '#f16f23',
                             alignItems: 'center',
                             justifyContent: 'center',
                             borderWidth: 2,

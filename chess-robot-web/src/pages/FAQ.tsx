@@ -1,6 +1,10 @@
 import { useState } from 'react';
-import { ArrowLeft, Search, ChevronDown, ChevronUp, MessageCircle } from 'lucide-react';
+import { ArrowLeft, Search, ChevronDown, ChevronUp, MessageCircle, Send } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import feedbackService from '../services/feedbackService';
+import authService from '../services/authService';
 import '../styles/FAQ.css';
 
 const faqs = [
@@ -35,6 +39,11 @@ export default function FAQ() {
     const navigate = useNavigate();
     const [expandedId, setExpandedId] = useState<number | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
+    const [feedbackMessage, setFeedbackMessage] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showFeedbackForm, setShowFeedbackForm] = useState(false);
+
+    const user = authService.getCurrentUser();
 
     const toggleExpand = (id: number) => {
         setExpandedId(expandedId === id ? null : id);
@@ -45,8 +54,44 @@ export default function FAQ() {
         faq.answer.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
+    const handleSubmitFeedback = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (!user) {
+            toast.error('Please login to submit feedback');
+            navigate('/login');
+            return;
+        }
+
+        if (feedbackMessage.trim().length < 10) {
+            toast.error('Feedback must be at least 10 characters');
+            return;
+        }
+
+        if (feedbackMessage.trim().length > 1000) {
+            toast.error('Feedback cannot exceed 1000 characters');
+            return;
+        }
+
+        setIsSubmitting(true);
+
+        try {
+            await feedbackService.createFeedback(feedbackMessage.trim());
+            toast.success('✓ Thank you for your feedback!');
+            setFeedbackMessage('');
+            setShowFeedbackForm(false);
+        } catch (error: any) {
+            console.error('Error submitting feedback:', error);
+            toast.error(error.message || 'Failed to submit feedback. Please try again.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     return (
         <div className="faq-container">
+            <ToastContainer position="top-right" autoClose={3000} />
+
             {/* Header */}
             <div className="faq-header">
                 <div onClick={() => navigate('/')} style={{ cursor: 'pointer', padding: '8px', borderRadius: '12px', backgroundColor: '#F3F4F6' }}>
@@ -99,17 +144,107 @@ export default function FAQ() {
                     )}
                 </div>
 
-                {/* Contact Support */}
-                <div className="contact-card">
-                    <div className="contact-icon-container">
-                        <MessageCircle size={32} color="white" />
+                {/* Feedback Form */}
+                {showFeedbackForm && user && (
+                    <div className="contact-card" style={{ marginTop: '24px' }}>
+                        <h3 className="contact-title">Send us your feedback</h3>
+                        <form onSubmit={handleSubmitFeedback}>
+                            <textarea
+                                className="feedback-textarea"
+                                placeholder="Tell us what you think... (minimum 10 characters)"
+                                value={feedbackMessage}
+                                onChange={(e) => setFeedbackMessage(e.target.value)}
+                                rows={5}
+                                maxLength={1000}
+                                disabled={isSubmitting}
+                                style={{
+                                    width: '100%',
+                                    padding: '12px',
+                                    borderRadius: '12px',
+                                    border: '1px solid #E5E7EB',
+                                    fontSize: '14px',
+                                    fontFamily: 'inherit',
+                                    resize: 'vertical',
+                                    marginBottom: '12px'
+                                }}
+                            />
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: '12px', color: '#6B7280' }}>
+                                    {feedbackMessage.length}/1000 characters
+                                </span>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setShowFeedbackForm(false);
+                                            setFeedbackMessage('');
+                                        }}
+                                        disabled={isSubmitting}
+                                        style={{
+                                            padding: '10px 20px',
+                                            borderRadius: '12px',
+                                            border: '1px solid #E5E7EB',
+                                            backgroundColor: 'white',
+                                            color: '#6B7280',
+                                            fontWeight: '600',
+                                            cursor: 'pointer',
+                                            fontSize: '14px'
+                                        }}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={isSubmitting || feedbackMessage.trim().length < 10}
+                                        className="contact-button"
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '8px',
+                                            opacity: isSubmitting || feedbackMessage.trim().length < 10 ? 0.5 : 1
+                                        }}
+                                    >
+                                        {isSubmitting ? (
+                                            <>Sending...</>
+                                        ) : (
+                                            <>
+                                                <Send size={18} />
+                                                Send Feedback
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
                     </div>
-                    <h3 className="contact-title">Still need help?</h3>
-                    <p className="contact-text">Our support team is available 24/7 to assist you with any issues.</p>
-                    <button className="contact-button">
-                        Contact Support
-                    </button>
-                </div>
+                )}
+
+                {/* Contact Support */}
+                {!showFeedbackForm && (
+                    <div className="contact-card">
+                        <div className="contact-icon-container">
+                            <MessageCircle size={32} color="white" />
+                        </div>
+                        <h3 className="contact-title">Still need help?</h3>
+                        <p className="contact-text">
+                            {user
+                                ? 'Share your feedback or report an issue. Our support team will review it as soon as possible.'
+                                : 'Please login to send feedback or contact our support team.'}
+                        </p>
+                        <button
+                            className="contact-button"
+                            onClick={() => {
+                                if (user) {
+                                    setShowFeedbackForm(true);
+                                } else {
+                                    navigate('/login');
+                                }
+                            }}
+                        >
+                            {user ? 'Send Feedback' : 'Login to Send Feedback'}
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );

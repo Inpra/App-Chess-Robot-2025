@@ -102,7 +102,7 @@ export default function ProfileScreen() {
     const getAvatarUrl = () => {
         if (user?.avatarUrl) return user.avatarUrl;
         const name = user?.fullName || user?.username || 'User';
-        return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=667eea&color=fff&size=100`;
+        return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=f16f23&color=fff&size=100`;
     };
 
     const getInitials = () => {
@@ -162,8 +162,8 @@ export default function ProfileScreen() {
                 }
             />
 
-            <ScrollView 
-                contentContainerStyle={styles.content} 
+            <ScrollView
+                contentContainerStyle={styles.content}
                 showsVerticalScrollIndicator={false}
                 refreshControl={
                     <RefreshControl
@@ -176,102 +176,102 @@ export default function ProfileScreen() {
             >
                 {/* User Profile Card */}
                 <View style={styles.profileCard}>
-                        <View style={styles.avatarContainer}>
-                            <Image
-                                source={{ uri: getAvatarUrl() }}
-                                style={styles.avatar}
-                            />
-                            {/* <TouchableOpacity style={styles.editAvatarButton}>
+                    <View style={styles.avatarContainer}>
+                        <Image
+                            source={{ uri: getAvatarUrl() }}
+                            style={styles.avatar}
+                        />
+                        {/* <TouchableOpacity style={styles.editAvatarButton}>
                                 <Ionicons name="camera" size={16} color="white" />
                             </TouchableOpacity> */}
-                        </View>
-                        <Text style={styles.userName}>{user?.fullName || user?.username || 'User'}</Text>
-                        <Text style={styles.userEmail}>{user?.email || ''}</Text>
-                        {user?.phoneNumber && (
-                            <Text style={styles.userPhone}>📱 {user.phoneNumber}</Text>
-                        )}
+                    </View>
+                    <Text style={styles.userName}>{user?.fullName || user?.username || 'User'}</Text>
+                    <Text style={styles.userEmail}>{user?.email || ''}</Text>
+                    {user?.phoneNumber && (
+                        <Text style={styles.userPhone}>📱 {user.phoneNumber}</Text>
+                    )}
+                    <Link href="/profile/edit" asChild>
+                        <TouchableOpacity style={styles.editProfileButton}>
+                            <Text style={styles.editProfileText}>{t('editProfile')}</Text>
+                        </TouchableOpacity>
+                    </Link>
+                </View>
+
+                {/* Stats Summary */}
+                <View style={styles.statsContainer}>
+                    <View style={styles.statItem}>
+                        <Text style={styles.statValue}>{(user as any)?.eloRating || 1200}</Text>
+                        <Text style={styles.statLabel}>ELO</Text>
+                    </View>
+                    <View style={styles.statDivider} />
+                    <View style={styles.statItem}>
+                        <Text style={styles.statValue}>{(user as any)?.wins || 0}</Text>
+                        <Text style={styles.statLabel}>{t('wins')}</Text>
+                    </View>
+                    <View style={styles.statDivider} />
+                    <View style={styles.statItem}>
+                        <Text style={styles.statValue}>{(user as any)?.totalGamesPlayed || 0}</Text>
+                        <Text style={styles.statLabel}>{t('matches')}</Text>
+                    </View>
+                </View>
+
+                {/* Settings Sections */}
+                <View style={styles.section}>
+                    <Text style={styles.sectionHeader}>{t('account')}</Text>
+                    <View style={styles.sectionContent}>
                         <Link href="/profile/edit" asChild>
-                            <TouchableOpacity style={styles.editProfileButton}>
-                                <Text style={styles.editProfileText}>{t('editProfile')}</Text>
-                            </TouchableOpacity>
+                            {renderSettingItem('person-outline', t('personalInfo'))}
+                        </Link>
+                        <Link href="/profile/security" asChild>
+                            {renderSettingItem('lock-closed-outline', t('securityAndPassword'))}
+                        </Link>
+                        <Link href="/points-history" asChild>
+                            {renderSettingItem('wallet-outline', t('transactionHistory'))}
                         </Link>
                     </View>
+                </View>
 
-                    {/* Stats Summary */}
-                    <View style={styles.statsContainer}>
-                        <View style={styles.statItem}>
-                            <Text style={styles.statValue}>{(user as any)?.eloRating || 1200}</Text>
-                            <Text style={styles.statLabel}>ELO</Text>
-                        </View>
-                        <View style={styles.statDivider} />
-                        <View style={styles.statItem}>
-                            <Text style={styles.statValue}>{(user as any)?.wins || 0}</Text>
-                            <Text style={styles.statLabel}>{t('wins')}</Text>
-                        </View>
-                        <View style={styles.statDivider} />
-                        <View style={styles.statItem}>
-                            <Text style={styles.statValue}>{(user as any)?.totalGamesPlayed || 0}</Text>
-                            <Text style={styles.statLabel}>{t('matches')}</Text>
-                        </View>
+                <View style={styles.section}>
+                    <Text style={styles.sectionHeader}>{t('history')}</Text>
+                    <View style={styles.sectionContent}>
+                        <Link href="/match-history" asChild>
+                            {renderSettingItem('game-controller-outline', t('matchHistory'))}
+                        </Link>
+                        <Link href="/ranking" asChild>
+                            {renderSettingItem('trophy-outline', t('ranking'))}
+                        </Link>
                     </View>
+                </View>
 
-                    {/* Settings Sections */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionHeader}>{t('account')}</Text>
-                        <View style={styles.sectionContent}>
-                            <Link href="/profile/edit" asChild>
-                                {renderSettingItem('person-outline', t('personalInfo'))}
-                            </Link>
-                            <Link href="/profile/security" asChild>
-                                {renderSettingItem('lock-closed-outline', t('securityAndPassword'))}
-                            </Link>
-                            <Link href="/points-history" asChild>
-                                {renderSettingItem('wallet-outline', t('transactionHistory'))}
-                            </Link>
-                        </View>
+                <View style={styles.section}>
+                    <Text style={styles.sectionHeader}>{t('settings')}</Text>
+                    <View style={styles.sectionContent}>
+                        {renderSettingItem('moon-outline', t('darkMode'), 'switch', isDarkMode, setIsDarkMode)}
+                        {renderSettingItem('notifications-outline', t('notifications'), 'switch', isNotificationsEnabled, setIsNotificationsEnabled)}
                     </View>
+                </View>
 
-                    <View style={styles.section}>
-                        <Text style={styles.sectionHeader}>{t('history')}</Text>
-                        <View style={styles.sectionContent}>
-                            <Link href="/match-history" asChild>
-                                {renderSettingItem('game-controller-outline', t('matchHistory'))}
-                            </Link>
-                            <Link href="/ranking" asChild>
-                                {renderSettingItem('trophy-outline', t('ranking'))}
-                            </Link>
-                        </View>
+                <View style={styles.section}>
+                    <Text style={styles.sectionHeader}>{t('language')}</Text>
+                    <LanguageSelector />
+                </View>
+
+                <View style={styles.section}>
+                    <Text style={styles.sectionHeader}>{t('support')}</Text>
+                    <View style={styles.sectionContent}>
+                        <Link href="/faq" asChild>
+                            {renderSettingItem('help-circle-outline', t('faq'))}
+                        </Link>
                     </View>
+                </View>
 
-                    <View style={styles.section}>
-                        <Text style={styles.sectionHeader}>{t('settings')}</Text>
-                        <View style={styles.sectionContent}>
-                            {renderSettingItem('moon-outline', t('darkMode'), 'switch', isDarkMode, setIsDarkMode)}
-                            {renderSettingItem('notifications-outline', t('notifications'), 'switch', isNotificationsEnabled, setIsNotificationsEnabled)}
-                        </View>
-                    </View>
+                <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+                    <Ionicons name="log-out-outline" size={20} color="#EF4444" />
+                    <Text style={styles.logoutText}>{t('logout')}</Text>
+                </TouchableOpacity>
 
-                    <View style={styles.section}>
-                        <Text style={styles.sectionHeader}>{t('language')}</Text>
-                        <LanguageSelector />
-                    </View>
-
-                    <View style={styles.section}>
-                        <Text style={styles.sectionHeader}>{t('support')}</Text>
-                        <View style={styles.sectionContent}>
-                            <Link href="/faq" asChild>
-                                {renderSettingItem('help-circle-outline', t('faq'))}
-                            </Link>
-                        </View>
-                    </View>
-
-                    <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-                        <Ionicons name="log-out-outline" size={20} color="#EF4444" />
-                        <Text style={styles.logoutText}>{t('logout')}</Text>
-                    </TouchableOpacity>
-
-                    <Text style={styles.versionText}>Version 1.0.0</Text>
-                </ScrollView>
+                <Text style={styles.versionText}>Version 1.0.0</Text>
+            </ScrollView>
         </SafeAreaView>
     );
 }

@@ -229,7 +229,7 @@ class WebSocketService {
 // Note: For Android Emulator use 'ws://10.0.2.2:8081/'
 // For Physical Device use your computer's IP address e.g. 'ws://192.168.1.x:8081/'
 const wsService = new WebSocketService({
-    url: process.env.EXPO_PUBLIC_WEBSOCKET_URL || 'ws://10.17.0.187:8081/',
+    url: process.env.EXPO_PUBLIC_WEBSOCKET_URL || 'ws://100.73.130.46:8081/',
 });
 
 export default wsService;
