@@ -17,12 +17,12 @@ import {
     BackHandler
 } from 'react-native';
 import ChessBoard from '../game/ChessBoard';
-import CameraView from '../camera/CameraView';
+// import CameraView from '../camera/CameraView';
 import MoveHistory from '../game/MoveHistory';
 import ServerStatusCard from '../game/ServerStatusCard';
 import GameActionsCard from '../game/GameActionsCard';
 import { GameOverModal } from '../game/GameOverModal';
-import { CAMERA_CONFIG } from '@/services/apiConfig';
+// import { CAMERA_CONFIG } from '@/services/apiConfig';
 import puzzleService, { type TrainingPuzzle } from '@/services/puzzleService';
 import gameService from '@/services/gameService';
 import wsService from '@/services/websocketService';
@@ -51,7 +51,7 @@ export default function PuzzleGameScreen() {
     const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected');
 
     // UI State
-    const [showCamera, setShowCamera] = useState(false);
+    // const [showCamera, setShowCamera] = useState(false);
     const [isGoalExpanded, setIsGoalExpanded] = useState(true);
     const [gameStatus, setGameStatus] = useState<'waiting' | 'in_progress' | 'finished' | 'paused' | 'ended' | 'starting' | 'idle'>('idle');
     const [isStartingGame, setIsStartingGame] = useState(false);
@@ -883,12 +883,13 @@ export default function PuzzleGameScreen() {
                     )}
 
                     {/* Camera View */}
-                    <CameraView
+                    {/* Camera View */}
+                    {/* <CameraView
                         mode="embedded"
                         isConnected={isConnected}
                         onExpand={() => setShowCamera(true)}
                         streamUrl={CAMERA_CONFIG.STREAM_URL}
-                    />
+                    /> */}
 
                     {/* Move History */}
                     <MoveHistory moves={moveHistory} />
@@ -896,14 +897,15 @@ export default function PuzzleGameScreen() {
             </View>
 
             {/* Camera Modal */}
-            <CameraView
+            {/* Camera Modal */}
+            {/* <CameraView
                 mode="modal"
                 visible={showCamera}
                 onClose={() => setShowCamera(false)}
                 isConnected={isConnected}
                 streamUrl={CAMERA_CONFIG.STREAM_URL}
                 title="Robot Camera"
-            />
+            /> */}
         </SafeAreaView>
     );
 }
