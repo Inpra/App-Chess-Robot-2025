@@ -13,6 +13,7 @@ export interface ChessBoardProps {
     selectedSquare?: { row: number; col: number } | null;
     possibleMoves?: { row: number; col: number }[];
     checkSquare?: { row: number; col: number } | null;
+    hintSquares?: { from: number; to: number } | null;
     highlightedSquares?: { row: number; col: number; color?: string }[];
     styles: any;
     interactive?: boolean;
@@ -27,6 +28,7 @@ export default function ChessBoard({
     selectedSquare = null,
     possibleMoves = [],
     checkSquare = null,
+    hintSquares = null,
     highlightedSquares = [],
     styles,
     interactive = true,
@@ -95,6 +97,12 @@ export default function ChessBoard({
         return checkSquare?.row === row && checkSquare?.col === col;
     };
 
+    const isHintSquare = (row: number, col: number) => {
+        if (!hintSquares) return false;
+        const index = row * 8 + col;
+        return index === hintSquares.from || index === hintSquares.to;
+    };
+
     const getHighlightedSquare = (row: number, col: number) => {
         return highlightedSquares.find(sq => sq.row === row && sq.col === col);
     };
@@ -121,6 +129,7 @@ export default function ChessBoard({
                             const isSelected = isSquareSelected(rowIndex, colIndex);
                             const isPossible = showPossibleMoves && isPossibleMove(rowIndex, colIndex);
                             const isCheck = isSquareInCheck(rowIndex, colIndex);
+                            const isHint = isHintSquare(rowIndex, colIndex);
                             const highlighted = getHighlightedSquare(rowIndex, colIndex);
                             const customStyle = customSquareStyle?.(rowIndex, colIndex);
 
@@ -128,6 +137,7 @@ export default function ChessBoard({
                                 styles.square,
                                 isSelected && styles.selectedSquare,
                                 isCheck && styles.checkSquare,
+                                isHint && { backgroundColor: 'rgba(255, 255, 0, 0.5)' },
                                 highlighted && { backgroundColor: highlighted.color || 'rgba(255, 255, 0, 0.3)' },
                                 customStyle,
                             ];

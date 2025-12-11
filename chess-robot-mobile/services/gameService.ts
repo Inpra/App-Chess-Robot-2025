@@ -508,10 +508,27 @@ class GameService {
     /**
      * Get player games (match history)
      */
-    async getPlayerGames(playerId: string): Promise<any[]> {
+    async getPlayerGames(
+        playerId: string,
+        filters?: {
+            status?: string;
+            result?: string;
+            fromDate?: string;
+            toDate?: string;
+        }
+    ): Promise<any[]> {
         try {
+            const queryParams = new URLSearchParams();
+            if (filters?.status) queryParams.append('status', filters.status);
+            if (filters?.result) queryParams.append('result', filters.result);
+            if (filters?.fromDate) queryParams.append('fromDate', filters.fromDate);
+            if (filters?.toDate) queryParams.append('toDate', filters.toDate);
+
+            const queryString = queryParams.toString();
+            const url = `${this.baseUrl}/Games/player/${playerId}${queryString ? `?${queryString}` : ''}`;
+
             const headers = await this.getHeaders();
-            const response = await fetch(`${this.baseUrl}/Games/player/${playerId}`, {
+            const response = await fetch(url, {
                 method: 'GET',
                 headers,
             });

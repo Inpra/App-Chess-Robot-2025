@@ -74,7 +74,7 @@ export default function MatchHistoryScreen() {
 
             // Fetch fresh user profile to get stats from database (accurate source of truth)
             const userProfile = await authService.getProfile();
-            
+
             // Use stats from user profile (from database) - most accurate
             const totalGames = (userProfile as any)?.totalGamesPlayed || 0;
             const wins = (userProfile as any)?.wins || 0;
@@ -109,7 +109,7 @@ export default function MatchHistoryScreen() {
 
             // Build filter parameters for API
             const filters: { status?: string; result?: string } = {};
-            
+
             if (filter === 'all') {
                 // Get all displayable games (finished, aborted, paused)
                 // No API filter, will filter client-side
@@ -122,7 +122,7 @@ export default function MatchHistoryScreen() {
             }
 
             // Fetch player games with filters
-            const gamesData = await gameService.getPlayerGames(currentUser.id);
+            const gamesData = await gameService.getPlayerGames(currentUser.id, filters);
 
             // Additional client-side filter for 'all' case
             let displayGames = gamesData;
@@ -147,7 +147,7 @@ export default function MatchHistoryScreen() {
     const getResultColor = (result: string, status?: string) => {
         // If game is paused, show purple
         if (status === 'paused') return '#8B5CF6';
-        
+
         const lowerResult = result?.toLowerCase();
         switch (lowerResult) {
             case 'win': return '#23b249';
@@ -198,17 +198,39 @@ export default function MatchHistoryScreen() {
                         <Text style={styles.matchDate}>{formatDate(item.startedAt)}</Text>
                     </View>
                 </View>
-                <View style={[styles.resultBadge, { backgroundColor: getResultColor(item.result || '', item.status) + '20', flexDirection: 'row', alignItems: 'center', gap: 4 }]}>
-                    {item.status === 'paused' ? (
-                        <>
-                            <Ionicons name="pause" size={14} color="#8B5CF6" />
-                            <Text style={[styles.resultText, { color: '#8B5CF6' }]}>Paused</Text>
-                        </>
-                    ) : (
-                        <Text style={[styles.resultText, { color: getResultColor(item.result || '', item.status) }]}>
-                            {item.result ? item.result.charAt(0).toUpperCase() + item.result.slice(1) : 'N/A'}
-                        </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    {/* Game Type Badge */}
+                    {item.gameType && (
+                        <View style={{
+                            paddingHorizontal: 12,
+                            paddingVertical: 6,
+                            borderRadius: 16,
+                            backgroundColor: item.gameType.code === 'training_puzzle' ? '#EDE9FE' : '#e8f0fe',
+                            borderWidth: 1,
+                            borderColor: item.gameType.code === 'training_puzzle' ? '#A78BFA' : '#1567b1',
+                        }}>
+                            <Text style={{
+                                fontSize: 12,
+                                fontWeight: '600',
+                                color: item.gameType.code === 'training_puzzle' ? '#7C3AED' : '#1567b1',
+                            }}>
+                                {item.gameType.name}
+                            </Text>
+                        </View>
                     )}
+                    {/* Result Badge */}
+                    <View style={[styles.resultBadge, { backgroundColor: getResultColor(item.result || '', item.status) + '20', flexDirection: 'row', alignItems: 'center', gap: 4 }]}>
+                        {item.status === 'paused' ? (
+                            <>
+                                <Ionicons name="pause" size={14} color="#8B5CF6" />
+                                <Text style={[styles.resultText, { color: '#8B5CF6' }]}>Paused</Text>
+                            </>
+                        ) : (
+                            <Text style={[styles.resultText, { color: getResultColor(item.result || '', item.status) }]}>
+                                {item.result ? item.result.charAt(0).toUpperCase() + item.result.slice(1) : 'N/A'}
+                            </Text>
+                        )}
+                    </View>
                 </View>
             </View>
 
@@ -268,7 +290,7 @@ export default function MatchHistoryScreen() {
                             </View>
                         </View>
                         <Text style={styles.sectionTitle}>Recent Matches</Text>
-                        
+
                         {/* Filter Tabs */}
                         <View style={styles.filterContainer}>
                             <TouchableOpacity
@@ -281,7 +303,7 @@ export default function MatchHistoryScreen() {
                                 <Ionicons name="list" size={16} color={selectedFilter === 'all' ? 'white' : Colors.light.text} />
                                 <Text style={[styles.filterText, { color: selectedFilter === 'all' ? 'white' : Colors.light.text }]}>All</Text>
                             </TouchableOpacity>
-                            
+
                             <TouchableOpacity
                                 onPress={() => handleFilterChange('win')}
                                 style={[
@@ -292,7 +314,7 @@ export default function MatchHistoryScreen() {
                                 <Ionicons name="trophy" size={16} color={selectedFilter === 'win' ? 'white' : '#23b249'} />
                                 <Text style={[styles.filterText, { color: selectedFilter === 'win' ? 'white' : Colors.light.text }]}>Win</Text>
                             </TouchableOpacity>
-                            
+
                             <TouchableOpacity
                                 onPress={() => handleFilterChange('lose')}
                                 style={[
@@ -303,7 +325,7 @@ export default function MatchHistoryScreen() {
                                 <Ionicons name="close" size={16} color={selectedFilter === 'lose' ? 'white' : '#EF4444'} />
                                 <Text style={[styles.filterText, { color: selectedFilter === 'lose' ? 'white' : Colors.light.text }]}>Lose</Text>
                             </TouchableOpacity>
-                            
+
                             <TouchableOpacity
                                 onPress={() => handleFilterChange('draw')}
                                 style={[
@@ -314,7 +336,7 @@ export default function MatchHistoryScreen() {
                                 <Ionicons name="remove" size={16} color={selectedFilter === 'draw' ? 'white' : '#1567b1'} />
                                 <Text style={[styles.filterText, { color: selectedFilter === 'draw' ? 'white' : Colors.light.text }]}>Draw</Text>
                             </TouchableOpacity>
-                            
+
                             <TouchableOpacity
                                 onPress={() => handleFilterChange('paused')}
                                 style={[
