@@ -283,21 +283,28 @@ export default function PersonalInformation() {
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 gap: '8px',
-                                padding: '14px',
-                                backgroundColor: saving ? '#9CA3AF' : '#3B82F6',
+                                padding: '16px',
+                                background: saving ? '#9CA3AF' : 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%)',
                                 color: 'white',
                                 border: 'none',
-                                borderRadius: '8px',
-                                fontSize: '16px',
-                                fontWeight: '600',
+                                borderRadius: '12px',
+                                fontSize: '18px',
+                                fontWeight: '700',
                                 cursor: saving ? 'not-allowed' : 'pointer',
-                                transition: 'background-color 0.2s',
+                                transition: 'all 0.2s',
+                                boxShadow: saving ? 'none' : '0 4px 12px rgba(241, 111, 35, 0.3)',
                             }}
                             onMouseEnter={(e) => {
-                                if (!saving) e.currentTarget.style.backgroundColor = '#2563EB';
+                                if (!saving) {
+                                    e.currentTarget.style.transform = 'translateY(-2px)';
+                                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(241, 111, 35, 0.4)';
+                                }
                             }}
                             onMouseLeave={(e) => {
-                                if (!saving) e.currentTarget.style.backgroundColor = '#3B82F6';
+                                if (!saving) {
+                                    e.currentTarget.style.transform = 'translateY(0)';
+                                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(241, 111, 35, 0.3)';
+                                }
                             }}
                         >
                             <Save size={20} />

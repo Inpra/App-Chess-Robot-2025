@@ -1,4 +1,4 @@
-    import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft, User, ArrowUpDown, TrendingUp, TrendingDown, Loader2, Trophy, X, Minus, Pause, LayoutList } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import gameService from '../services/gameService';
@@ -60,7 +60,7 @@ export default function MatchHistory() {
 
             // Fetch fresh user profile to get stats from database (accurate source of truth)
             const userProfile = await authService.getProfile();
-            
+
             // Use stats from user profile (from database) - most accurate
             const totalGames = (userProfile as any)?.totalGamesPlayed || 0;
             const wins = (userProfile as any)?.wins || 0;
@@ -95,7 +95,7 @@ export default function MatchHistory() {
 
             // Build filter parameters for API
             const filters: { status?: string; result?: string } = {};
-            
+
             if (filter === 'all') {
                 // Get all displayable games (finished, aborted, paused)
                 // No API filter, will filter client-side
@@ -129,7 +129,7 @@ export default function MatchHistory() {
     const getResultColor = (result: string, status?: string) => {
         // If game is paused, show purple
         if (status === 'paused') return '#8B5CF6';
-        
+
         const lowerResult = result?.toLowerCase();
         switch (lowerResult) {
             case 'win': return '#23b249';
@@ -142,13 +142,13 @@ export default function MatchHistory() {
     const handleGameClick = (game: GameData) => {
         // If game is paused, navigate to VsBot to resume
         if (game.status === 'paused') {
-            navigate('/game/vs-bot', { 
-                state: { 
+            navigate('/game/vs-bot', {
+                state: {
                     resumeGameId: game.id,
                     difficulty: game.difficulty || 'medium',
                     difficultyName: game.difficulty ? game.difficulty.charAt(0).toUpperCase() + game.difficulty.slice(1) : 'Medium',
                     elo: 1500
-                } 
+                }
             });
         } else {
             // Otherwise, show match detail
@@ -205,10 +205,10 @@ export default function MatchHistory() {
                     </div>
                 </div>
 
-                <div style={{ 
-                    position: 'sticky', 
-                    top: 0, 
-                    zIndex: 20, 
+                <div style={{
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 20,
                     backgroundColor: 'var(--color-background)',
                     paddingTop: 10,
                     paddingBottom: 10,
@@ -217,10 +217,10 @@ export default function MatchHistory() {
                     <h3 className="section-title" style={{ marginBottom: 12 }}>Recent Matches</h3>
 
                     {/* Filter Tabs */}
-                    <div style={{ 
-                        display: 'flex', 
-                        gap: 8, 
-                        overflowX: 'auto', 
+                    <div style={{
+                        display: 'flex',
+                        gap: 8,
+                        overflowX: 'auto',
                         paddingBottom: 4
                     }}>
                         <button
@@ -244,90 +244,90 @@ export default function MatchHistory() {
                             <LayoutList size={16} color={selectedFilter === 'all' ? 'white' : 'var(--color-text)'} />
                             All
                         </button>
-                    <button
-                        onClick={() => handleFilterChange('win')}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 6,
-                            padding: '10px 18px',
-                            borderRadius: 20,
-                            border: 'none',
-                            backgroundColor: selectedFilter === 'win' ? '#23b249' : '#F3F4F6',
-                            color: selectedFilter === 'win' ? 'white' : 'var(--color-text)',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            whiteSpace: 'nowrap',
-                            transition: 'all 0.2s',
-                            fontSize: '14px'
-                        }}
-                    >
-                        <Trophy size={16} color={selectedFilter === 'win' ? 'white' : '#23b249'} />
-                        Win
-                    </button>
-                    <button
-                        onClick={() => handleFilterChange('lose')}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 6,
-                            padding: '10px 18px',
-                            borderRadius: 20,
-                            border: 'none',
-                            backgroundColor: selectedFilter === 'lose' ? '#EF4444' : '#F3F4F6',
-                            color: selectedFilter === 'lose' ? 'white' : 'var(--color-text)',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            whiteSpace: 'nowrap',
-                            transition: 'all 0.2s',
-                            fontSize: '14px'
-                        }}
-                    >
-                        <X size={16} color={selectedFilter === 'lose' ? 'white' : '#EF4444'} />
-                        Lose
-                    </button>
-                    <button
-                        onClick={() => handleFilterChange('draw')}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 6,
-                            padding: '10px 18px',
-                            borderRadius: 20,
-                            border: 'none',
-                            backgroundColor: selectedFilter === 'draw' ? '#1567b1' : '#F3F4F6',
-                            color: selectedFilter === 'draw' ? 'white' : 'var(--color-text)',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            whiteSpace: 'nowrap',
-                            transition: 'all 0.2s',
-                            fontSize: '14px'
-                        }}
-                    >
-                        <Minus size={16} color={selectedFilter === 'draw' ? 'white' : '#1567b1'} />
-                        Draw
-                    </button>
-                    <button
-                        onClick={() => handleFilterChange('paused')}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 6,
-                            padding: '10px 18px',
-                            borderRadius: 20,
-                            border: 'none',
-                            backgroundColor: selectedFilter === 'paused' ? '#8B5CF6' : '#F3F4F6',
-                            color: selectedFilter === 'paused' ? 'white' : 'var(--color-text)',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            whiteSpace: 'nowrap',
-                            transition: 'all 0.2s',
-                            fontSize: '14px'
-                        }}
-                    >
-                        <Pause size={16} color={selectedFilter === 'paused' ? 'white' : '#8B5CF6'} />
-                        Paused
-                    </button>
+                        <button
+                            onClick={() => handleFilterChange('win')}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 6,
+                                padding: '10px 18px',
+                                borderRadius: 20,
+                                border: 'none',
+                                backgroundColor: selectedFilter === 'win' ? '#23b249' : '#F3F4F6',
+                                color: selectedFilter === 'win' ? 'white' : 'var(--color-text)',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                whiteSpace: 'nowrap',
+                                transition: 'all 0.2s',
+                                fontSize: '14px'
+                            }}
+                        >
+                            <Trophy size={16} color={selectedFilter === 'win' ? 'white' : '#23b249'} />
+                            Win
+                        </button>
+                        <button
+                            onClick={() => handleFilterChange('lose')}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 6,
+                                padding: '10px 18px',
+                                borderRadius: 20,
+                                border: 'none',
+                                backgroundColor: selectedFilter === 'lose' ? '#EF4444' : '#F3F4F6',
+                                color: selectedFilter === 'lose' ? 'white' : 'var(--color-text)',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                whiteSpace: 'nowrap',
+                                transition: 'all 0.2s',
+                                fontSize: '14px'
+                            }}
+                        >
+                            <X size={16} color={selectedFilter === 'lose' ? 'white' : '#EF4444'} />
+                            Lose
+                        </button>
+                        <button
+                            onClick={() => handleFilterChange('draw')}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 6,
+                                padding: '10px 18px',
+                                borderRadius: 20,
+                                border: 'none',
+                                backgroundColor: selectedFilter === 'draw' ? '#1567b1' : '#F3F4F6',
+                                color: selectedFilter === 'draw' ? 'white' : 'var(--color-text)',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                whiteSpace: 'nowrap',
+                                transition: 'all 0.2s',
+                                fontSize: '14px'
+                            }}
+                        >
+                            <Minus size={16} color={selectedFilter === 'draw' ? 'white' : '#1567b1'} />
+                            Draw
+                        </button>
+                        <button
+                            onClick={() => handleFilterChange('paused')}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 6,
+                                padding: '10px 18px',
+                                borderRadius: 20,
+                                border: 'none',
+                                backgroundColor: selectedFilter === 'paused' ? '#8B5CF6' : '#F3F4F6',
+                                color: selectedFilter === 'paused' ? 'white' : 'var(--color-text)',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                whiteSpace: 'nowrap',
+                                transition: 'all 0.2s',
+                                fontSize: '14px'
+                            }}
+                        >
+                            <Pause size={16} color={selectedFilter === 'paused' ? 'white' : '#8B5CF6'} />
+                            Paused
+                        </button>
                     </div>
                 </div>
 
