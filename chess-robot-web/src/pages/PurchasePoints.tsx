@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+    import { useState, useEffect } from 'react';
 import { ArrowLeft, Star, Trophy, Diamond, ShieldCheck, ArrowRight, Clock, X, Crown, Zap, Gift, Loader2, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import '../styles/PurchasePoints.css';
 import { getActivePointPackages, formatPrice, type PointPackage } from '../services/pointPackageService';
-import { createPayment, checkPaymentStatus, type PaymentResponse } from '../services/paymentService';
+import { createPayment, checkPaymentStatus, cancelPayment, type PaymentResponse } from '../services/paymentService';
 
 // Package display configuration
 interface PackageDisplay extends PointPackage {
@@ -145,6 +145,34 @@ export default function PurchasePoints() {
         setPollingInterval(interval);
     };
 
+    const handleCloseModal = async () => {
+        // Stop polling
+        if (pollingInterval) {
+            clearInterval(pollingInterval);
+            setPollingInterval(null);
+        }
+
+        // Cancel payment if it's still pending
+        if (paymentStatus === 'pending' && paymentData) {
+            try {
+                const transactionId = paymentData.transactionId || paymentData.TransactionId;
+                if (transactionId) {
+                    console.log('Cancelling payment:', transactionId);
+                    await cancelPayment(transactionId);
+                    console.log('Payment cancelled successfully');
+                }
+            } catch (error) {
+                console.error('Error cancelling payment:', error);
+                // Continue closing modal even if cancel fails
+            }
+        }
+
+        // Reset modal state
+        setModalVisible(false);
+        setPaymentData(null);
+        setPaymentStatus('pending');
+    };
+
     const getIcon = (iconName: string, size: number, color: string) => {
         switch (iconName) {
             case 'star':
@@ -262,11 +290,11 @@ export default function PurchasePoints() {
 
             {/* Payment Modal */}
             {modalVisible && selectedPackage && (
-                <div className="modal-overlay" onClick={() => setModalVisible(false)}>
+                <div className="modal-overlay" onClick={handleCloseModal}>
                     <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                         <div className="modal-header">
                             <h3 className="modal-title">Thanh toán</h3>
-                            <button className="close-button" onClick={() => setModalVisible(false)}>
+                            <button className="close-button" onClick={handleCloseModal}>
                                 <X size={20} color="#6B7280" />
                             </button>
                         </div>
@@ -374,7 +402,7 @@ export default function PurchasePoints() {
                                 <div style={{ textAlign: 'center', padding: '40px 20px' }}>
                                     <p style={{ color: '#EF4444' }}>Không thể tạo link thanh toán</p>
                                     <button
-                                        onClick={() => setModalVisible(false)}
+                                        onClick={handleCloseModal}
                                         style={{
                                             marginTop: '16px',
                                             padding: '12px 24px',
