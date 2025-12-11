@@ -712,28 +712,21 @@ export default function VsBotScreen() {
             };
 
             // Parse the suggested move to get from/to squares
-            const tempGame = new Chess(currentFen);
-            const move = tempGame.move(suggestion.suggestedMoveSan);
+            const move = game.move(suggestion.suggestedMoveSan);
 
             if (move) {
                 // Convert chess.js square notation to board indices
                 const fromIndex = squareToIndex(move.from);
                 const toIndex = squareToIndex(move.to);
 
+                // Undo the move (we only wanted to parse it)
+                game.undo();
+
                 // Set hint squares to highlight on board
                 setHintSquares({ from: fromIndex, to: toIndex });
 
                 console.log(`[VsBot] Hint displayed: ${suggestion.suggestedMoveSan} (from: ${move.from}, to: ${move.to})`);
                 console.log(`[VsBot] Points deducted: ${suggestion.pointsDeducted}, Remaining: ${suggestion.remainingPoints}`);
-
-                Alert.alert(
-                    '💡 AI Suggestion',
-                    `Suggested move: ${suggestion.suggestedMoveSan}\n\n` +
-                    `Confidence: ${(suggestion.confidence * 100).toFixed(0)}%\n` +
-                    `Points deducted: ${suggestion.pointsDeducted}\n` +
-                    `Remaining points: ${suggestion.remainingPoints}`,
-                    [{ text: 'OK' }]
-                );
             } else {
                 Alert.alert('Error', 'Cannot parse suggested move');
             }
