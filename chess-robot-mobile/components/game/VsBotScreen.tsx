@@ -1,13 +1,13 @@
-import { Chess } from 'chess.js';
+                                                                                                            import { Chess } from 'chess.js';
 import NavigationHeader from '@/components/common/NavigationHeader';
 import { Colors } from '@/constants/theme';
 import { getGameStyles } from '@/styles/game.styles';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
-import { SafeAreaView, ScrollView, Text, TouchableOpacity, useWindowDimensions, View, Alert } from 'react-native';
+import { SafeAreaView, ScrollView, Text, TouchableOpacity, useWindowDimensions, View, Alert, BackHandler } from 'react-native';
 import ChessBoard from './ChessBoard';
-import CameraView from '../camera/CameraView';
+// import CameraView from '../camera/CameraView';
 import MoveHistory, { type Move } from './MoveHistory';
 import MatchHeader from './MatchHeader';
 import { GameOverModal } from './GameOverModal';
@@ -24,7 +24,7 @@ export default function VsBotScreen() {
     // Connection State
     const [isConnected, setIsConnected] = useState(false);
     const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected');
-    const [showCamera, setShowCamera] = useState(false);
+    // const [showCamera, setShowCamera] = useState(false);
 
     // Game State
     const [gameId, setGameId] = useState<string | null>((resumeGameId as string) || null);
@@ -108,12 +108,56 @@ export default function VsBotScreen() {
 
     // Auto-resume game if resumeGameId is provided
     useEffect(() => {
-        if (resumeGameId && gameStatus === 'paused' && isConnected) {
-            console.log('[VsBot] Auto-resuming game:', resumeGameId);
-            setGameMessage('Resuming paused game...');
-            handleResumeGame();
-        }
-    }, [resumeGameId, isConnected]);
+        const autoResume = async () => {
+            // Only auto-resume if ALL conditions are met:
+            // 1. resumeGameId exists (user came from match history)
+            // 2. gameStatus is 'paused' (game is in paused state)
+            // 3. isConnected is true (WebSocket is ready)
+            // 4. gameId is set (game session exists)
+            if (resumeGameId && gameStatus === 'paused' && isConnected && gameId) {
+                console.log('[VsBot] Auto-resuming game:', resumeGameId);
+                setGameMessage('Resuming paused game...');
+
+                try {
+                    // Call API to resume game (sends resume command with saved FEN to AI)
+                    const response = await gameService.resumeGame(gameId);
+
+                    console.log('[VsBot] ✓ Game resumed:', response);
+
+                    // Load the saved FEN position
+                    if (response.fenStr) {
+                        const newGame = new Chess(response.fenStr);
+                        setGame(newGame);
+                        setFen(response.fenStr);
+                        lastProcessedFen.current = response.fenStr;
+
+                        // Rebuild move history from chess.js
+                        const history = newGame.history();
+                        const moves: Move[] = [];
+                        for (let i = 0; i < history.length; i += 2) {
+                            moves.push({
+                                moveNumber: Math.floor(i / 2) + 1,
+                                white: history[i],
+                                black: history[i + 1]
+                            });
+                        }
+                        setMoveHistory(moves);
+                    }
+
+                    // Update UI
+                    setGameStatus('playing');
+                    setBoardSetupStatus('checking');
+                    setGameMessage('Game resumed - Set up your board to continue');
+                    Alert.alert('Game Resumed', '✓ Game resumed! Please set up your board');
+                } catch (error: any) {
+                    console.error('[VsBot] ✗ Failed to resume game:', error);
+                    Alert.alert('Error', error.message || 'Failed to resume game. Please try again.');
+                }
+            }
+        };
+
+        autoResume();
+    }, [resumeGameId, isConnected, gameId, gameStatus]);
 
     const gameOverHandled = useRef<boolean>(false);
 
@@ -321,6 +365,22 @@ export default function VsBotScreen() {
             }
         };
     }, []);
+
+    // Handle hardware back button press
+    useEffect(() => {
+        const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+            // If game is active, show pause confirmation instead of going back
+            if (gameStatus === 'playing' && gameId) {
+                handlePauseGame();
+                return true; // Prevent default back action
+            }
+            // Allow default back action for other states
+            return false;
+        });
+
+        return () => backHandler.remove();
+    }, [gameStatus, gameId]);
+
 
     const savePendingMoves = async () => {
         if (pendingMoves.current.length === 0) return;
@@ -755,7 +815,17 @@ export default function VsBotScreen() {
             <Stack.Screen options={{ headerShown: false }} />
 
             {/* Header */}
-            <NavigationHeader title="Vs Robot Arm" onBack={() => router.back()} />
+            <NavigationHeader
+                title="Vs Robot Arm"
+                onBack={() => {
+                    // If game is active, show pause confirmation
+                    if (gameStatus === 'playing' && gameId) {
+                        handlePauseGame();
+                    } else {
+                        router.back();
+                    }
+                }}
+            />
 
             <View style={styles.contentContainer}>
                 {/* Board Section: Players + Board */}
@@ -832,12 +902,12 @@ export default function VsBotScreen() {
                     </View>
 
                     {/* Robot Camera (Embedded) */}
-                    <CameraView
+                    {/* <CameraView
                         mode="embedded"
                         isConnected={isConnected}
                         onExpand={() => setShowCamera(true)}
                         streamUrl={CAMERA_CONFIG.STREAM_URL}
-                    />
+                    /> */}
 
                     {/* Game Actions */}
                     <View style={styles.actionsCard}>
@@ -955,14 +1025,14 @@ export default function VsBotScreen() {
                 </ScrollView>
             </View>
 
-            <CameraView
+            {/* <CameraView
                 mode="modal"
                 visible={showCamera}
                 onClose={() => setShowCamera(false)}
                 isConnected={isConnected}
                 streamUrl={CAMERA_CONFIG.STREAM_URL}
                 title="Robot Camera"
-            />
+            /> */}
 
             {/* Game Over Modal */}
             <GameOverModal

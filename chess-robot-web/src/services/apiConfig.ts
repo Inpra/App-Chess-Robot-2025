@@ -36,6 +36,7 @@ export const GAME_ENDPOINTS = {
     START: '/Games/start',
     MOVE: '/Games/move',
     END: '/Games/end',
+    TEST_START: '/Games/test-start',
 };
 
 // Robot endpoints

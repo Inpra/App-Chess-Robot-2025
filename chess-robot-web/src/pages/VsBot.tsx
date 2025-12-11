@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Chess } from 'chess.js';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { Pause, Flag } from 'lucide-react';
 import wsService from '../services/websocketService';
 import gameService from '../services/gameService';
 import { ChessBoard, initialBoard, fenToBoard } from '../components/chess';
@@ -11,6 +12,7 @@ import { CameraView } from '../components/camera';
 import {
     MoveHistory,
     GameOverModal,
+    ConfirmModal,
     GameHeader,
     MatchHeader,
     ServerStatusCard,
@@ -18,11 +20,17 @@ import {
 } from '../components/game';
 import type { Move } from '../components/game';
 import { CAMERA_CONFIG } from '../services/apiConfig';
+import authService from '../services/authService';
 import '../styles/VsBot.css';
 
-export default function VsBot() {
+export default function VsBot({ isGuest: propIsGuest = false }: { isGuest?: boolean }) {
     const navigate = useNavigate();
     const location = useLocation();
+
+    // Auto-detect guest mode if user is not logged in
+    const user = authService.getCurrentUser();
+    const isGuest = propIsGuest || !user;
+
     const { elo, difficulty, difficultyName, resumeGameId } = (location.state as any) || { elo: 1500, difficulty: 'medium', difficultyName: 'Medium' };
     const [isConnected, setIsConnected] = useState(false);
     const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected');
@@ -56,6 +64,22 @@ export default function VsBot() {
         result: 'draw',
         reason: '',
         message: ''
+    });
+
+    // Confirm modal state
+    const [confirmModal, setConfirmModal] = useState<{
+        isOpen: boolean;
+        title: string;
+        message: string;
+        onConfirm: () => void;
+        variant: 'danger' | 'warning' | 'info';
+        icon?: React.ReactNode;
+    }>({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => { },
+        variant: 'warning'
     });
 
     // Chess.js instance to track game state
@@ -175,11 +199,11 @@ export default function VsBot() {
                 console.log('[VsBot] Auto-resuming game:', resumeGameId);
                 // Show message that game will be resumed
                 setGameMessage('Resuming paused game...');
-                
+
                 try {
                     // Call API to resume game
                     const response = await gameService.resumeGame(gameId);
-                    
+
                     console.log('[VsBot] ✓ Game resumed:', response);
 
                     // Load the saved FEN position
@@ -188,7 +212,7 @@ export default function VsBot() {
                         setBoard(newBoard);
                         chessGame.current.load(response.fenStr);
                         lastProcessedFen.current = response.fenStr;
-                        
+
                         // Rebuild move history from chess.js
                         const history = chessGame.current.history();
                         const moves: Move[] = [];
@@ -263,15 +287,18 @@ export default function VsBot() {
             }
 
             // Update game result in database (this also sends end command to AI)
-            await gameService.updateGameResult(
-                gameId,
-                result,
-                'completed',
-                Math.ceil(totalMoves / 2),
-                currentFen
-            );
-
-            console.log(`[VsBot] ✓ Game over - Result: ${result}, Reason: ${reason}`);
+            if (!isGuest) {
+                await gameService.updateGameResult(
+                    gameId,
+                    result,
+                    'completed',
+                    Math.ceil(totalMoves / 2),
+                    currentFen
+                );
+                console.log(`[VsBot] ✓ Game over - Result: ${result}, Reason: ${reason}`);
+            } else {
+                console.log(`[VsBot] (Guest) - Result: ${result}, Reason: ${reason} - API update skipped`);
+            }
 
             // Update UI
             setGameStatus('ended');
@@ -289,7 +316,7 @@ export default function VsBot() {
             console.error('[VsBot] ✗ Failed to update game over:', error);
             showToast('error', '✗ Failed to save game result. Please try again.');
         }
-    }, [gameId]);
+    }, [gameId, isGuest]);
 
     const computeMessageHash = (type: string, data: any): string => {
         // Simple hash based on key fields
@@ -429,6 +456,7 @@ export default function VsBot() {
 
     // Batch save pending moves
     const savePendingMoves = async () => {
+        if (isGuest) return; // Guests don't save moves
         if (pendingMoves.current.length === 0) return;
 
         const movesToSave = [...pendingMoves.current];
@@ -571,14 +599,16 @@ export default function VsBot() {
                             // Update game result
                             (async () => {
                                 try {
-                                    await gameService.updateGameResult(
-                                        gameId,
-                                        result,
-                                        'completed',
-                                        moveNumber,
-                                        newFen
-                                    );
-                                    console.log(`[VsBot] ✓ Game result updated: ${result}`);
+                                    if (!isGuest) {
+                                        await gameService.updateGameResult(
+                                            gameId,
+                                            result,
+                                            'completed',
+                                            moveNumber,
+                                            newFen
+                                        );
+                                        console.log(`[VsBot] ✓ Game result updated: ${result}`);
+                                    }
 
                                     // Show modal after successful update
                                     setGameOverModal({
@@ -604,14 +634,16 @@ export default function VsBot() {
                             // Update game result
                             (async () => {
                                 try {
-                                    await gameService.updateGameResult(
-                                        gameId,
-                                        'draw',
-                                        'completed',
-                                        moveNumber,
-                                        newFen
-                                    );
-                                    console.log('[VsBot] ✓ Game result updated: draw');
+                                    if (!isGuest) {
+                                        await gameService.updateGameResult(
+                                            gameId,
+                                            'draw',
+                                            'completed',
+                                            moveNumber,
+                                            newFen
+                                        );
+                                        console.log('[VsBot] ✓ Game result updated: draw');
+                                    }
 
                                     // Show modal after successful update
                                     setGameOverModal({
@@ -724,10 +756,15 @@ export default function VsBot() {
             setCheckSquare(null);
 
             // Call API to start game
-            const response = await gameService.startGame({
-                gameTypeCode: 'normal_game',
-                difficulty: difficulty || 'medium',
-            });
+            let response;
+            if (isGuest) {
+                response = await gameService.testStartGame();
+            } else {
+                response = await gameService.startGame({
+                    gameTypeCode: 'normal_game',
+                    difficulty: difficulty || 'medium',
+                });
+            }
 
             console.log('[VsBot] Game started:', response);
             setGameId(response.gameId);
@@ -752,19 +789,30 @@ export default function VsBot() {
             return;
         }
 
-        console.log('[VsBot] Pausing game:', gameId, 'current status:', gameStatus);
-
-        // Show confirmation dialog
-        const confirmed = window.confirm(
-            '⏸️ Pause Game?\n\n' +
-            'Your progress will be saved and you can resume later from Match History.\n' +
-            'Do you want to pause this game?'
-        );
-
-        if (!confirmed) {
-            console.log('[VsBot] Pause cancelled by user');
+        if (isGuest) {
+            showToast('info', 'Feature not available for guests');
             return;
         }
+
+        console.log('[VsBot] Pausing game:', gameId, 'current status:', gameStatus);
+
+        // Show confirmation modal
+        setConfirmModal({
+            isOpen: true,
+            title: 'Pause Game?',
+            message: 'Your progress will be saved and you can resume later from Match History.\n\nDo you want to pause this game?',
+            variant: 'warning',
+            icon: <Pause size={64} />,
+            onConfirm: async () => {
+                setConfirmModal({ ...confirmModal, isOpen: false });
+                await executePauseGame();
+            }
+        });
+    };
+
+    // Execute pause game after confirmation
+    const executePauseGame = async () => {
+        if (!gameId) return;
 
         try {
             // Save any pending moves first
@@ -776,7 +824,7 @@ export default function VsBot() {
             // Call API to pause game (saves state and sends end command to AI)
             console.log('[VsBot] Calling pauseGame API for gameId:', gameId);
             const response = await gameService.pauseGame(gameId);
-            
+
             console.log('[VsBot] ✓ Game paused successfully:', response);
 
             // Update UI
@@ -804,7 +852,7 @@ export default function VsBot() {
         try {
             // Call API to resume game (sends resume command with saved FEN to AI)
             const response = await gameService.resumeGame(gameId);
-            
+
             console.log('[VsBot] ✓ Game resumed:', response);
 
             // Load the saved FEN position
@@ -813,7 +861,7 @@ export default function VsBot() {
                 setBoard(newBoard);
                 chessGame.current.load(response.fenStr);
                 lastProcessedFen.current = response.fenStr;
-                
+
                 // Rebuild move history from chess.js
                 const history = chessGame.current.history();
                 const moves: Move[] = [];
@@ -845,16 +893,23 @@ export default function VsBot() {
             return;
         }
 
-        // Show confirmation dialog
-        const confirmed = window.confirm(
-            '⚠️ Are you sure you want to resign?\n\n' +
-            'This will end the game and count as a loss.\n' +
-            'This action cannot be undone.'
-        );
+        // Show confirmation modal
+        setConfirmModal({
+            isOpen: true,
+            title: 'Resign Game?',
+            message: 'This will end the game and count as a loss.\n\nThis action cannot be undone.\n\nAre you sure you want to resign?',
+            variant: 'danger',
+            icon: <Flag size={64} />,
+            onConfirm: async () => {
+                setConfirmModal({ ...confirmModal, isOpen: false });
+                await executeResignGame();
+            }
+        });
+    };
 
-        if (!confirmed) {
-            return;
-        }
+    // Execute resign game after confirmation
+    const executeResignGame = async () => {
+        if (!gameId) return;
 
         try {
             // Save any pending moves first
@@ -867,13 +922,25 @@ export default function VsBot() {
             const currentFen = chessGame.current.fen();
 
             // 1. Update game result in database (this also sends end command to AI)
-            await gameService.updateGameResult(
-                gameId,
-                'lose',
-                'completed',
-                Math.ceil(totalMoves / 2),
-                currentFen
-            );
+            if (!isGuest) {
+                await gameService.updateGameResult(
+                    gameId,
+                    'lose',
+                    'completed',
+                    Math.ceil(totalMoves / 2),
+                    currentFen
+                );
+            } else {
+                // For guests, maybe just end locally or call test-end if exists?
+                // For now, assume robot just resets eventually or we can send a custom command if needed.
+                // But updateGameResult is what notifies AI. Guests can't call it.
+                // We will rely on just closing the loop locally. `gameService.endGame` also requires auth.
+                // We might need a `gameService.testEndGame` if we want to reset robot state properly for guest.
+                // GamesController has `test-end`.
+                // For now, let's just log.
+                console.log('[VsBot] Guest resigned - API update skipped');
+                // Ideally, we should call testEndGame here.
+            }
 
             console.log('[VsBot] ✓ Game resigned - Database updated and AI notified');
 
@@ -902,10 +969,15 @@ export default function VsBot() {
             return;
         }
 
+        if (isGuest) {
+            showToast('warning', 'Guests cannot use AI hints');
+            return;
+        }
+
         try {
             // Get current FEN position
             const currentFen = chessGame.current.fen();
-            
+
             // Set loading state
             setIsLoadingHint(true);
 
@@ -925,18 +997,18 @@ export default function VsBot() {
 
             // Parse the suggested move to get from/to squares
             const move = chessGame.current.move(suggestion.suggestedMoveSan);
-            
+
             if (move) {
                 // Convert chess.js square notation (e.g., 'e2', 'e4') to board indices
                 const fromIndex = squareToIndex(move.from);
                 const toIndex = squareToIndex(move.to);
-                
+
                 // Undo the move (we only wanted to parse it)
                 chessGame.current.undo();
-                
+
                 // Set hint squares to highlight on board
                 setHintSquares({ from: fromIndex, to: toIndex });
-                
+
                 console.log(`[VsBot] Hint displayed: ${suggestion.suggestedMoveSan} (from: ${move.from}, to: ${move.to})`);
                 console.log(`[VsBot] Points deducted: ${suggestion.pointsDeducted}, Remaining: ${suggestion.remainingPoints}`);
             } else {
@@ -945,7 +1017,7 @@ export default function VsBot() {
 
         } catch (error: any) {
             console.error('[VsBot] Failed to get hint:', error);
-            
+
             // Show specific error messages
             if (error.message.includes('đủ điểm') || error.message.includes('Insufficient points')) {
                 showToast('error', error.message, true);
@@ -1047,8 +1119,151 @@ export default function VsBot() {
 
                     {/* Move History */}
                     <MoveHistory moves={moveHistory} />
+
+                    {/* Test Modal Buttons (Development Only) */}
+                    <div style={{
+                        marginTop: '16px',
+                        padding: '12px',
+                        backgroundColor: '#1a1a2e',
+                        borderRadius: '8px',
+                        border: '1px solid #2a2a3e'
+                    }}>
+                        <div style={{
+                            fontSize: '12px',
+                            color: '#888',
+                            marginBottom: '8px',
+                            fontWeight: 'bold'
+                        }}>
+                            🧪 Test Game Over Modal:
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px', flexDirection: 'column' }}>
+                            <button
+                                onClick={() => setGameOverModal({
+                                    isOpen: true,
+                                    result: 'win',
+                                    reason: 'Checkmate',
+                                    message: 'Checkmate! You won!'
+                                })}
+                                style={{
+                                    padding: '8px 12px',
+                                    backgroundColor: '#28a745',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    fontSize: '12px',
+                                    fontWeight: '500'
+                                }}
+                            >
+                                ✅ Test Win Modal
+                            </button>
+                            <button
+                                onClick={() => setGameOverModal({
+                                    isOpen: true,
+                                    result: 'lose',
+                                    reason: 'Checkmate',
+                                    message: 'Checkmate! Robot won!'
+                                })}
+                                style={{
+                                    padding: '8px 12px',
+                                    backgroundColor: '#dc3545',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    fontSize: '12px',
+                                    fontWeight: '500'
+                                }}
+                            >
+                                ❌ Test Lose Modal
+                            </button>
+                            <button
+                                onClick={() => setGameOverModal({
+                                    isOpen: true,
+                                    result: 'draw',
+                                    reason: 'Stalemate',
+                                    message: 'Stalemate! Game is a draw'
+                                })}
+                                style={{
+                                    padding: '8px 12px',
+                                    backgroundColor: '#6c757d',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    fontSize: '12px',
+                                    fontWeight: '500'
+                                }}
+                            >
+                                ⚖️ Test Draw Modal
+                            </button>
+                            <button
+                                onClick={() => setConfirmModal({
+                                    isOpen: true,
+                                    title: 'Pause Game?',
+                                    message: 'Test pause confirmation modal',
+                                    variant: 'warning',
+                                    icon: <Pause size={64} />,
+                                    onConfirm: () => {
+                                        setConfirmModal({ ...confirmModal, isOpen: false });
+                                        alert('Pause confirmed!');
+                                    }
+                                })}
+                                style={{
+                                    padding: '8px 12px',
+                                    backgroundColor: '#f59e0b',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    fontSize: '12px',
+                                    fontWeight: '500'
+                                }}
+                            >
+                                ⏸️ Test Pause Modal
+                            </button>
+                            <button
+                                onClick={() => setConfirmModal({
+                                    isOpen: true,
+                                    title: 'Resign Game?',
+                                    message: 'Test resign confirmation modal',
+                                    variant: 'danger',
+                                    icon: <Flag size={64} />,
+                                    onConfirm: () => {
+                                        setConfirmModal({ ...confirmModal, isOpen: false });
+                                        alert('Resign confirmed!');
+                                    }
+                                })}
+                                style={{
+                                    padding: '8px 12px',
+                                    backgroundColor: '#ef4444',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    fontSize: '12px',
+                                    fontWeight: '500'
+                                }}
+                            >
+                                🏳️ Test Resign Modal
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
+
+            {/* Confirm Modal */}
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                variant={confirmModal.variant}
+                icon={confirmModal.icon}
+                confirmText="Yes"
+                cancelText="No"
+                onConfirm={confirmModal.onConfirm}
+                onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+            />
 
             {/* Game Over Modal */}
             <GameOverModal

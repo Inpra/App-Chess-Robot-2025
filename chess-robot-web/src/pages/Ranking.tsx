@@ -20,7 +20,7 @@ export default function Ranking() {
     const fetchRankings = async () => {
         setLoading(true);
         setError(null);
-        
+
         try {
             // Fetch all rankings
             const allRankings = await rankingService.getGlobalRanking(100);
@@ -46,9 +46,11 @@ export default function Ranking() {
     const topThree = rankings.slice(0, 3);
     const restOfList = rankings.slice(3);
 
-    const getAvatarUrl = (url?: string) => {
+    const getAvatarUrl = (url?: string, name?: string) => {
         if (url) return url;
-        return `https://ui-avatars.com/api/?name=${encodeURIComponent('User')}&background=667eea&color=fff&size=100`;
+        const displayName = name || 'User';
+        const initials = displayName.split(' ').map(n => n.charAt(0)).join('').substring(0, 2).toUpperCase();
+        return `https://ui-avatars.com/api/?name=${encodeURIComponent(initials)}&background=f16f23&color=fff&size=100`;
     };
 
     const renderPodiumItem = (item: RankingUser, displayRank: number) => {
@@ -59,11 +61,11 @@ export default function Ranking() {
         return (
             <div className={`podium-item ${isFirst ? 'first' : ''}`} key={item.userId}>
                 <div className="avatar-wrapper">
-                    <img 
-                        src={getAvatarUrl(item.avatarUrl)} 
-                        alt={item.fullName || item.username} 
-                        className="podium-avatar" 
-                        style={{ width: size, height: size }} 
+                    <img
+                        src={getAvatarUrl(item.avatarUrl, item.fullName || item.username)}
+                        alt={item.fullName || item.username}
+                        className="podium-avatar"
+                        style={{ width: size, height: size }}
                     />
                     <div className="rank-badge" style={{ backgroundColor: crownColor }}>
                         {displayRank}
@@ -78,7 +80,7 @@ export default function Ranking() {
     return (
         <div className="ranking-container">
             <ToastContainer position="top-right" autoClose={3000} />
-            
+
             <div className="ranking-header">
                 <div onClick={() => navigate('/')} style={{ cursor: 'pointer', padding: '8px' }}>
                     <ArrowLeft size={24} color="var(--color-text)" />
@@ -88,28 +90,28 @@ export default function Ranking() {
             </div>
 
             {loading ? (
-                <div style={{ 
-                    display: 'flex', 
-                    justifyContent: 'center', 
-                    alignItems: 'center', 
+                <div style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
                     minHeight: '400px',
                     color: '#6B7280'
                 }}>
                     <Loader2 size={40} className="spin" />
                 </div>
             ) : error ? (
-                <div style={{ 
-                    padding: '40px 20px', 
-                    textAlign: 'center', 
-                    color: '#EF4444' 
+                <div style={{
+                    padding: '40px 20px',
+                    textAlign: 'center',
+                    color: '#EF4444'
                 }}>
                     {error}
                 </div>
             ) : rankings.length === 0 ? (
-                <div style={{ 
-                    padding: '40px 20px', 
-                    textAlign: 'center', 
-                    color: '#6B7280' 
+                <div style={{
+                    padding: '40px 20px',
+                    textAlign: 'center',
+                    color: '#6B7280'
                 }}>
                     Chưa có dữ liệu xếp hạng
                 </div>
@@ -124,10 +126,10 @@ export default function Ranking() {
                     {restOfList.map((item) => (
                         <div key={item.userId} className="list-item">
                             <div className="list-rank">{item.rank}</div>
-                            <img 
-                                src={getAvatarUrl(item.avatarUrl)} 
-                                alt={item.fullName || item.username} 
-                                className="list-avatar" 
+                            <img
+                                src={getAvatarUrl(item.avatarUrl, item.fullName || item.username)}
+                                alt={item.fullName || item.username}
+                                className="list-avatar"
                             />
                             <div className="list-info">
                                 <div className="list-name">{item.fullName || item.username}</div>
@@ -141,10 +143,10 @@ export default function Ranking() {
             {userRanking && (
                 <div className="user-rank-footer">
                     <div className="list-rank">{userRanking.rank}</div>
-                    <img 
-                        src={getAvatarUrl(userRanking.avatarUrl)} 
-                        alt={userRanking.fullName || userRanking.username} 
-                        className="list-avatar" 
+                    <img
+                        src={getAvatarUrl(userRanking.avatarUrl, userRanking.fullName || userRanking.username)}
+                        alt={userRanking.fullName || userRanking.username}
+                        className="list-avatar"
                     />
                     <div className="list-info">
                         <div className="list-name">{userRanking.fullName || userRanking.username}</div>

@@ -1,5 +1,6 @@
 export * from './MoveHistory';
 export * from './GameOverModal';
+export * from './ConfirmModal';
 export * from './GameStatistics';
 export * from './ReplayControls';
 export * from './GameHeader';

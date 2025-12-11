@@ -47,12 +47,12 @@ class WebSocketService {
           try {
             const data = JSON.parse(event.data);
             console.log('[WebSocket] Received:', data);
-            
+
             // Notify specific type handlers
             if (data.type) {
               this.notifyHandlers(data.type, data);
             }
-            
+
             // Notify all message handlers
             this.notifyHandlers('message', data);
           } catch (error) {
@@ -69,7 +69,7 @@ class WebSocketService {
         this.socket.onclose = () => {
           console.log('[WebSocket] Disconnected');
           this.notifyHandlers('connection', { status: 'disconnected' });
-          
+
           if (!this.isManualClose) {
             this.attemptReconnect();
           }
@@ -85,7 +85,7 @@ class WebSocketService {
    */
   disconnect(): void {
     this.isManualClose = true;
-    
+
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
@@ -131,7 +131,7 @@ class WebSocketService {
     if (!this.messageHandlers.has(type)) {
       this.messageHandlers.set(type, new Set());
     }
-    
+
     this.messageHandlers.get(type)!.add(handler);
 
     // Return unsubscribe function
@@ -181,10 +181,10 @@ class WebSocketService {
     }
 
     const maxAttempts = this.config.maxReconnectAttempts || 5;
-    
+
     if (this.reconnectAttempts >= maxAttempts) {
       console.error('[WebSocket] Max reconnect attempts reached');
-      this.notifyHandlers('connection', { 
+      this.notifyHandlers('connection', {
         status: 'failed',
         message: 'Max reconnection attempts reached'
       });
@@ -206,7 +206,7 @@ class WebSocketService {
    */
   getStatus(): string {
     if (!this.socket) return 'disconnected';
-    
+
     switch (this.socket.readyState) {
       case WebSocket.CONNECTING:
         return 'connecting';
@@ -224,7 +224,7 @@ class WebSocketService {
 
 // Create singleton instance
 const wsService = new WebSocketService({
-  url: 'ws://localhost:8081/', // Robot Chess Server WebSocket URL (port 8081, no /ws path)
+  url: 'ws://100.73.130.46:8081/', // Robot Chess Server WebSocket URL (port 8081, no /ws path)
 });
 
 export default wsService;

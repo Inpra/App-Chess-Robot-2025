@@ -160,7 +160,7 @@ function Dashboard() {
                   width: 32,
                   height: 32,
                   borderRadius: 16,
-                  backgroundColor: '#667eea',
+                  backgroundColor: '#f16f23',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -241,7 +241,7 @@ function Dashboard() {
                   style={{
                     padding: '8px 24px',
                     borderRadius: '20px',
-                    backgroundColor: '#667eea',
+                    backgroundColor: '#0061ac',
                     border: 'none',
                     color: 'white',
                     fontWeight: '600',
@@ -249,6 +249,20 @@ function Dashboard() {
                   }}
                 >
                   Register
+                </button>
+                <button
+                  onClick={() => navigate('/game/guest')}
+                  style={{
+                    padding: '8px 24px',
+                    borderRadius: '20px',
+                    backgroundColor: '#10B981',
+                    border: 'none',
+                    color: 'white',
+                    fontWeight: '600',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Guest
                 </button>
               </div>
             )}
@@ -277,7 +291,7 @@ function Dashboard() {
           <div className="card">
             <h3 className="card-title">Quick Access</h3>
             <div className="quick-play-grid">
-              <div className="quick-play-item" onClick={() => user ? setShowDifficultyModal(true) : navigate('/login')}>
+              <div className="quick-play-item" onClick={() => user ? setShowDifficultyModal(true) : navigate('/game/guest')}>
                 <Cpu size={32} color="#8B5CF6" />
                 <div className="quick-play-text">Vs Bot</div>
               </div>
@@ -477,7 +491,7 @@ function Dashboard() {
                           width: '40px',
                           height: '40px',
                           borderRadius: '50%',
-                          backgroundColor: '#667eea',
+                          backgroundColor: '#f16f23',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -571,6 +585,9 @@ function App() {
         <Route path="/ranking" element={<Ranking />} />
         <Route path="/faq" element={<FAQ />} />
         <Route path="/tutorial" element={<Tutorial />} />
+
+        {/* Guest Route */}
+        <Route path="/game/guest" element={<VsBot isGuest={true} />} />
 
         {/* Protected Routes */}
         <Route path="/game/vs-bot" element={

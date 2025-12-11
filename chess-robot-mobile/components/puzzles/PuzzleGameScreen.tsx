@@ -13,7 +13,8 @@ import {
     View,
     ActivityIndicator,
     Alert,
-    ScrollView
+    ScrollView,
+    BackHandler
 } from 'react-native';
 import ChessBoard from '../game/ChessBoard';
 import CameraView from '../camera/CameraView';
@@ -686,6 +687,21 @@ export default function PuzzleGameScreen() {
         }
     };
 
+    // Handle hardware back button press
+    useEffect(() => {
+        const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+            // If puzzle is active, show pause confirmation instead of going back
+            if (gameStatus === 'in_progress' && gameId) {
+                handlePauseGame();
+                return true; // Prevent default back action
+            }
+            // Allow default back action for other states
+            return false;
+        });
+
+        return () => backHandler.remove();
+    }, [gameStatus, gameId]);
+
     if (loading) {
         return (
             <SafeAreaView style={styles.container}>
@@ -724,7 +740,14 @@ export default function PuzzleGameScreen() {
             {/* Header */}
             <NavigationHeader
                 title={puzzle.name || `Puzzle #${id}`}
-                onBack={() => router.navigate('/puzzles')}
+                onBack={() => {
+                    // If puzzle is active, show pause confirmation
+                    if (gameStatus === 'in_progress' && gameId) {
+                        handlePauseGame();
+                    } else {
+                        router.navigate('/puzzles');
+                    }
+                }}
             />
 
             <View style={styles.contentContainer}>
