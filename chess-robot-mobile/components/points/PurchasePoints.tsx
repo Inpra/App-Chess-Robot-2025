@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { getActivePointPackages, formatPrice, type PointPackage } from '@/services/pointPackageService';
-import { createPayment, checkPaymentStatus, type PaymentResponse } from '@/services/paymentService';
+import { createPayment, checkPaymentStatus, cancelPayment, type PaymentResponse } from '@/services/paymentService';
 
 // Package display configuration
 interface PackageDisplay extends PointPackage {
@@ -165,11 +165,29 @@ export default function PurchasePoints() {
         }, 5 * 60 * 1000);
     };
 
-    const handleCloseModal = () => {
+    const handleCloseModal = async () => {
+        // Stop polling
         if (pollingInterval) {
             clearInterval(pollingInterval);
             setPollingInterval(null);
         }
+
+        // Cancel payment if it's still pending
+        if (paymentStatus === 'pending' && paymentData) {
+            try {
+                const transactionId = paymentData.transactionId || paymentData.TransactionId;
+                if (transactionId) {
+                    console.log('Cancelling payment:', transactionId);
+                    await cancelPayment(transactionId);
+                    console.log('Payment cancelled successfully');
+                }
+            } catch (error) {
+                console.error('Error cancelling payment:', error);
+                // Continue closing modal even if cancel fails
+            }
+        }
+
+        // Reset modal state
         setModalVisible(false);
         setPaymentData(null);
         setPaymentStatus('pending');

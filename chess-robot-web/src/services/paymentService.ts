@@ -93,6 +93,21 @@ export const checkPaymentStatus = async (transactionId: string): Promise<Payment
 };
 
 /**
+ * Cancel pending payment
+ */
+export const cancelPayment = async (transactionId: string): Promise<{ success: boolean; message: string }> => {
+    try {
+        const response = await apiClient.post<{ success: boolean; message: string }>(
+            `/Payments/cancel/${transactionId}`
+        );
+        return response;
+    } catch (error) {
+        console.error('Error cancelling payment:', error);
+        throw error;
+    }
+};
+
+/**
  * Get current user's payment history
  */
 export const getMyPaymentHistory = async (): Promise<PaymentHistory[]> => {
