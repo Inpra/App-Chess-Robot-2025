@@ -1,7 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/ThemeSettings.css';
+import chessboardBrown from '../assets/chessboard.png';
+import chessboardBlue from '../assets/chessboard _blue.png';
+import chessboardGray from '../assets/chessboard_gray.png';
+import chessboardGreen from '../assets/chessboard_green.png';
 
 export type BoardThemeId = 'green' | 'brown' | 'blue' | 'gray';
 export type PieceStyleId = 'classic' | 'silhouette';
@@ -9,15 +13,14 @@ export type PieceStyleId = 'classic' | 'silhouette';
 export interface BoardTheme {
     id: BoardThemeId;
     name: string;
-    light: string;
-    dark: string;
+    image: string;
 }
 
 export const BOARD_THEMES: Record<BoardThemeId, BoardTheme> = {
-    green: { id: 'green', name: 'Green', light: '#EEEED2', dark: '#769656' },
-    brown: { id: 'brown', name: 'Brown', light: '#F0D9B5', dark: '#B58863' },
-    blue: { id: 'blue', name: 'Blue', light: '#DEE3E6', dark: '#8CA2AD' },
-    gray: { id: 'gray', name: 'Gray', light: '#E0E0E0', dark: '#808080' },
+    green: { id: 'green', name: 'Green', image: chessboardGreen },
+    brown: { id: 'brown', name: 'Brown', image: chessboardBrown },
+    blue: { id: 'blue', name: 'Blue', image: chessboardBlue },
+    gray: { id: 'gray', name: 'Gray', image: chessboardGray },
 };
 
 export default function ThemeSettings() {
@@ -25,25 +28,49 @@ export default function ThemeSettings() {
     const [boardThemeId, setBoardThemeId] = useState<BoardThemeId>('green');
     const [pieceStyleId, setPieceStyleId] = useState<PieceStyleId>('classic');
 
+    // Load saved theme on mount
+    useEffect(() => {
+        try {
+            const savedTheme = localStorage.getItem('game_theme');
+            if (savedTheme) {
+                const { boardThemeId: savedBoardTheme, pieceStyleId: savedPieceStyle } = JSON.parse(savedTheme);
+                if (savedBoardTheme) setBoardThemeId(savedBoardTheme);
+                if (savedPieceStyle) setPieceStyleId(savedPieceStyle);
+            }
+        } catch (error) {
+            console.error('Failed to load saved theme:', error);
+        }
+    }, []);
+
     const handleSave = () => {
         // Save to localStorage
         localStorage.setItem('game_theme', JSON.stringify({ boardThemeId, pieceStyleId }));
-        navigate('/');
+        // Trigger a storage event to notify other components
+        window.dispatchEvent(new Event('storage'));
+        
+        // Show success message
+        alert('✓ Theme saved successfully!');
+        
+        // Navigate back
+        setTimeout(() => {
+            navigate('/');
+        }, 500);
     };
 
     const renderBoardPreview = (themeId: BoardThemeId) => {
         const theme = BOARD_THEMES[themeId];
         return (
-            <div className="board-preview">
-                {[...Array(8)].map((_, i) => (
-                    <div
-                        key={i}
-                        className="board-square"
-                        style={{
-                            backgroundColor: (Math.floor(i / 4) + i) % 2 === 0 ? theme.light : theme.dark
-                        }}
-                    />
-                ))}
+            <div className="board-preview-image">
+                <img 
+                    src={theme.image} 
+                    alt={theme.name}
+                    style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        borderRadius: '8px'
+                    }}
+                />
             </div>
         );
     };

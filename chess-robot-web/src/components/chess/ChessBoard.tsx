@@ -1,6 +1,32 @@
+import { useState, useEffect } from 'react';
 import { getPieceImageSource } from '../../constants/lessonData';
-import chessboardImg from '../../assets/chessboard.png';
+import chessboardBrown from '../../assets/chessboard.png';
+import chessboardBlue from '../../assets/chessboard _blue.png';
+import chessboardGray from '../../assets/chessboard_gray.png';
+import chessboardGreen from '../../assets/chessboard_green.png';
 import './ChessBoard.css';
+
+// Board theme mapping
+const BOARD_THEME_IMAGES: Record<string, string> = {
+    brown: chessboardBrown,
+    blue: chessboardBlue,
+    gray: chessboardGray,
+    green: chessboardGreen,
+};
+
+// Get board theme from localStorage
+const getBoardTheme = (): string => {
+    try {
+        const savedTheme = localStorage.getItem('game_theme');
+        if (savedTheme) {
+            const { boardThemeId } = JSON.parse(savedTheme);
+            return BOARD_THEME_IMAGES[boardThemeId] || chessboardGreen;
+        }
+    } catch (error) {
+        console.error('Failed to load theme:', error);
+    }
+    return chessboardGreen; // Default to green
+};
 
 // Chess piece type
 export interface ChessPiece {
@@ -122,6 +148,22 @@ export const ChessBoard = ({
 
     // Use FEN if provided, otherwise fall back to board prop
     const board = fen ? fenToBoard(fen) : (boardProp || initialBoard);
+    
+    // State to track board theme changes
+    const [boardThemeImage, setBoardThemeImage] = useState(getBoardTheme());
+    
+    // Listen for theme changes from localStorage
+    useEffect(() => {
+        const handleStorageChange = () => {
+            setBoardThemeImage(getBoardTheme());
+        };
+        
+        window.addEventListener('storage', handleStorageChange);
+        
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+        };
+    }, []);
 
     const handleSquareClick = (row: number, col: number) => {
         if (!interactive || !onSquareClick) return;
@@ -210,7 +252,7 @@ export const ChessBoard = ({
             <div className="chess-board-container">
                 {/* Chessboard background */}
                 <img
-                    src={chessboardImg}
+                    src={boardThemeImage}
                     alt="Chessboard"
                     className="chess-board-background"
                     draggable={false}

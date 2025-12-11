@@ -70,6 +70,17 @@
     overflow: hidden;
 }
 
+.board-preview-image {
+    height: 120px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #F3F4F6;
+}
+
 .board-square {
     width: 25%;
     height: 50%;
