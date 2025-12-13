@@ -165,7 +165,7 @@ class AuthService {
         try {
             const response = await apiClient.post<{ success: boolean; message: string }>(
                 AUTH_ENDPOINTS.VERIFY_EMAIL,
-                { token },
+                { Token: token }, // Use capital T to match backend DTO
                 true // Skip authentication for public endpoint
             );
 
@@ -188,7 +188,7 @@ class AuthService {
         try {
             const response = await apiClient.post<{ success: boolean; message: string }>(
                 AUTH_ENDPOINTS.RESEND_VERIFICATION,
-                { email },
+                { Email: email }, // Use capital E to match backend DTO
                 true // Skip authentication for public endpoint
             );
 
@@ -211,7 +211,7 @@ class AuthService {
         try {
             const response = await apiClient.post<{ success: boolean; message: string }>(
                 AUTH_ENDPOINTS.FORGOT_PASSWORD,
-                { email },
+                { Email: email }, // Use capital E to match backend DTO
                 true // Skip authentication for public endpoint
             );
 
@@ -234,7 +234,7 @@ class AuthService {
         try {
             const response = await apiClient.post<{ success: boolean; message: string }>(
                 AUTH_ENDPOINTS.RESET_PASSWORD,
-                { token, newPassword },
+                { Token: token, NewPassword: newPassword }, // Use capital letters to match backend DTO
                 true // Skip authentication for public endpoint
             );
 

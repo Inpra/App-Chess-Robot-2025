@@ -23,8 +23,9 @@ export default function Login() {
             const response = await authService.login(email, password);
 
             if (response.success) {
-                // If it's a new user (0 games played) or specifically flagged, redirect to Elo selection
-                if (response.user && response.user.totalGamesPlayed === 0) {
+                // Check if user has completed initial setup (avatar and elo selection)
+                const needsSetup = response.user && (!response.user.avatarUrl || response.user.eloRating === 0);
+                if (needsSetup) {
                     navigate('/avatar-selection');
                 } else {
                     navigate('/');

@@ -71,10 +71,10 @@ function Dashboard() {
           setUser(profile);
           setPointsBalance((profile as any).pointsBalance || 0);
 
-          // Check if we need to offer initial Elo selection
-          const eloSetKey = `initial_elo_set_${profile.id}`;
-          if (profile.totalGamesPlayed === 0 && !localStorage.getItem(eloSetKey)) {
-            navigate('/elo-selection');
+          // Check if user needs to complete initial setup (avatar and elo)
+          const needsSetup = !profile.avatarUrl || profile.eloRating === 0;
+          if (needsSetup) {
+            navigate('/avatar-selection');
           }
         }
       });
