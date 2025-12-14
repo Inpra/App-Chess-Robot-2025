@@ -35,25 +35,33 @@ const PasswordInput = ({ label, name, value, show, onToggle, onChange }: Passwor
                 name={name}
                 value={value}
                 onChange={onChange}
+                placeholder="••••••••"
                 required
                 style={{
                     width: '100%',
-                    padding: '12px 48px 12px 16px',
-                    border: '1px solid #D1D5DB',
-                    borderRadius: '8px',
-                    fontSize: '14px',
+                    padding: '14px 48px 14px 16px',
+                    border: '1px solid #E5E7EB',
+                    borderRadius: '16px',
+                    fontSize: '15px',
                     outline: 'none',
-                    transition: 'border-color 0.2s',
+                    transition: 'all 0.2s',
+                    backgroundColor: '#F9FAFB',
                 }}
-                onFocus={(e) => e.target.style.borderColor = '#3B82F6'}
-                onBlur={(e) => e.target.style.borderColor = '#D1D5DB'}
+                onFocus={(e) => {
+                    e.target.style.borderColor = '#F16F23';
+                    e.target.style.boxShadow = '0 0 0 4px rgba(241, 111, 35, 0.1)';
+                }}
+                onBlur={(e) => {
+                    e.target.style.borderColor = '#E5E7EB';
+                    e.target.style.boxShadow = 'none';
+                }}
             />
             <button
                 type="button"
                 onClick={onToggle}
                 style={{
                     position: 'absolute',
-                    right: '12px',
+                    right: '16px',
                     top: '50%',
                     transform: 'translateY(-50%)',
                     background: 'none',
@@ -62,7 +70,7 @@ const PasswordInput = ({ label, name, value, show, onToggle, onChange }: Passwor
                     padding: '4px',
                     display: 'flex',
                     alignItems: 'center',
-                    color: '#6B7280'
+                    color: '#9CA3AF'
                 }}
             >
                 {show ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -178,12 +186,17 @@ export default function SecurityPassword() {
                         padding: '8px', 
                         borderRadius: '12px', 
                         backgroundColor: 'white',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '40px',
+                        height: '40px'
                     }}
                 >
                     <ArrowLeft size={24} color="#111827" />
                 </div>
-                <h2 style={{ fontSize: '20px', fontWeight: 'bold', margin: 0, color: '#111827' }}>
+                <h2 style={{ fontSize: '20px', fontWeight: '700', margin: 0, color: '#111827' }}>
                     Security & Password
                 </h2>
                 <div style={{ width: 40 }}></div>
@@ -193,19 +206,19 @@ export default function SecurityPassword() {
             <div style={{
                 maxWidth: '600px',
                 margin: '0 auto 16px',
-                backgroundColor: '#EFF6FF',
-                borderRadius: '12px',
+                backgroundColor: '#FFF3E0',
+                borderRadius: '16px',
                 padding: '16px',
                 display: 'flex',
                 gap: '12px',
-                border: '1px solid #DBEAFE'
+                border: '1px solid #FFE0B2'
             }}>
-                <Shield size={24} color="#3B82F6" style={{ flexShrink: 0 }} />
+                <Shield size={24} color="#F16F23" style={{ flexShrink: 0, marginTop: '2px' }} />
                 <div>
-                    <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#1E40AF', margin: '0 0 4px' }}>
+                    <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#E65100', margin: '0 0 4px' }}>
                         Account Security
                     </h3>
-                    <p style={{ fontSize: '13px', color: '#1E40AF', margin: 0, lineHeight: '1.5' }}>
+                    <p style={{ fontSize: '13px', color: '#E65100', margin: 0, lineHeight: '1.5' }}>
                         A strong password helps protect your account. Use at least 6 characters,
                         including uppercase, lowercase and numbers.
                     </p>
@@ -217,9 +230,10 @@ export default function SecurityPassword() {
                 maxWidth: '600px',
                 margin: '0 auto',
                 backgroundColor: 'white',
-                borderRadius: '16px',
-                padding: '24px',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                borderRadius: '24px',
+                padding: '32px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                border: '1px solid #E5E7EB'
             }}>
                 <form onSubmit={handleSubmit}>
                     <PasswordInput
@@ -252,33 +266,34 @@ export default function SecurityPassword() {
                     {/* Password Strength Indicator */}
                     {formData.newPassword && (
                         <div style={{ marginBottom: '24px' }}>
-                            <p style={{ fontSize: '12px', color: '#6B7280', marginBottom: '8px' }}>
+                            <p style={{ fontSize: '12px', color: '#6B7280', marginBottom: '8px', fontWeight: '500' }}>
                                 Password strength:
                             </p>
                             <div style={{
                                 display: 'flex',
                                 gap: '4px',
-                                marginBottom: '4px'
+                                marginBottom: '6px'
                             }}>
                                 {[1, 2, 3, 4].map((level) => (
                                     <div
                                         key={level}
                                         style={{
                                             flex: 1,
-                                            height: '4px',
-                                            borderRadius: '2px',
+                                            height: '6px',
+                                            borderRadius: '3px',
                                             backgroundColor:
                                                 formData.newPassword.length >= level * 3
                                                     ? level === 1 ? '#EF4444'
                                                         : level === 2 ? '#F59E0B'
-                                                            : level === 3 ? '#10B981'
-                                                                : '#059669'
-                                                    : '#E5E7EB'
+                                                            : level === 3 ? '#F16F23'
+                                                                : '#10B981'
+                                                    : '#E5E7EB',
+                                            transition: 'background-color 0.3s'
                                         }}
                                     />
                                 ))}
                             </div>
-                            <p style={{ fontSize: '11px', color: '#6B7280', margin: 0 }}>
+                            <p style={{ fontSize: '12px', color: '#6B7280', margin: 0, fontWeight: '500' }}>
                                 {formData.newPassword.length < 6 && 'Weak'}
                                 {formData.newPassword.length >= 6 && formData.newPassword.length < 9 && 'Medium'}
                                 {formData.newPassword.length >= 9 && formData.newPassword.length < 12 && 'Strong'}
@@ -298,20 +313,27 @@ export default function SecurityPassword() {
                             justifyContent: 'center',
                             gap: '8px',
                             padding: '14px',
-                            backgroundColor: loading ? '#9CA3AF' : '#3B82F6',
+                            background: loading ? '#9CA3AF' : 'linear-gradient(135deg, #F16F23 0%, #4A5CF5 100%)',
                             color: 'white',
                             border: 'none',
-                            borderRadius: '8px',
+                            borderRadius: '16px',
                             fontSize: '16px',
                             fontWeight: '600',
                             cursor: loading ? 'not-allowed' : 'pointer',
-                            transition: 'background-color 0.2s',
+                            transition: 'all 0.2s',
+                            boxShadow: loading ? 'none' : '0 4px 12px rgba(241, 111, 35, 0.2)',
                         }}
                         onMouseEnter={(e) => {
-                            if (!loading) e.currentTarget.style.backgroundColor = '#2563EB';
+                            if (!loading) {
+                                e.currentTarget.style.transform = 'translateY(-1px)';
+                                e.currentTarget.style.boxShadow = '0 6px 16px rgba(241, 111, 35, 0.3)';
+                            }
                         }}
                         onMouseLeave={(e) => {
-                            if (!loading) e.currentTarget.style.backgroundColor = '#3B82F6';
+                            if (!loading) {
+                                e.currentTarget.style.transform = 'translateY(0)';
+                                e.currentTarget.style.boxShadow = '0 4px 12px rgba(241, 111, 35, 0.2)';
+                            }
                         }}
                     >
                         <Lock size={20} />

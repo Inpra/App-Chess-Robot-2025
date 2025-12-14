@@ -45,12 +45,9 @@ export default function Register() {
             });
 
             if (response.success) {
-                // Check if user is new (0 games played) to set initial Elo
-                if (response.user && response.user.totalGamesPlayed === 0) {
-                    navigate('/avatar-selection');
-                } else {
-                    setShowSuccessMessage(true);
-                }
+                // Always show email verification message first
+                // User needs to verify email before proceeding
+                setShowSuccessMessage(true);
             } else {
                 setError(response.error || 'Registration failed. Please try again.');
             }

@@ -34,7 +34,7 @@ export default function QRCodeLogin() {
             setErrorMessage('')
 
             // Generate QR session
-            const response = await fetch('http://100.73.130.46:7096/api/auth/qr-session', {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/qr-session`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -53,7 +53,7 @@ export default function QRCodeLogin() {
 
             // Connect to SignalR
             const newConnection = new signalR.HubConnectionBuilder()
-                .withUrl('http://100.73.130.46:7096/authHub')
+                .withUrl(import.meta.env.VITE_HUB_URL)
                 .withAutomaticReconnect()
                 .configureLogging(signalR.LogLevel.Information)
                 .build()
@@ -67,9 +67,10 @@ export default function QRCodeLogin() {
                     localStorage.setItem('auth_token', token)
                     localStorage.setItem('user', JSON.stringify(user))
 
-                    // Redirect to Avatar Selection if new user, otherwise home
+                    // Redirect to Avatar Selection if user hasn't completed setup, otherwise home
                     setTimeout(() => {
-                        if (user && user.totalGamesPlayed === 0) {
+                        const needsSetup = user && (!user.avatarUrl || user.eloRating === 0);
+                        if (needsSetup) {
                             navigate('/avatar-selection')
                         } else {
                             navigate('/')
