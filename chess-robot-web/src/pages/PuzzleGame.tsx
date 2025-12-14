@@ -275,6 +275,17 @@ export default function PuzzleGame() {
 
             // Handle different message types
             if (data.type === 'board_status') {
+                // Always update board with detected FEN to show what AI sees
+                if (data.detected) {
+                    try {
+                        const detectedBoard = fenToBoard(data.detected);
+                        setBoard(detectedBoard);
+                        console.log('[PuzzleGame] Updated board with detected FEN:', data.detected);
+                    } catch (error) {
+                        console.error('[PuzzleGame] Failed to parse detected FEN:', error);
+                    }
+                }
+
                 if (data.status === 'correct') {
                     setBoardSetupStatus('correct');
                     setMessage('✓ Board setup verified! Make your move.');

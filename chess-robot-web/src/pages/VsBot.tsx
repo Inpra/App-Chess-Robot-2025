@@ -376,6 +376,17 @@ export default function VsBot({ isGuest: propIsGuest = false }: { isGuest?: bool
                 console.log('[VsBot] Board status:', data);
                 const newStatus = data.status === 'correct' ? 'correct' : 'incorrect';
 
+                // Always update board with detected FEN to show what AI sees
+                if (data.detected) {
+                    try {
+                        const detectedBoard = fenToBoard(data.detected);
+                        setBoard(detectedBoard);
+                        console.log('[VsBot] Updated board with detected FEN:', data.detected);
+                    } catch (error) {
+                        console.error('[VsBot] Failed to parse detected FEN:', error);
+                    }
+                }
+
                 // Only show toast if status changed (prevent spam)
                 if (boardSetupStatus !== newStatus) {
                     setBoardSetupStatus(newStatus);
