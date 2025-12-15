@@ -6,6 +6,7 @@ import bannerRobot from './assets/FPT.VN_BIG.D-b2da87b8.png';
 import authService from './services/authService';
 import type { UserResponse } from './services/authService';
 import rankingService, { type RankingUser } from './services/rankingService';
+import NotificationBanner from './components/NotificationBanner';
 import {
   Home,
   Gamepad2,
@@ -562,6 +563,7 @@ function Dashboard() {
 function App() {
   return (
     <Router>
+      <NotificationBanner />
       <ToastContainer
         position="top-right"
         autoClose={3000}
