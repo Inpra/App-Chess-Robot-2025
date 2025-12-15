@@ -301,6 +301,78 @@ export default function PuzzleGame() {
                 if (data.move) {
                     setMessage(`Move: ${data.move}`);
                 }
+            } else if (data.type === 'game_over') {
+                console.log('[PuzzleGame] ========== GAME OVER RECEIVED ==========');
+                console.log('[PuzzleGame] Full data:', JSON.stringify(data, null, 2));
+                
+                if (!gameId) {
+                    console.warn('[PuzzleGame] ✗ No gameId - skipping game over handling');
+                    return;
+                }
+
+                const { reason, winner, message: gameOverMessage } = data;
+                console.log('[PuzzleGame] ✓ Processing - reason:', reason, 'winner:', winner);
+                
+                // Determine result based on winner
+                let result: 'win' | 'lose' | 'draw' = 'draw';
+                let notificationMessage = 'Puzzle ended';
+                
+                if (reason === 'checkmate') {
+                    // In puzzle mode, if white (human) wins = puzzle solved
+                    // If black wins = puzzle failed
+                    result = winner === 'white' ? 'win' : 'lose';
+                    notificationMessage = winner === 'white' 
+                        ? 'Checkmate! Puzzle solved!' 
+                        : 'Checkmate! You lost the puzzle';
+                } else if (reason === 'stalemate') {
+                    result = 'draw';
+                    notificationMessage = 'Stalemate - Puzzle ended in a draw';
+                } else {
+                    result = 'draw';
+                    notificationMessage = gameOverMessage || 'Puzzle ended';
+                }
+
+                // Save game result to database
+                (async () => {
+                    try {
+                        // Save any pending moves first
+                        if (pendingMoves.current.length > 0) {
+                            await savePendingMoves();
+                        }
+
+                        // Get current move count
+                        const totalMoves = moveCounter.current;
+                        const currentFen = chessGame.current.fen();
+
+                        // Update game result in database (this also sends end command to AI)
+                        await gameService.updateGameResult(
+                            gameId,
+                            result,
+                            'completed',
+                            Math.ceil(totalMoves / 2),
+                            currentFen
+                        );
+                        console.log(`[PuzzleGame] ✓ Game over - Result: ${result}, Reason: ${reason}`);
+
+                    } catch (error: any) {
+                        console.error('[PuzzleGame] ✗ Failed to update game over:', error);
+                        showToast('error', '✗ Failed to save game result. Please try again.');
+                    }
+                })();
+                
+                showToast(result === 'win' ? 'success' : result === 'lose' ? 'error' : 'info', notificationMessage);
+                setMessage(notificationMessage);
+                
+                // Update UI
+                setGameStatus('ended');
+                
+                // Show game over modal
+                setGameOverModal({
+                    isOpen: true,
+                    result: result,
+                    reason: reason || 'Game Over',
+                    message: notificationMessage
+                });
             } else if (data.type === 'robot_response') {
                 if (data.message) {
                     console.log('[PuzzleGame] Robot:', data.message);
@@ -513,11 +585,34 @@ export default function PuzzleGame() {
             const puzzleData = await puzzleService.getPuzzleById(id!);
             setPuzzle(puzzleData);
 
+            console.log('[PuzzleGame] Puzzle FEN string:', puzzleData.fenStr);
+            console.log('[PuzzleGame] FEN length:', puzzleData.fenStr?.length);
+            console.log('[PuzzleGame] FEN fields:', puzzleData.fenStr?.split(' ').length);
+
+            // Validate and fix FEN if needed
+            let fenStr = puzzleData.fenStr?.trim() || '';
+            const fenParts = fenStr.split(' ');
+
+            // If FEN is incomplete, add missing fields with defaults
+            if (fenParts.length < 6) {
+                console.warn('[PuzzleGame] Incomplete FEN detected, adding default fields');
+                const defaults = [
+                    fenParts[0] || '8/8/8/8/8/8/8/8',  // position
+                    fenParts[1] || 'w',                  // active color
+                    fenParts[2] || '-',                  // castling
+                    fenParts[3] || '-',                  // en passant
+                    fenParts[4] || '0',                  // halfmove clock
+                    fenParts[5] || '1'                   // fullmove number
+                ];
+                fenStr = defaults.join(' ');
+                console.log('[PuzzleGame] Fixed FEN:', fenStr);
+            }
+
             // Parse FEN and set board
-            const newBoard = fenToBoard(puzzleData.fenStr);
+            const newBoard = fenToBoard(fenStr);
             setBoard(newBoard);
-            chessGame.current = new Chess(puzzleData.fenStr);
-            lastProcessedFen.current = puzzleData.fenStr;
+            chessGame.current = new Chess(fenStr);
+            lastProcessedFen.current = fenStr;
             moveCounter.current = 0; // Reset move counter for new puzzle
 
             setMessage('Please arrange the board as shown on screen to start.');
