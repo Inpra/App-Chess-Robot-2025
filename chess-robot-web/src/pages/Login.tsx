@@ -40,11 +40,6 @@ export default function Login() {
         }
     };
 
-    const handleSocialLogin = (provider: string) => {
-        console.log(`Login with ${provider}`);
-        // TODO: Implement social login
-    };
-
     return (
         <div className="auth-container">
             <div className="auth-card">

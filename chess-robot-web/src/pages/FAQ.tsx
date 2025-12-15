@@ -1,43 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft, Search, ChevronDown, ChevronUp, MessageCircle, Send } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import feedbackService from '../services/feedbackService';
 import authService from '../services/authService';
+import faqService, { type Faq } from '../services/faqService';
 import '../styles/FAQ.css';
-
-const faqs = [
-    {
-        id: 1,
-        question: 'How do I connect to the Robot Arm?',
-        answer: 'Go to the "Vs Bot" game mode. Ensure your Robot Arm is powered on and Bluetooth is enabled on your device. The app will automatically scan for available robots.',
-    },
-    {
-        id: 2,
-        question: 'How do I top up points?',
-        answer: 'Click on the Cart icon in the sidebar to visit the Store. Select a point package (Starter, Pro, or Grandmaster) and follow the payment instructions.',
-    },
-    {
-        id: 3,
-        question: 'Can I play offline?',
-        answer: 'Yes, you can play against the built-in AI bot without an internet connection. However, online features like matchmaking and purchasing points require internet access.',
-    },
-    {
-        id: 4,
-        question: 'How is my ELO calculated?',
-        answer: 'Your ELO rating is updated after every ranked match based on the result and your opponent\'s rating. Winning against a higher-rated opponent gives more points.',
-    },
-    {
-        id: 5,
-        question: 'What if the robot makes a wrong move?',
-        answer: 'If the robot makes an invalid move or knocks over a piece, please pause the game using the pause button and manually adjust the board. You can then resume the game.',
-    },
-];
 
 export default function FAQ() {
     const navigate = useNavigate();
-    const [expandedId, setExpandedId] = useState<number | null>(null);
+    const [faqs, setFaqs] = useState<Faq[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [expandedId, setExpandedId] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [feedbackMessage, setFeedbackMessage] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -45,7 +20,35 @@ export default function FAQ() {
 
     const user = authService.getCurrentUser();
 
-    const toggleExpand = (id: number) => {
+    // Fetch FAQs from API on component mount
+    useEffect(() => {
+        const fetchFaqs = async () => {
+            try {
+                setLoading(true);
+                const data = await faqService.getAllFaqs();
+                // Ensure data is an array before sorting
+                if (Array.isArray(data)) {
+                    const sortedData = data.sort((a, b) => 
+                        (a.displayOrder || 999) - (b.displayOrder || 999)
+                    );
+                    setFaqs(sortedData);
+                } else {
+                    console.warn('FAQ data is not an array:', data);
+                    setFaqs([]);
+                }
+            } catch (error: any) {
+                console.error('Error loading FAQs:', error);
+                toast.error('Failed to load FAQs. Please try again later.');
+                setFaqs([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchFaqs();
+    }, []);
+
+    const toggleExpand = (id: string) => {
         setExpandedId(expandedId === id ? null : id);
     };
 
@@ -117,30 +120,38 @@ export default function FAQ() {
                 {/* FAQ List */}
                 <div className="faq-list">
                     <h3 className="section-title">Frequently Asked Questions</h3>
-                    {filteredFaqs.map((faq) => (
-                        <div key={faq.id} className="faq-item">
-                            <div
-                                className="faq-header-item"
-                                onClick={() => toggleExpand(faq.id)}
-                            >
-                                <span className={`faq-question ${expandedId === faq.id ? 'active-question' : ''}`}>
-                                    {faq.question}
-                                </span>
-                                {expandedId === faq.id ? (
-                                    <ChevronUp size={20} color="var(--color-primary)" />
-                                ) : (
-                                    <ChevronDown size={20} color="#9CA3AF" />
+                    
+                    {loading ? (
+                        <div style={{ textAlign: 'center', padding: '40px', color: '#6B7280' }}>
+                            <p>Loading FAQs...</p>
+                        </div>
+                    ) : filteredFaqs.length === 0 ? (
+                        <p className="no-results-text">
+                            {searchQuery ? 'No results found.' : 'No FAQs available at the moment.'}
+                        </p>
+                    ) : (
+                        filteredFaqs.map((faq) => (
+                            <div key={faq.id} className="faq-item">
+                                <div
+                                    className="faq-header-item"
+                                    onClick={() => toggleExpand(faq.id)}
+                                >
+                                    <span className={`faq-question ${expandedId === faq.id ? 'active-question' : ''}`}>
+                                        {faq.question}
+                                    </span>
+                                    {expandedId === faq.id ? (
+                                        <ChevronUp size={20} color="var(--color-primary)" />
+                                    ) : (
+                                        <ChevronDown size={20} color="#9CA3AF" />
+                                    )}
+                                </div>
+                                {expandedId === faq.id && (
+                                    <div className="faq-body">
+                                        <p className="faq-answer">{faq.answer}</p>
+                                    </div>
                                 )}
                             </div>
-                            {expandedId === faq.id && (
-                                <div className="faq-body">
-                                    <p className="faq-answer">{faq.answer}</p>
-                                </div>
-                            )}
-                        </div>
-                    ))}
-                    {filteredFaqs.length === 0 && (
-                        <p className="no-results-text">No results found.</p>
+                        ))
                     )}
                 </div>
 
