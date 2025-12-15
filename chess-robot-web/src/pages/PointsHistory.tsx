@@ -81,6 +81,38 @@ export default function PointsHistory() {
         }
     };
 
+    // Format transaction description to be more user-friendly
+    const formatTransactionDescription = (item: PointTransaction): string => {
+        const type = item.transactionType;
+        const description = item.description || '';
+
+        // Handle AI suggestion transactions
+        if (type === 'ai_suggestion' || type === 'service_usage') {
+            // New format: "AI Hint for [Game Type Name]"
+            if (description.includes('AI Hint for')) {
+                return description; // Already formatted correctly from backend
+            }
+            // Legacy format: "Gợi ý AI cho game [game-id]"
+            if (description.toLowerCase().includes('game')) {
+                return 'AI Hint Used in Game';
+            }
+            return 'AI Hint Used';
+        }
+
+        // Handle deposit transactions
+        if (type === 'deposit') {
+            return description || 'Points Added';
+        }
+
+        // Handle adjustment transactions
+        if (type === 'adjustment') {
+            return description || 'Points Adjustment';
+        }
+
+        // Default: return description or type
+        return description || type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    };
+
     return (
         <div className="points-history-container">
             <ToastContainer position="top-right" autoClose={3000} />
@@ -178,6 +210,7 @@ export default function PointsHistory() {
                             transactions.map((item) => {
                                 const iconData = getTransactionIcon(item.transactionType);
                                 const IconComponent = iconData.icon;
+                                const displayDescription = formatTransactionDescription(item);
 
                                 return (
                                     <div key={item.id} className="history-card">
@@ -187,10 +220,7 @@ export default function PointsHistory() {
                                             </div>
                                             <div>
                                                 <div className="card-title">
-                                                    {item.description ||
-                                                        (item.transactionType === 'ai_suggestion' ? 'AI Suggestion' :
-                                                            item.transactionType === 'deposit' ? 'Deposit' :
-                                                                item.transactionType === 'adjustment' ? 'Adjustment' : 'Transaction')}
+                                                    {displayDescription}
                                                 </div>
                                                 <div className="card-date">{formatDate(item.createdAt)}</div>
                                             </div>
