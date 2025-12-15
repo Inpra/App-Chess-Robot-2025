@@ -391,7 +391,11 @@ export default function PuzzleGameScreen() {
                 handlePuzzleSolution(data);
             } else if (data.type === 'ai_move_executed' || data.type === 'move_detected') {
                 if (data.move) {
-                    setMessage(`Move: ${data.move}`);
+                    // Handle both string and object move formats
+                    const moveText = typeof data.move === 'string' 
+                        ? data.move 
+                        : data.move.notation || `${data.move.from}→${data.move.to}`;
+                    setMessage(`Move: ${moveText}`);
                 }
             }
         });
