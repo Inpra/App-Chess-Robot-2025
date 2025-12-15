@@ -298,8 +298,27 @@ export default function PuzzleGame() {
             } else if (data.type === 'puzzle_solution') {
                 handlePuzzleSolution(data);
             } else if (data.type === 'ai_move_executed' || data.type === 'move_detected') {
-                if (data.move) {
-                    setMessage(`Move: ${data.move}`);
+                console.log('[PuzzleGame] AI move:', data);
+                const move = data.move;
+
+                // Show toast notification for AI moves
+                if (move) {
+                    const moveText = `${move.from_piece?.replace('_', ' ')} ${move.from} → ${move.to}`;
+                    showToast('info', `🤖 Robot: ${moveText}`);
+                    setMessage(`Robot moved: ${move.notation || moveText}`);
+
+                    if (move.results_in_check) {
+                        setTimeout(() => {
+                            showToast('warning', '⚠️ Check!');
+                        }, 1000);
+                    }
+                }
+            } else if (data.type === 'robot_response') {
+                console.log('[PuzzleGame] Robot response:', data);
+                if (data.status === 'completed') {
+                    showToast('success', '✓ Robot movement completed');
+                } else if (data.status === 'error') {
+                    showToast('error', '✗ Robot movement failed');
                 }
             } else if (data.type === 'game_over') {
                 console.log('[PuzzleGame] ========== GAME OVER RECEIVED ==========');

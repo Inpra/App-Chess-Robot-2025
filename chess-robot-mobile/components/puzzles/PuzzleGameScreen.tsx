@@ -171,6 +171,119 @@ export default function PuzzleGameScreen() {
         };
     }, []);
 
+    // Track if game over was already handled to prevent duplicate processing
+    const gameOverHandled = useRef<boolean>(false);
+
+    // Handle game over
+    const handleGameOver = useCallback(async (data: any, providedGame?: Chess) => {
+        console.log('[handleGameOver] ========== CALLED ==========');
+        if (!gameId || gameOverHandled.current) return;
+
+        gameOverHandled.current = true; // Mark as handled immediately
+
+        const { reason, winner, message } = data;
+
+        try {
+            // Save pending moves first
+            console.log('[handleGameOver] Pending moves count:', pendingMoves.current.length);
+            if (pendingMoves.current.length > 0) {
+                console.log('[handleGameOver] Saving pending moves...');
+                await savePendingMoves();
+                console.log('[handleGameOver] ✓ Pending moves saved');
+            }
+
+            // Use the provided game instance for most up-to-date state
+            const targetGame = providedGame || chessGame.current;
+
+            // Calculate total moves
+            const totalMoves = moveCounter.current;
+            const currentFen = targetGame.fen();
+
+            console.log('[handleGameOver] Total moves:', totalMoves);
+            console.log('[handleGameOver] Current FEN:', currentFen);
+
+            let result: 'win' | 'lose' | 'draw';
+            let notificationMessage: string;
+
+            if (reason === 'checkmate') {
+                // In puzzle mode, if white (human) wins = puzzle solved
+                result = winner === 'white' ? 'win' : 'lose';
+                notificationMessage = winner === 'white'
+                    ? 'Checkmate! Puzzle solved!'
+                    : 'Checkmate! You lost the puzzle';
+            } else if (reason === 'stalemate') {
+                result = 'draw';
+                notificationMessage = 'Stalemate! Puzzle ended in a draw';
+            } else {
+                result = 'draw';
+                notificationMessage = message || 'Puzzle ended';
+            }
+
+            console.log('[handleGameOver] Updating game result:', { gameId, result, totalMoves });
+            await gameService.updateGameResult(
+                gameId,
+                result,
+                'completed',
+                Math.ceil(totalMoves / 2),
+                currentFen
+            );
+            console.log('[handleGameOver] ✓ Game result updated');
+
+            setGameStatus('ended');
+            setMessage(notificationMessage);
+
+            // Show game over modal
+            setGameOverModal({
+                isOpen: true,
+                result: result,
+                reason: reason.charAt(0).toUpperCase() + reason.slice(1),
+                message: notificationMessage
+            });
+
+        } catch (error) {
+            console.error('[PuzzleGame] Failed to update game over:', error);
+            gameOverHandled.current = false;
+            Alert.alert('Error', 'Failed to save game result.');
+        }
+    }, [gameId]);
+
+    // Check for local game over using Chess.js logic
+    const checkLocalGameOver = (newGame: Chess) => {
+        if (newGame.isGameOver()) {
+            console.log('[checkLocalGameOver] Local game over detected!');
+
+            let reason = 'draw';
+            let winner = 'draw';
+            let message = 'Game Over';
+
+            if (newGame.isCheckmate()) {
+                reason = 'checkmate';
+                // If turn is 'w', White was checkmated -> Black wins
+                // If turn is 'b', Black was checkmated -> White wins
+                winner = newGame.turn() === 'w' ? 'black' : 'white';
+            } else if (newGame.isStalemate()) {
+                reason = 'stalemate';
+                message = 'Stalemate';
+            } else if (newGame.isInsufficientMaterial()) {
+                reason = 'insufficient material';
+                message = 'Insufficient Material';
+            } else if (newGame.isThreefoldRepetition()) {
+                reason = 'threefold repetition';
+                message = 'Threefold Repetition';
+            } else if (newGame.isDraw()) {
+                reason = 'draw';
+            }
+
+            // Construct data similar to server event
+            handleGameOver({
+                type: 'game_over',
+                reason,
+                winner,
+                message
+            }, newGame);
+        }
+    };
+
     // Handle puzzle solution check
     const handlePuzzleSolution = useCallback((data: any) => {
         console.log('[PuzzleGame] Puzzle solution:', data);
@@ -227,8 +340,11 @@ export default function PuzzleGameScreen() {
             if (data.fen_str) {
                 console.log('[PuzzleGame] Updating board with FEN:', data.fen_str);
                 try {
+                    // Load new FEN
+                    const newGame = new Chess(data.fen_str);
+                    chessGame.current = newGame;
                     setFen(data.fen_str);
-
+                    
                     // Clear hint when board updates
                     setHintSquares(prev => {
                         if (prev) {
@@ -238,8 +354,11 @@ export default function PuzzleGameScreen() {
                         return prev;
                     });
 
-                    // Update move history from FEN change
-                    updateMoveHistoryFromFen(data.fen_str);
+                    // Update move history from FEN change - pass newGame for accurate check detection
+                    updateMoveHistoryFromFen(data.fen_str, newGame);
+                    
+                    // ⚠️ Check for local game over after board update
+                    checkLocalGameOver(newGame);
                 } catch (error) {
                     console.error('[PuzzleGame] Failed to parse FEN:', error);
                 }
@@ -280,7 +399,7 @@ export default function PuzzleGameScreen() {
         return () => {
             unsubscribeMessage();
         };
-    }, [gameId, puzzle, handlePuzzleSolution]);
+    }, [gameId, puzzle, handlePuzzleSolution, handleGameOver]);
 
     // Batch save pending moves
     const savePendingMoves = async () => {
@@ -324,81 +443,100 @@ export default function PuzzleGameScreen() {
     }, []);
 
     // Update move history from FEN changes
-    const updateMoveHistoryFromFen = (newFen: string) => {
+    const updateMoveHistoryFromFen = (newFen: string, newGame: Chess) => {
         // Skip if this FEN was already processed
         if (newFen === lastProcessedFen.current) {
             return;
         }
 
         try {
-            // Get the position part of FEN
-            const newPosition = newFen.split(' ')[0];
-            const currentPosition = chessGame.current.fen().split(' ')[0];
+            // If this is the first FEN or a game reset, just update
+            if (!lastProcessedFen.current || lastProcessedFen.current === 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1') {
+                lastProcessedFen.current = newFen;
 
-            // If positions are the same, no move was made
-            if (newPosition === currentPosition) {
+                // Check for check using the NEW game object
+                if (newGame.inCheck()) {
+                    const turn = newGame.turn();
+                    const board = newGame.board();
+                    for (let row = 0; row < 8; row++) {
+                        for (let col = 0; col < 8; col++) {
+                            const piece = board[row][col];
+                            if (piece && piece.type === 'k' && piece.color === turn) {
+                                setCheckSquare({ row, col });
+                                return;
+                            }
+                        }
+                    }
+                } else {
+                    setCheckSquare(null);
+                }
                 return;
             }
 
-            // Try to find the move by checking all legal moves
-            const possibleMoves = chessGame.current.moves({ verbose: true });
+            // Get the position part of FEN
+            const oldGame = new Chess(lastProcessedFen.current);
+            const oldPosition = lastProcessedFen.current.split(' ')[0];
+            const newPosition = newFen.split(' ')[0];
+
+            // If positions are the same, no move was made
+            if (oldPosition === newPosition) {
+                lastProcessedFen.current = newFen;
+                return;
+            }
+
+            // Try to find the move by checking all legal moves from old position
+            const possibleMoves = oldGame.moves({ verbose: true });
             let moveFound = false;
 
             for (const move of possibleMoves) {
-                const testGame = new Chess(chessGame.current.fen());
+                const testGame = new Chess(lastProcessedFen.current);
                 testGame.move(move.san);
 
                 if (testGame.fen().split(' ')[0] === newPosition) {
-                    const madeMove = chessGame.current.move(move.san);
+                    console.log('[PuzzleGame] Move detected from FEN:', move.san);
 
-                    if (madeMove && gameId) {
-                        console.log('[PuzzleGame] Move detected from FEN:', madeMove.san);
-
+                    if (gameId) {
                         moveCounter.current += 1;
                         const moveNumber = Math.ceil(moveCounter.current / 2);
 
                         queueMoveForSave({
                             gameId: gameId,
                             moveNumber: moveNumber,
-                            playerColor: madeMove.color === 'w' ? 'white' : 'black',
-                            fromSquare: madeMove.from,
-                            toSquare: madeMove.to,
-                            fromPiece: `${madeMove.color === 'w' ? 'white' : 'black'}_${madeMove.piece}`,
-                            toPiece: madeMove.captured ?
-                                `${madeMove.color === 'w' ? 'black' : 'white'}_${madeMove.captured}` :
+                            playerColor: move.color === 'w' ? 'white' : 'black',
+                            fromSquare: move.from,
+                            toSquare: move.to,
+                            fromPiece: `${move.color === 'w' ? 'white' : 'black'}_${move.piece}`,
+                            toPiece: move.captured ?
+                                `${move.color === 'w' ? 'black' : 'white'}_${move.captured}` :
                                 undefined,
-                            notation: madeMove.san,
-                            resultsInCheck: chessGame.current.inCheck(),
+                            notation: move.san,
+                            resultsInCheck: newGame.inCheck(),
                             fenStr: newFen
                         });
-
-                        // Update move history UI
-                        setMoveHistory(() => {
-                            const history = chessGame.current.history();
-                            const moves: Move[] = [];
-
-                            for (let i = 0; i < history.length; i += 2) {
-                                moves.push({
-                                    moveNumber: Math.floor(i / 2) + 1,
-                                    white: history[i],
-                                    black: history[i + 1]
-                                });
-                            }
-
-                            return moves;
-                        });
-
-                        moveFound = true;
                     }
+
+                    // Update move history UI
+                    const history = newGame.history();
+                    const moves: Move[] = [];
+
+                    for (let i = 0; i < history.length; i += 2) {
+                        moves.push({
+                            moveNumber: Math.floor(i / 2) + 1,
+                            white: history[i],
+                            black: history[i + 1]
+                        });
+                    }
+
+                    setMoveHistory(moves);
+                    moveFound = true;
                     break;
                 }
             }
 
             if (!moveFound) {
                 console.log('[PuzzleGame] Could not determine move, resetting game state');
-                chessGame.current.load(newFen);
 
-                const history = chessGame.current.history();
+                const history = newGame.history();
                 const moves: Move[] = [];
 
                 for (let i = 0; i < history.length; i += 2) {
@@ -413,7 +551,23 @@ export default function PuzzleGameScreen() {
             }
 
             lastProcessedFen.current = newFen;
-            updateCheckSquare();
+
+            // Check for check using the NEW game object
+            if (newGame.inCheck()) {
+                const turn = newGame.turn();
+                const board = newGame.board();
+                for (let row = 0; row < 8; row++) {
+                    for (let col = 0; col < 8; col++) {
+                        const piece = board[row][col];
+                        if (piece && piece.type === 'k' && piece.color === turn) {
+                            setCheckSquare({ row, col });
+                            return;
+                        }
+                    }
+                }
+            } else {
+                setCheckSquare(null);
+            }
         } catch (error) {
             console.error('[PuzzleGame] Error updating move history:', error);
         }
@@ -496,6 +650,7 @@ export default function PuzzleGameScreen() {
             chessGame.current = new Chess(puzzle.fenStr);
             lastProcessedFen.current = puzzle.fenStr;
             moveCounter.current = 0;
+            gameOverHandled.current = false;
 
             // Call API to start game
             console.log('[PuzzleGame] Starting puzzle game...');
