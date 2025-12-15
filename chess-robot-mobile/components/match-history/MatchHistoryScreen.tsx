@@ -239,7 +239,7 @@ export default function MatchHistoryScreen() {
                     <Ionicons name="swap-vertical-outline" size={18} color="#9CA3AF" />
                     <Text style={styles.statText}>{item.totalMoves || 0} Moves</Text>
                 </View>
-                {item.ratingChange !== undefined && item.ratingChange !== 0 && (
+                {item.status !== 'paused' && item.ratingChange !== undefined && item.ratingChange !== 0 && (
                     <View style={styles.statItem}>
                         <Ionicons
                             name={item.ratingChange > 0 ? "trending-up-outline" : "trending-down-outline"}

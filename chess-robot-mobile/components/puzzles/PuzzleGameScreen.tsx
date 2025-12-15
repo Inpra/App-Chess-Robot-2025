@@ -45,6 +45,7 @@ export default function PuzzleGameScreen() {
     const [checkSquare, setCheckSquare] = useState<{ row: number, col: number } | null>(null);
     const [hintSquares, setHintSquares] = useState<{ from: number; to: number } | null>(null);
     const [message, setMessage] = useState<string | null>(null);
+    const [boardSetupStatus, setBoardSetupStatus] = useState<'correct' | 'incorrect' | null>(null);
 
     // Connection State
     const [isConnected, setIsConnected] = useState(false);
@@ -245,7 +246,29 @@ export default function PuzzleGameScreen() {
             }
 
             // Handle different message types
-            if (data.type === 'puzzle_solution') {
+            if (data.type === 'board_status') {
+                console.log('[PuzzleGame] Board status:', data);
+                
+                // Always update board with detected FEN to show what AI sees
+                if (data.detected) {
+                    try {
+                        const detectedFen = data.detected;
+                        setFen(detectedFen);
+                        chessGame.current.load(detectedFen);
+                        console.log('[PuzzleGame] Updated board with detected FEN:', detectedFen);
+                    } catch (error) {
+                        console.error('[PuzzleGame] Failed to parse detected FEN:', error);
+                    }
+                }
+
+                if (data.status === 'correct') {
+                    setBoardSetupStatus('correct');
+                    setMessage('✓ Board setup verified! Make your move.');
+                } else if (data.status === 'incorrect') {
+                    setBoardSetupStatus('incorrect');
+                    setMessage('✗ Board setup incorrect. Please fix the position.');
+                }
+            } else if (data.type === 'puzzle_solution') {
                 handlePuzzleSolution(data);
             } else if (data.type === 'ai_move_executed' || data.type === 'move_detected') {
                 if (data.move) {

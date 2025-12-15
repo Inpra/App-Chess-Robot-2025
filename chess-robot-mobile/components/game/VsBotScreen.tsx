@@ -326,7 +326,21 @@ export default function VsBotScreen() {
 
             // Handle message types
             if (data.type === 'board_status') {
+                console.log('[VsBot] Board status:', data);
                 const newStatus = data.status === 'correct' ? 'correct' : 'incorrect';
+
+                // Always update board with detected FEN to show what AI sees
+                if (data.detected) {
+                    try {
+                        const detectedFen = data.detected;
+                        setFen(detectedFen);
+                        game.load(detectedFen);
+                        console.log('[VsBot] Updated board with detected FEN:', detectedFen);
+                    } catch (error) {
+                        console.error('[VsBot] Failed to parse detected FEN:', error);
+                    }
+                }
+
                 if (boardSetupStatus !== newStatus) {
                     setBoardSetupStatus(newStatus);
                     if (data.status === 'correct') {

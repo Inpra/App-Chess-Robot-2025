@@ -398,7 +398,7 @@ export default function MatchHistory() {
                                     <ArrowUpDown size={18} color="#9CA3AF" />
                                     <span className="stat-text">{game.totalMoves || 0} Moves</span>
                                 </div>
-                                {game.ratingChange !== undefined && game.ratingChange !== 0 && (
+                                {game.status !== 'paused' && game.ratingChange !== undefined && game.ratingChange !== 0 && (
                                     <div className="stat-item">
                                         {game.ratingChange > 0 ? (
                                             <TrendingUp size={18} color="#23b249" />
