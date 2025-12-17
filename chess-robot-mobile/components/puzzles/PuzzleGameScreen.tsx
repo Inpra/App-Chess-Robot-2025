@@ -519,39 +519,37 @@ export default function PuzzleGameScreen() {
                         });
                     }
 
-                    // Update move history UI
-                    const history = newGame.history();
-                    const moves: Move[] = [];
+                    // Update move history UI by appending new move to existing history
+                    const currentMoveNum = Math.ceil(moveCounter.current / 2);
+                    const isWhiteMove = move.color === 'w';
 
-                    for (let i = 0; i < history.length; i += 2) {
-                        moves.push({
-                            moveNumber: Math.floor(i / 2) + 1,
-                            white: history[i],
-                            black: history[i + 1]
-                        });
-                    }
-
-                    setMoveHistory(moves);
+                    setMoveHistory(prevHistory => {
+                        const newHistory = [...prevHistory];
+                        
+                        if (isWhiteMove) {
+                            // Add new move pair for white
+                            newHistory.push({
+                                moveNumber: currentMoveNum,
+                                white: move.san,
+                                black: undefined
+                            });
+                        } else {
+                            // Update last move pair with black's move
+                            if (newHistory.length > 0) {
+                                const lastMove = newHistory[newHistory.length - 1];
+                                lastMove.black = move.san;
+                            }
+                        }
+                        
+                        return newHistory;
+                    });
                     moveFound = true;
                     break;
                 }
             }
 
             if (!moveFound) {
-                console.log('[PuzzleGame] Could not determine move, resetting game state');
-
-                const history = newGame.history();
-                const moves: Move[] = [];
-
-                for (let i = 0; i < history.length; i += 2) {
-                    moves.push({
-                        moveNumber: Math.floor(i / 2) + 1,
-                        white: history[i],
-                        black: history[i + 1]
-                    });
-                }
-
-                setMoveHistory(moves);
+                console.log('[PuzzleGame] Could not determine move from FEN change');
             }
 
             lastProcessedFen.current = newFen;

@@ -106,57 +106,79 @@ export default function VsBotScreen() {
         };
     }, []);
 
-    // Auto-resume game if resumeGameId is provided
+    // Load paused game data if resumeGameId is provided
     useEffect(() => {
-        const autoResume = async () => {
-            // Only auto-resume if ALL conditions are met:
+        const loadPausedGame = async () => {
+            // Load paused game data when:
             // 1. resumeGameId exists (user came from match history)
             // 2. gameStatus is 'paused' (game is in paused state)
             // 3. isConnected is true (WebSocket is ready)
             // 4. gameId is set (game session exists)
             if (resumeGameId && gameStatus === 'paused' && isConnected && gameId) {
-                console.log('[VsBot] Auto-resuming game:', resumeGameId);
-                setGameMessage('Resuming paused game...');
+                console.log('[VsBot] Loading paused game data:', resumeGameId);
+                setGameMessage('Loading paused game...');
 
                 try {
-                    // Call API to resume game (sends resume command with saved FEN to AI)
-                    const response = await gameService.resumeGame(gameId);
+                    // Fetch game details to load the saved position
+                    const gameDetails = await gameService.getGameById(gameId);
 
-                    console.log('[VsBot] ✓ Game resumed:', response);
+                    console.log('[VsBot] ✓ Paused game loaded:', gameDetails);
 
-                    // Load the saved FEN position
-                    if (response.fenStr) {
-                        const newGame = new Chess(response.fenStr);
+                    // Load the saved FEN position for preview (use fenCurrent for paused games)
+                    const savedFen = gameDetails.fenCurrent || gameDetails.fenStart;
+                    if (savedFen) {
+                        const newGame = new Chess(savedFen);
                         setGame(newGame);
-                        setFen(response.fenStr);
-                        lastProcessedFen.current = response.fenStr;
-
-                        // Rebuild move history from chess.js
-                        const history = newGame.history();
-                        const moves: Move[] = [];
-                        for (let i = 0; i < history.length; i += 2) {
-                            moves.push({
-                                moveNumber: Math.floor(i / 2) + 1,
-                                white: history[i],
-                                black: history[i + 1]
-                            });
-                        }
-                        setMoveHistory(moves);
+                        setFen(savedFen);
+                        lastProcessedFen.current = savedFen;
                     }
 
-                    // Update UI
-                    setGameStatus('playing');
-                    setBoardSetupStatus('checking');
-                    setGameMessage('Game resumed - Set up your board to continue');
-                    Alert.alert('Game Resumed', '✓ Game resumed! Please set up your board');
+                    // Fetch moves separately to rebuild move history
+                    try {
+                        const movesData = await gameService.getGameMoves(gameId);
+                        console.log('[VsBot] Moves loaded:', movesData.length);
+
+                        if (movesData && Array.isArray(movesData)) {
+                            // Sort moves by moveNumber and playerColor to ensure correct order
+                            const sortedMoves = movesData.sort((a, b) => {
+                                if (a.moveNumber !== b.moveNumber) {
+                                    return a.moveNumber - b.moveNumber;
+                                }
+                                // Within same move number, white comes before black
+                                return a.playerColor === 'white' ? -1 : 1;
+                            });
+
+                            // Group moves into pairs for display
+                            const moves: Move[] = [];
+                            for (let i = 0; i < sortedMoves.length; i += 2) {
+                                const whiteMove = sortedMoves[i];
+                                const blackMove = sortedMoves[i + 1];
+                                
+                                moves.push({
+                                    moveNumber: whiteMove.moveNumber,
+                                    white: whiteMove.notation,
+                                    black: blackMove?.notation || undefined
+                                });
+                            }
+                            
+                            setMoveHistory(moves);
+                            console.log('[VsBot] Move history rebuilt:', moves.length, 'pairs');
+                        }
+                    } catch (moveError) {
+                        console.error('[VsBot] Failed to load moves:', moveError);
+                        // Continue anyway, at least we have the board position
+                    }
+
+                    // Show message that user can review and resume
+                    setGameMessage('Paused game loaded - Review board and click Resume to continue');
                 } catch (error: any) {
-                    console.error('[VsBot] ✗ Failed to resume game:', error);
-                    Alert.alert('Error', error.message || 'Failed to resume game. Please try again.');
+                    console.error('[VsBot] ✗ Failed to load paused game:', error);
+                    Alert.alert('Error', error.message || 'Failed to load paused game.');
                 }
             }
         };
 
-        autoResume();
+        loadPausedGame();
     }, [resumeGameId, isConnected, gameId, gameStatus]);
 
     const gameOverHandled = useRef<boolean>(false);
@@ -721,32 +743,15 @@ export default function VsBotScreen() {
         if (!gameId || gameStatus !== 'paused') return;
 
         try {
+            setGameMessage('Resuming game...');
+
             // Call API to resume game (sends resume command with saved FEN to AI)
             const response = await gameService.resumeGame(gameId);
 
             console.log('[VsBot] ✓ Game resumed:', response);
 
-            // Load the saved FEN position
-            if (response.fenStr) {
-                const newGame = new Chess(response.fenStr);
-                setGame(newGame);
-                setFen(response.fenStr);
-                lastProcessedFen.current = response.fenStr;
-
-                // Rebuild move history from chess.js
-                const history = newGame.history();
-                const moves: Move[] = [];
-                for (let i = 0; i < history.length; i += 2) {
-                    moves.push({
-                        moveNumber: Math.floor(i / 2) + 1,
-                        white: history[i],
-                        black: history[i + 1]
-                    });
-                }
-                setMoveHistory(moves);
-            }
-
-            // Update UI
+            // The FEN and move history should already be loaded from loadPausedGame
+            // Just update game status and notify AI to continue
             setGameStatus('playing');
             setBoardSetupStatus('checking');
             setGameMessage('Game resumed - Set up your board to continue');

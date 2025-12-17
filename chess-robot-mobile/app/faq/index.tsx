@@ -1,8 +1,9 @@
 import { Colors } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
+  Alert,
   LayoutAnimation,
   Platform,
   SafeAreaView,
@@ -13,7 +14,12 @@ import {
   TouchableOpacity,
   UIManager,
   View,
+  ActivityIndicator,
+  KeyboardAvoidingView,
 } from 'react-native';
+import faqService, { type Faq } from '@/services/faqService';
+import feedbackService from '@/services/feedbackService';
+import authService from '@/services/authService';
 
 if (Platform.OS === 'android') {
   if (UIManager.setLayoutAnimationEnabledExperimental) {
@@ -21,40 +27,54 @@ if (Platform.OS === 'android') {
   }
 }
 
-const faqs = [
-  {
-    id: 1,
-    question: 'How do I connect to the Robot Arm?',
-    answer: 'Go to the "Vs Bot" game mode. Ensure your Robot Arm is powered on and Bluetooth is enabled on your device. The app will automatically scan for available robots.',
-  },
-  {
-    id: 2,
-    question: 'How do I top up points?',
-    answer: 'Click on the Cart icon in the sidebar to visit the Store. Select a point package (Starter, Pro, or Grandmaster) and follow the payment instructions.',
-  },
-  {
-    id: 3,
-    question: 'Can I play offline?',
-    answer: 'Yes, you can play against the built-in AI bot without an internet connection. However, online features like matchmaking and purchasing points require internet access.',
-  },
-  {
-    id: 4,
-    question: 'How is my ELO calculated?',
-    answer: 'Your ELO rating is updated after every ranked match based on the result and your opponent\'s rating. Winning against a higher-rated opponent gives more points.',
-  },
-  {
-    id: 5,
-    question: 'What if the robot makes a wrong move?',
-    answer: 'If the robot makes an invalid move or knocks over a piece, please pause the game using the pause button and manually adjust the board. You can then resume the game.',
-  },
-];
 
 export default function FAQScreen() {
   const router = useRouter();
-  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [faqs, setFaqs] = useState<Faq[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [feedbackMessage, setFeedbackMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showFeedbackForm, setShowFeedbackForm] = useState(false);
+  const [user, setUser] = useState<any>(null);
 
-  const toggleExpand = (id: number) => {
+  // Fetch user and FAQs from API
+  useEffect(() => {
+    const fetchData = async () => {
+      const currentUser = await authService.getCurrentUser();
+      setUser(currentUser);
+    };
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    const fetchFaqs = async () => {
+      try {
+        setLoading(true);
+        const data = await faqService.getAllFaqs();
+        if (Array.isArray(data)) {
+          const sortedData = data.sort((a, b) => 
+            (a.displayOrder || 999) - (b.displayOrder || 999)
+          );
+          setFaqs(sortedData);
+        } else {
+          console.warn('FAQ data is not an array:', data);
+          setFaqs([]);
+        }
+      } catch (error: any) {
+        console.error('Error loading FAQs:', error);
+        Alert.alert('Error', 'Failed to load FAQs. Please try again later.');
+        setFaqs([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFaqs();
+  }, []);
+
+  const toggleExpand = (id: string) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setExpandedId(expandedId === id ? null : id);
   };
@@ -63,6 +83,38 @@ export default function FAQScreen() {
     faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
     faq.answer.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const handleSubmitFeedback = async () => {
+    if (!user) {
+      Alert.alert('Login Required', 'Please login to submit feedback');
+      router.push('/login');
+      return;
+    }
+
+    if (feedbackMessage.trim().length < 10) {
+      Alert.alert('Invalid Input', 'Feedback must be at least 10 characters');
+      return;
+    }
+
+    if (feedbackMessage.trim().length > 1000) {
+      Alert.alert('Invalid Input', 'Feedback cannot exceed 1000 characters');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      await feedbackService.createFeedback(feedbackMessage.trim());
+      Alert.alert('Success', '✓ Thank you for your feedback!');
+      setFeedbackMessage('');
+      setShowFeedbackForm(false);
+    } catch (error: any) {
+      console.error('Error submitting feedback:', error);
+      Alert.alert('Error', error.message || 'Failed to submit feedback. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -77,7 +129,16 @@ export default function FAQScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <ScrollView 
+          contentContainerStyle={styles.content} 
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
         {/* Search Bar */}
         <View style={styles.searchContainer}>
             <Ionicons name="search" size={20} color="#9CA3AF" style={styles.searchIcon} />
@@ -93,7 +154,18 @@ export default function FAQScreen() {
         {/* FAQ List */}
         <View style={styles.faqList}>
             <Text style={styles.sectionTitle}>Frequently Asked Questions</Text>
-            {filteredFaqs.map((faq) => (
+            
+            {loading ? (
+              <View style={{ alignItems: 'center', padding: 40 }}>
+                <ActivityIndicator size="large" color={Colors.light.primary} />
+                <Text style={{ marginTop: 16, color: '#6B7280' }}>Loading FAQs...</Text>
+              </View>
+            ) : filteredFaqs.length === 0 ? (
+              <Text style={styles.noResultsText}>
+                {searchQuery ? 'No results found.' : 'No FAQs available at the moment.'}
+              </Text>
+            ) : (
+              filteredFaqs.map((faq) => (
                 <View key={faq.id} style={styles.faqItem}>
                     <TouchableOpacity 
                         style={styles.faqHeader} 
@@ -115,25 +187,92 @@ export default function FAQScreen() {
                         </View>
                     )}
                 </View>
-            ))}
-            {filteredFaqs.length === 0 && (
-                <Text style={styles.noResultsText}>No results found.</Text>
+              ))
             )}
         </View>
 
-        {/* Contact Support */}
-        <View style={styles.contactCard}>
-            <View style={styles.contactIconContainer}>
-                <Ionicons name="chatbubbles" size={32} color="white" />
+        {/* Feedback Form */}
+        {showFeedbackForm && user && (
+          <View style={styles.feedbackCard}>
+            <Text style={styles.feedbackTitle}>Send us your feedback</Text>
+            <TextInput
+              style={styles.feedbackTextarea}
+              placeholder="Tell us what you think... (minimum 10 characters)"
+              placeholderTextColor="#9CA3AF"
+              value={feedbackMessage}
+              onChangeText={setFeedbackMessage}
+              multiline
+              numberOfLines={5}
+              maxLength={1000}
+              editable={!isSubmitting}
+              textAlignVertical="top"
+            />
+            <View style={styles.feedbackFooter}>
+              <Text style={styles.charCount}>{feedbackMessage.length}/1000 characters</Text>
+              <View style={styles.feedbackActions}>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => {
+                    setShowFeedbackForm(false);
+                    setFeedbackMessage('');
+                  }}
+                  disabled={isSubmitting}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.submitButton,
+                    (isSubmitting || feedbackMessage.trim().length < 10) && styles.submitButtonDisabled
+                  ]}
+                  onPress={handleSubmitFeedback}
+                  disabled={isSubmitting || feedbackMessage.trim().length < 10}
+                >
+                  {isSubmitting ? (
+                    <ActivityIndicator size="small" color="white" />
+                  ) : (
+                    <>
+                      <Ionicons name="send" size={18} color="white" />
+                      <Text style={styles.submitButtonText}>Send</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
-            <Text style={styles.contactTitle}>Still need help?</Text>
-            <Text style={styles.contactText}>Our support team is available 24/7 to assist you with any issues.</Text>
-            <TouchableOpacity style={styles.contactButton}>
-                <Text style={styles.contactButtonText}>Contact Support</Text>
-            </TouchableOpacity>
-        </View>
+          </View>
+        )}
+
+        {/* Contact Support */}
+        {!showFeedbackForm && (
+          <View style={styles.contactCard}>
+              <View style={styles.contactIconContainer}>
+                  <Ionicons name="chatbubbles" size={32} color="white" />
+              </View>
+              <Text style={styles.contactTitle}>Still need help?</Text>
+              <Text style={styles.contactText}>
+                {user
+                  ? 'Share your feedback or report an issue. Our support team will review it as soon as possible.'
+                  : 'Please login to send feedback or contact our support team.'}
+              </Text>
+              <TouchableOpacity 
+                style={styles.contactButton}
+                onPress={() => {
+                  if (user) {
+                    setShowFeedbackForm(true);
+                  } else {
+                    router.push('/login');
+                  }
+                }}
+              >
+                  <Text style={styles.contactButtonText}>
+                    {user ? 'Send Feedback' : 'Login to Send Feedback'}
+                  </Text>
+              </TouchableOpacity>
+          </View>
+        )}
 
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -233,6 +372,74 @@ const styles = StyleSheet.create({
       textAlign: 'center',
       color: '#9CA3AF',
       marginTop: 20,
+  },
+  feedbackCard: {
+      backgroundColor: Colors.light.card,
+      borderRadius: 16,
+      padding: 20,
+      marginBottom: 24,
+      borderWidth: 1,
+      borderColor: Colors.light.border,
+  },
+  feedbackTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: '#111827',
+      marginBottom: 16,
+  },
+  feedbackTextarea: {
+      backgroundColor: '#F9FAFB',
+      borderRadius: 12,
+      padding: 12,
+      fontSize: 14,
+      color: '#111827',
+      borderWidth: 1,
+      borderColor: '#E5E7EB',
+      minHeight: 120,
+      marginBottom: 12,
+  },
+  feedbackFooter: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+  },
+  charCount: {
+      fontSize: 12,
+      color: '#6B7280',
+  },
+  feedbackActions: {
+      flexDirection: 'row',
+      gap: 8,
+  },
+  cancelButton: {
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: '#E5E7EB',
+      backgroundColor: 'white',
+  },
+  cancelButtonText: {
+      color: '#6B7280',
+      fontWeight: '600',
+      fontSize: 14,
+  },
+  submitButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 12,
+      backgroundColor: Colors.light.primary,
+  },
+  submitButtonDisabled: {
+      opacity: 0.5,
+  },
+  submitButtonText: {
+      color: 'white',
+      fontWeight: '700',
+      fontSize: 14,
   },
   contactCard: {
       backgroundColor: Colors.light.primary,

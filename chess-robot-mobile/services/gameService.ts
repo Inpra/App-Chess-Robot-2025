@@ -364,9 +364,10 @@ class GameService {
      */
     async getGameMoves(gameId: string): Promise<GameMoveResponse[]> {
         try {
+            const headers = await this.getHeaders();
             const response = await fetch(`${this.baseUrl}/Games/${gameId}/moves`, {
                 method: 'GET',
-                headers: { 'Content-Type': 'application/json' },
+                headers,
             });
 
             if (!response.ok) {
@@ -541,6 +542,29 @@ class GameService {
             return await response.json();
         } catch (error) {
             console.error('[GameService] Get player games error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get game by ID with full details including moves
+     */
+    async getGameById(gameId: string): Promise<GameReplayResponse> {
+        try {
+            const headers = await this.getHeaders();
+            const response = await fetch(`${this.baseUrl}/Games/${gameId}`, {
+                method: 'GET',
+                headers,
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Failed to get game details');
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('[GameService] Get game by ID error:', error);
             throw error;
         }
     }
